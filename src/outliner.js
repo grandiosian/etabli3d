@@ -10,7 +10,6 @@ const treeVisible=()=> lv(3) && $('#app').classList.contains('with-tree');
 function setTreeOpen(v){
   $('#app').classList.toggle('with-tree', v);
   if(!matchMedia('(max-width: 860px)').matches){ prefs.tree=v; savePrefs(); }
-  $('#bTree').classList.toggle('on', v); $('#bTree').setAttribute('aria-pressed', String(v));
   renderOutliner(); placeDemo(); requestAnimationFrame(()=>{ updateOverlay(); placeInsp(); applyViewOffset(); });
 }
 function selectFromTree(id, e){

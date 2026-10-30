@@ -2,7 +2,8 @@
    Repères d'échelle : un objet connu posé à côté des pièces (pomme, canette,
    voiture, immeuble, avion) pour se rendre compte des tailles réelles.
    « Auto » choisit l'objet d'après la taille des pièces (plus grand si le modèle
-   est plus grand). Ces objets ne sont ni cliquables, ni exportés, ni enregistrés.
+   est plus grand). Ils sont en gris, loin derrière le plan de travail, toujours au même endroit, avec une
+   plaque au sol « Référence d'échelle ». Ni cliquables, ni exportés, ni enregistrés.
    ========================================================= */
 const REFS={
   pomme:  {name:'Pomme',   size:'8 cm',   dim:80},
@@ -30,7 +31,7 @@ const refBuild={
     return g; },
   immeuble(){ const g=new THREE.Group();
     const cv=document.createElement('canvas'); cv.width=256; cv.height=256; const c=cv.getContext('2d');
-    c.fillStyle='#d9c7a6'; c.fillRect(0,0,256,256); c.fillStyle='#4d5d6b'; for(let f=0;f<4;f++) for(let i=0;i<5;i++) c.fillRect(14+i*49, 18+f*62, 30, 34);
+    c.fillStyle='#c4c8c6'; c.fillRect(0,0,256,256); c.fillStyle='#7f8784'; for(let f=0;f<4;f++) for(let i=0;i<5;i++) c.fillRect(14+i*49, 18+f*62, 30, 34);
     const tex=new THREE.CanvasTexture(cv); tex.colorSpace=THREE.SRGBColorSpace;
     const side=new THREE.MeshStandardMaterial({map:tex, roughness:.8}), top=refMat(0x8d8478);
     const b=new THREE.Mesh(new THREE.BoxGeometry(10000,8000,12000), [side,side,side,side,top,top]); b.position.z=6000; g.add(b); return g; },
@@ -50,27 +51,33 @@ const refBuild={
 /* the object that fits the size of the model (largest dimension D, in mm) */
 function refAuto(D){ return D<100? 'pomme' : D<600? 'canette' : D<8000? 'voiture' : D<25000? 'immeuble' : 'avion'; }
 function partsBox(){ const b=new THREE.Box3(); for(const [id,r] of meshes){ if(r.mesh.visible) b.union(new THREE.Box3().setFromObject(r.mesh)); } return b; }
-/* place the reference next to the parts (to their right, on the floor) */
+/* en gris : l'objet repère ne se confond pas avec les pièces */
+function refGrey(o){ o.traverse(m=>{ if(!m.isMesh) return; for(const M of [].concat(m.material)){ if(M.map){ M.color.set(0xffffff); continue; } const c=M.color, l=0.2126*c.r+0.7152*c.g+0.0722*c.b; const g=0.42+0.42*Math.min(1,l*1.6); c.setRGB(g,g,g); M.metalness=0; } }); }
+/* plaque au sol, devant l'objet : « Référence d'échelle » et son nom */
+function refPlaque(k, w){
+  const R=REFS[k], cv=document.createElement('canvas'); cv.width=1024; cv.height=256; const c=cv.getContext('2d');
+  c.fillStyle='rgba(60,70,66,.72)'; c.font='700 78px "Saira Semi Condensed",sans-serif'; c.textAlign='center'; c.fillText('RÉFÉRENCE D’ÉCHELLE', 512, 100);
+  c.font='500 70px "IBM Plex Sans",sans-serif'; c.fillText(`${R.name} · ${R.size}`, 512, 200);
+  const t=new THREE.CanvasTexture(cv); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=8;
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(w, w/4), new THREE.MeshBasicMaterial({map:t, transparent:true, depthWrite:false})); m.renderOrder=2; return m;
+}
+/* posé loin du plan de travail, derrière lui, toujours au même endroit (il ne suit pas les pièces) */
 function refUpdate(){
   const mode=prefs.ref||'auto', show= mode!=='aucun' && ws==='model' && $('#sk').hidden;
   const b=partsBox(), D= b.isEmpty()? 50 : Math.max(b.max.x-b.min.x, b.max.y-b.min.y, b.max.z-b.min.z);
   const k= !show? null : mode==='auto'? refAuto(D) : mode;
-  REF.group.visible=!!k; REF.kind=k; if(!k){ if(REF.lab) REF.lab.hidden=true; return; }
+  REF.group.visible=!!k; REF.kind=k; if(!k) return;
   for(const [kk,o] of Object.entries(REF.objs)) o.visible= kk===k;
-  let o=REF.objs[k]; if(!o){ o=REF.objs[k]=refBuild[k](); o.traverse(m=>{ if(m.isMesh){ m.castShadow=false; m.userData.ref=true; } }); REF.group.add(o); }
-  REF.group.position.set(0,0,0); REF.group.updateMatrixWorld(true); const ob=new THREE.Box3().setFromObject(o), ow=ob.max.x-ob.min.x;   // boîte de l'objet seul, à l'origine
-  const bb= b.isEmpty()? new THREE.Box3(new THREE.Vector3(-25,-25,0), new THREE.Vector3(25,25,0)) : b;
-  const gap=Math.max(8, 0.12*Math.min(ow, Math.max(bb.max.x-bb.min.x, 20)));
-  REF.group.position.set(bb.max.x+gap+ow/2-(ob.max.x+ob.min.x)/2, (bb.min.y+bb.max.y)/2-(ob.max.y+ob.min.y)/2, 0);
-  REF.top=new THREE.Vector3(REF.group.position.x+(ob.max.x+ob.min.x)/2, REF.group.position.y+(ob.max.y+ob.min.y)/2, ob.max.z);
+  let o=REF.objs[k];
+  if(!o){ const obj=refBuild[k](); refGrey(obj); obj.traverse(m=>{ if(m.isMesh) m.userData.ref=true; });
+    obj.updateMatrixWorld(true); const ob=new THREE.Box3().setFromObject(obj), dim=REFS[k].dim, gap=Math.max(40, 0.3*dim), w=Math.max(ob.max.x-ob.min.x, 90);
+    obj.position.set(-(ob.max.x+ob.min.x)/2, MAT/2+gap-ob.min.y, 0);   // centré en X, derrière le plan de travail
+    const pl=refPlaque(k, w); pl.position.set(0, MAT/2+gap*0.45, 0.2); pl.userData.ref=true;
+    const sh=new THREE.Mesh(new THREE.CircleGeometry(0.62*Math.max(ob.max.x-ob.min.x, ob.max.y-ob.min.y),48), new THREE.MeshBasicMaterial({color:0x000000, transparent:true, opacity:.1, depthWrite:false}));
+    sh.scale.y=(ob.max.y-ob.min.y)/Math.max(ob.max.x-ob.min.x, ob.max.y-ob.min.y); sh.position.set(0, MAT/2+gap+(ob.max.y-ob.min.y)/2, 0.1); sh.userData.ref=true;   // ombre au sol : l'objet est posé, pas en l'air
+    o=REF.objs[k]=new THREE.Group(); o.add(obj, pl, sh); REF.group.add(o); }
 }
-function refTick(){
-  if(!REF.lab){ REF.lab=h('div',{class:'ref-lab',hidden:true}); $('#stage').append(REF.lab); }
-  if(!REF.group.visible || !REF.kind){ REF.lab.hidden=true; return; }
-  const s=toStage(REF.top); REF.lab.hidden=!s.vis; if(!s.vis) return;
-  const R=REFS[REF.kind]; if(REF.lab.dataset.k!==REF.kind){ REF.lab.dataset.k=REF.kind; REF.lab.innerHTML=`<b>${R.name}</b> · ${R.size}`; }
-  REF.lab.style.transform=`translate(${Math.round(s.x)}px,${Math.round(s.y-14)}px) translate(-50%,-100%)`;
-}
+function refTick(){}   // le texte est maintenant une plaque au sol (refPlaque)
 function setRef(mode){
   prefs.ref=mode; savePrefs(); refUpdate(); closeRefMenu();
   if(mode!=='aucun' && mode!=='auto' && REF.group.visible){ const b=partsBox().union(new THREE.Box3().setFromObject(REF.group)); frameBox(b, 30); }   // un objet choisi à la main : on le montre avec les pièces

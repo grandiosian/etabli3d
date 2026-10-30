@@ -35,9 +35,9 @@ with sync_playwright() as p:
     pg.click('#galleryClose')
     n = pg.evaluate(f'()=>[{E}.state.parts.length,{E}.state.joints.length,document.documentElement.dataset.level]')
     check('démarrage : maison, niveau débutant', n == [4, 0, '1'], n)
-    check('débutant : pas d’esquisse, bouton « Vérifier pour l’impression »', not pg.is_visible('#bSketch') and not pg.is_visible('#simbar') and 'impression' in pg.inner_text('#flow [data-go="check"]'))
+    check('débutant : pas d’esquisse, bouton « Vérifier pour l’impression »', not pg.is_visible('#bSketch') and not pg.is_visible('#simbar') and 'impression' in pg.evaluate("()=>document.querySelector('#rackSim [data-go=check]').textContent"))
     pg.click('#lvl [data-lvl="2"]'); pg.wait_for_timeout(200)
-    check('intermédiaire : esquisse et bouton « Valider pour simulation »', pg.is_visible('#bSketch') and 'simulation' in pg.inner_text('#flow [data-go="check"]') and not pg.is_visible('#bTree'))
+    check('intermédiaire : esquisse et bouton « Valider pour simulation »', pg.is_visible('#bSketch') and 'simulation' in pg.evaluate("()=>document.querySelector('#rackSim [data-go=check]').textContent") and not pg.is_visible('#bTree'))
     check('intermédiaire : outil Bézier disponible', pg.is_visible('#rack [data-sktool="bezier"]'))
     r = pg.evaluate("()=>{const k=[...document.querySelectorAll('#rack [data-sktool]')].map(e=>e.getBoundingClientRect()), v=[...document.querySelectorAll('#rackBasic .shape')].map(e=>e.getBoundingClientRect()), rk=document.querySelector('#rack').getBoundingClientRect(); return [k.length, Math.min(...k.map(b=>b.left)) > Math.max(...v.map(b=>b.right)), rk.right-Math.max(...k.map(b=>b.right)) < 60]}")
     check('icônes de création d’esquisse à droite de la barre', r == [5, True, True], r)
@@ -48,7 +48,14 @@ with sync_playwright() as p:
     check('arborescence à gauche, propriétés à droite sous le cube de vue', r == [True, True], r)
     r = pg.evaluate("()=>{const d=document.querySelector('#demo').getBoundingClientRect(), o=document.querySelector('#outliner').getBoundingClientRect(); return [!document.querySelector('#demo').hidden, d.left>=o.right-1 && d.left<o.right+40, document.querySelector('#demo').parentElement.id]}")
     check('guide à gauche de la vue, à droite de l’arborescence', r == [True, True, 'stage'], r)
-    check('barre de création à onglets : Volumes, Simulation mécanique', pg.locator('#rack .rack-title', has_text='Mécanique').count() == 0 and pg.locator('#rackBasic .shape', has_text='Roue dentée').count() == 0 and pg.locator('#rack [data-rtab]').count() == 2)
+    check('barre de création à onglets en haut (Volumes, Simulation), roues dentées avec les volumes ; menu Fichier', pg.locator('#rack [data-rtab]').count() == 2 and pg.locator('#rackBasic .shape', has_text='Roue dentée').count() == 1 and pg.is_hidden('#bNew') and pg.locator('#bTree').count() == 0 and pg.evaluate("()=>{const t=document.querySelector('.rack-tabs').getBoundingClientRect(), r=document.querySelector('.rack-row').getBoundingClientRect(); return t.bottom<=r.top+1}"))
+    pg.click('#bFile'); pg.wait_for_timeout(100)
+    r = pg.evaluate("()=>[!document.querySelector('#menuFile').hidden, [...document.querySelectorAll('#menuFile button')].map(b=>b.id).join(',')]")
+    pg.click('#bFile'); pg.wait_for_timeout(100)
+    hdr = pg.evaluate("()=>{const x=id=>document.querySelector(id).getBoundingClientRect(); return [x('#bUndo').left < x('#bFile').left, x('#lvl').left > innerWidth/2, x('#bLook').left > x('#lvl').left, x('#bHelp').left > x('#bLook').left]}")
+    check('menu Fichier (nouveau, ouvrir, enregistrer, STL, bibliothèque), flèches devant, niveaux / apparence / aide à droite', r == [True, 'bNew,bOpen,bSave,bStl,bExamples'] and all(hdr) and pg.is_hidden('#menuFile'), [r, hdr])
+    ed = pg.evaluate("()=>{const s=document.querySelector('.ed-shape'), r=s.getBoundingClientRect(); return [Math.abs((r.left+r.right)/2-innerWidth/2)<4, getComputedStyle(s).clipPath.startsWith('polygon')]}")
+    check('barre d’édition centrée, aux bords obliques', ed == [True, True], ed)
     pg.evaluate(f"()=>{E}.setSel([])")
     check('panneau « Propriétés » : invitation à cliquer un objet', pg.inner_text('#inspTitle') == 'Propriétés' and 'Cliquez sur un objet' in pg.inner_text('#inspBody') and 'Pour commencer' not in pg.inner_text('#inspBody'))
     pg.locator('#treeBody .tr').nth(0).locator('.tr-btn').nth(0).click(); pg.wait_for_timeout(200)
@@ -62,13 +69,13 @@ with sync_playwright() as p:
     pg.screenshot(path=os.path.join(OUT, 'simulation.png'))
     pg.click('#sReset')
 
-    pg.click('#bNew')
+    pg.evaluate("()=>document.querySelector('#bNew').click()")
     for k in ['box','cylinder','sphere','cone','pyramid','wedge','tube','torus','text','gear','rack']:
         pg.evaluate(f"()=>{E}.addPart('{k}')")
     check('11 volumes ajoutés', pg.evaluate(f'()=>{E}.state.parts.length') == 11)
     pg.screenshot(path=os.path.join(OUT, 'volumes.png'))
 
-    pg.click('#bNew')
+    pg.evaluate("()=>document.querySelector('#bNew').click()")
     g = pg.evaluate(f"""()=>{{const E={E}; const a=E.addPart('box'); const c=E.addPart('cylinder',[0,0],{{hole:true}});
         c.params.d=10; c.params.h=30; c.pos=[0,0,-5]; E.setSel([a.id,c.id]); E.groupSel();
         const G=E.state.parts[0]; return [E.state.parts.length, G.kind, E.getGeometry(G).attributes.position.count/3]}}""")
@@ -93,7 +100,7 @@ with sync_playwright() as p:
         pg.screenshot(path=os.path.join(OUT, f'exemple-{ex}.png'))
 
     # Sketch: rectangle + dimension typed in the field
-    pg.click('#bNew'); pg.click('#bSketch'); pg.wait_for_timeout(300)
+    pg.evaluate("()=>document.querySelector('#bNew').click()"); pg.click('#bSketch'); pg.wait_for_timeout(300)
     check('bouton Esquisse enfoncé pendant le choix du plan', pg.evaluate("()=>[...document.querySelectorAll('#rack .shape.on')].map(e=>e.id)") == ['bSketch'])
     check('clic sur Esquisse : choix du plan (3 plans dans la vue)', pg.is_visible('#planePick') and pg.is_hidden('#sk') and pg.evaluate(f"()=>{E}.PP.open && {E}.PP.group.visible && {E}.PP.group.children.length===3"))
     pg.click('#planePick [data-plane="xy"]'); pg.wait_for_timeout(300)
@@ -113,7 +120,7 @@ with sync_playwright() as p:
     pg.click('#skOk'); pg.wait_for_timeout(400)
     check('esquisse extrudée', pg.evaluate(f"()=>{E}.state.parts.some(p=>p.kind==='sketch' && p.params.plane==='xy')"))
     # Plan de face (XZ) choisi en cliquant dans la vue 3D : la pièce est debout
-    pg.click('#bNew'); pg.click('#rack [data-sktool="circle"]'); pg.wait_for_timeout(700)
+    pg.evaluate("()=>document.querySelector('#bNew').click()"); pg.click('#rack [data-sktool="circle"]'); pg.wait_for_timeout(700)
     pt = pg.evaluate(f"()=>{{const E={E}; const m=E.PP.meshes.xz; const v=new E.camera.position.constructor(0.3,0.75,0).applyMatrix4(m.matrix); const r=E.renderer.domElement.getBoundingClientRect(); v.project(E.camera); return [r.left+(v.x+1)/2*r.width, r.top+(1-v.y)/2*r.height];}}")
     pg.mouse.move(pt[0], pt[1]); pg.wait_for_timeout(100)
     hot = pg.evaluate(f"()=>{E}.PP.hot")
@@ -195,7 +202,7 @@ with sync_playwright() as p:
         check(f'volume Bézier ({k})', n > 500, n)
 
     # Valider -> Mécanique : gate, repères, liaison accrochée à un repère
-    pg.evaluate(f"()=>{E}.setWs('model')"); pg.click('#bNew'); pg.wait_for_timeout(200)
+    pg.evaluate(f"()=>{E}.setWs('model')"); pg.evaluate("()=>document.querySelector('#bNew').click()"); pg.wait_for_timeout(200)
     pg.evaluate(f"()=>{{const E={E}; const a=E.addPart('box',[0,0]); a.params.L=60; a.params.l=40; a.params.h=6; const c=E.addPart('cylinder',[20,0]); c.pos=[20,0,6];}}")
     pg.evaluate(f"()=>{E}.setWs('mech')"); pg.wait_for_timeout(300)
     check('Mécanique verrouillée avant validation', pg.evaluate(f'()=>!{E}.mechReady()') and pg.locator('text=Avant de simuler').count() == 1)
@@ -340,7 +347,10 @@ with sync_playwright() as p:
 
     # Démarche : Modéliser -> Valider -> simulations, sans bandeau
     pg.evaluate(f"()=>{E}.loadExample('maison')"); pg.wait_for_timeout(300)
-    pg.click('#flow [data-go="check"]'); pg.wait_for_timeout(300)
+    pg.click('#rack [data-rtab="sim"]'); pg.wait_for_timeout(100)
+    r = pg.evaluate("()=>[document.querySelector('#rackBasic').hidden, getComputedStyle(document.querySelector('.ed-wrap')).pointerEvents, getComputedStyle(document.querySelector('#bSketch')).pointerEvents]")
+    check('onglet Simulation mécanique : seul « Valider pour simulation », le reste grisé', r == [True, 'none', 'none'], r)
+    pg.click('#rackSim [data-go="check"]'); pg.wait_for_timeout(300)
     check('« Valider pour simulation » ouvre la Validation', pg.evaluate(f"()=>{E}.ws()")=='check' and pg.is_hidden('#rack') and pg.is_hidden('#tools'))
     check('Mouvement verrouillé avant validation', pg.evaluate("()=>document.querySelector('#flow [data-go=\"mech\"]').disabled"))
     pg.click('#inspBody .btn.primary'); pg.wait_for_timeout(500)
@@ -519,9 +529,9 @@ with sync_playwright() as p:
     pg.evaluate(f"()=>{E}.finishGroupEdit()"); pg.wait_for_timeout(300)
     check('fin de l’édition : tout réapparaît', pg.evaluate(f"()=>[...{E}.meshes.values()].every(r=>r.mesh.visible)"))
     # Barre de création à onglets, barre d'édition
-    pg.click('#rack [data-rtab="meca"]'); pg.wait_for_timeout(100)
-    r = pg.evaluate("()=>[!!document.querySelector('#rackMeca .shape') && document.querySelector('#rackMeca').offsetParent!==null, document.querySelector('#rackBasic').hidden, document.querySelector('#rack [data-rtab=meca]').textContent.trim()]")
-    check('onglet « Simulation mécanique » : roue dentée et crémaillère', r == [True, True, 'Simulation mécanique'] and pg.locator('#rackMeca .shape').count() == 2, r)
+    pg.click('#rack [data-rtab="sim"]'); pg.wait_for_timeout(100)
+    r = pg.evaluate("()=>[document.querySelector('#rackSim').children.length && !!document.querySelector('#rackSim [data-go=check]'), document.querySelector('#rackBasic').hidden, document.querySelector('#rack [data-rtab=sim]').textContent.trim()]")
+    check('onglet « Simulation mécanique » : le bouton de validation seul', r == [True, True, 'Simulation mécanique'] and pg.locator('#rackSim .shape').count() == 0, r)
     pg.click('#rack [data-rtab="vol"]')
     pg.evaluate(f"()=>{{const E={E}; E.setSel([E.state.parts[0].id, E.state.parts[1].id]);}}"); pg.wait_for_timeout(100)
     r = pg.evaluate("()=>[document.querySelector('#edSel').textContent, document.querySelector('#tGroup').disabled, Math.round(document.querySelector('#tGroup').getBoundingClientRect().height), document.querySelector('#tGroup svg').getBoundingClientRect().width]")
@@ -529,10 +539,10 @@ with sync_playwright() as p:
     pg.evaluate(f"()=>{E}.setSel([])")
 
     # Perçage hachuré, Guide : tuto pas à pas et consignes du TP
-    pg.click('#bNew'); pg.wait_for_timeout(200)
+    pg.evaluate("()=>document.querySelector('#bNew').click()"); pg.wait_for_timeout(200)
     r = pg.evaluate(f"()=>{{const E={E}; const c=E.addPart('cylinder'); c.hole=true; E.setSel([]); const m=E.meshes.get(c.id).mesh.material; return [!!m.defines && 'HATCH' in m.defines, m.transparent]}}")
     check('perçage transparent et hachuré', r == [True, True], r)
-    pg.click('#bNew'); pg.wait_for_timeout(200)
+    pg.evaluate("()=>document.querySelector('#bNew').click()"); pg.wait_for_timeout(200)
     if pg.is_hidden('#demo'): pg.click('#bGuide')
     pg.locator('#demo .gd-tabs .btn', has_text='Tutos').click(); pg.locator('#demo .gd-tuto', has_text='Premiers pas').click(); pg.wait_for_timeout(200)
     pg.evaluate(f"()=>{E}.addPart('box')"); pg.wait_for_timeout(800)
@@ -550,9 +560,9 @@ with sync_playwright() as p:
     pg.evaluate(f"()=>{E}.loadExample('maison')"); pg.wait_for_timeout(500)
     r = pg.evaluate(f"""()=>{{const E={E}; E.setRef('auto'); const b=new (E.camera.position.constructor)(); const B=E.state.parts.length;
       const pb=E.partsBox(), D=Math.max(pb.max.x-pb.min.x, pb.max.y-pb.min.y, pb.max.z-pb.min.z), rb=new (pb.constructor)().setFromObject(E.REF.group);
-      return [E.REF.kind===E.refAuto(D), E.REF.group.visible, [...E.meshes.values()].every(m=>!m.mesh.userData.ref), rb.min.x>pb.max.x, Math.abs(rb.min.z)<1];}}""")
-    pg.wait_for_timeout(100); r.append(pg.evaluate("()=>!document.querySelector('.ref-lab').hidden"))
-    check('repère d’échelle automatique posé à côté des pièces, hors des pièces', all(r), r)
+      return [E.REF.kind===E.refAuto(D), E.REF.group.visible, [...E.meshes.values()].every(m=>!m.mesh.userData.ref), Math.abs(rb.min.z)<1];}}""")
+    pg.wait_for_timeout(100); r.append(pg.evaluate(f"()=>{{const E={E}; const b=new (E.partsBox().constructor)().setFromObject(E.REF.group); return b.min.y>100 && E.REF.group.children.some(o=>o.visible && o.children.length===3)}}"))
+    check('repère d’échelle automatique, loin derrière le plan de travail, avec sa plaque, hors des pièces', all(r), r)
     r = pg.evaluate(f"()=>[{E}.refAuto(60), {E}.refAuto(300), {E}.refAuto(3000), {E}.refAuto(15000), {E}.refAuto(40000)]")
     check('repère choisi selon la taille : pomme, canette, voiture, immeuble, avion', r == ['pomme','canette','voiture','immeuble','avion'], r)
     pg.click('#refBtn'); pg.wait_for_timeout(100); pg.locator('#refMenu button', has_text='Voiture').click(); pg.wait_for_timeout(300)

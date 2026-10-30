@@ -37,10 +37,12 @@ function updateSteps(){
   const go=(k,label,icon,cls,opt={})=>h('button',{class:'btn '+(cls||''),'data-go':k,disabled:opt.off||null,title:opt.title||null,onclick:()=>setWs(k)},
     icon? svgIcon(icon) : null, opt.shortLabel? h('span',{}, h('span',{class:'lfull'},label), h('span',{class:'lshort'},opt.shortLabel)) : h('span',{class:opt.short?'hide-mid':null},label), opt.badge? h('span',{class:'flow-b'},opt.badge) : null);
   host.innerHTML='';
-  if(ws==='model'){
-    host.append(lv(2)? go('check','Valider pour simulation','check','primary',{shortLabel:'Valider', badge: parts.length? (todo? String(todo) : '✓') : null, title:'Contrôler les pièces, poser les repères, puis simuler'})
-                      : go('check','Vérifier pour l’impression','check','primary',{shortLabel:'Vérifier', title:'Contrôler les pièces avant de les imprimer'}));
-  } else {
+  const sim=$('#rackSim'); if(sim){   // en Modéliser, le bouton est dans l'onglet « Simulation mécanique » de la barre de création
+    $('#simTabLbl').textContent= lv(2)? 'Simulation mécanique' : 'Vérifier l’impression';
+    sim.replaceChildren(lv(2)? go('check','Valider pour simulation','check','primary sim-go',{badge: parts.length? (todo? String(todo) : '✓') : null, title:'Contrôler les pièces, poser les repères, puis simuler'})
+                             : go('check','Vérifier pour l’impression','check','primary sim-go',{title:'Contrôler les pièces avant de les imprimer'}),
+      h('span',{class:'sim-note'}, lv(2)? 'Contrôle les pièces et pose leurs repères, puis simule le mouvement ou la déformation.' : 'Contrôle les pièces avant de les imprimer : épaisseur, contact avec le plan, contours.')); }
+  if(ws!=='model'){
     host.append(go('model','Modélisation','back','ghost',{title:'Revenir à la modélisation'}));
     if(ws!=='check' && parts.length) host.append(go('check','Validation','check','ghost',{short:true,title:'Revenir à la validation'}));
     const W=WS.find(w=>w.k===ws);

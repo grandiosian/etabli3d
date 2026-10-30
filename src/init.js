@@ -3,7 +3,7 @@
    Wiring
    ========================================================= */
 hydrateIcons();
-for(const [host,list] of [['#rackBasic',BASIC],['#rackMeca',MECA]]){
+for(const [host,list] of [['#rackBasic',[...BASIC,...MECA]]]){   // roues dentées et crémaillère à la suite des volumes (niveau 3)
   for(const k of list){ const b=h('button',{class:'shape',title:`Ajouter : ${KINDS[k].label}`,'data-min':KIND_LVL[k]>1?String(KIND_LVL[k]):null}, svgIcon(k), KINDS[k].label);
     b.addEventListener('pointerdown',e=>{ if(e.button!==0) return; e.preventDefault(); startPaletteDrag(k,e); });
     b.addEventListener('click',e=>{ if(e.detail===0) addPart(k); });
@@ -11,10 +11,12 @@ for(const [host,list] of [['#rackBasic',BASIC],['#rackMeca',MECA]]){
 }
 initPlanes();
 /* onglets de la barre de création : Volumes / Simulation mécanique */
-function setRackTab(k){ if(k==='meca' && !lv(3)) k='vol'; $$('#rack [data-rtab]').forEach(b=>b.setAttribute('aria-selected', String(b.dataset.rtab===k)));
-  $$('#rack [data-rpane]').forEach(p=>p.hidden= p.dataset.rpane!==k); LAYOUT.rackTab=k; saveLayout(); }
+/* onglets de la barre de création : Volumes / Simulation mécanique ; l'onglet Simulation n'affiche que le bouton
+   « Valider pour simulation » (rendu par updateSteps) et grise le reste (esquisses, barre d'édition) */
+function setRackTab(k){ if(!['vol','sim'].includes(k)) k='vol'; $$('#rack [data-rtab]').forEach(b=>b.setAttribute('aria-selected', String(b.dataset.rtab===k)));
+  $$('#rack [data-rpane]').forEach(p=>p.hidden= p.dataset.rpane!==k); $('#app').classList.toggle('tab-sim', k==='sim'); LAYOUT.rackTab=k; saveLayout(); }
 $$('#rack [data-rtab]').forEach(b=>b.onclick=()=>setRackTab(b.dataset.rtab));
-setRackTab(LAYOUT.rackTab||'vol');
+setRackTab('vol');   // au démarrage : Volumes
 
 /* ---- level */
 function setLevel(n, quiet=false){
@@ -32,7 +34,6 @@ $$('#lvl [data-lvl]').forEach(b=>b.onclick=()=>setLevel(+b.dataset.lvl));
 $('#lvl').addEventListener('keydown',e=>{ if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft') return; e.preventDefault(); const n=clamp(prefs.level+(e.key==='ArrowRight'?1:-1),1,3); setLevel(n); $(`#lvl [data-lvl="${n}"]`).focus(); });
 
 /* ---- outliner */
-$('#bTree').onclick=()=>setTreeOpen(!$('#app').classList.contains('with-tree'));
 $('#treeClose').onclick=()=>setTreeOpen(false);
 $$('#treeMode [data-mode]').forEach(b=>b.onclick=()=>{ tree.mode=b.dataset.mode; renderOutliner(); });
 
@@ -45,12 +46,18 @@ function renderLook(){
   const axs=h('div',{class:'look-sw'}, ...Object.entries(AXCOL_SETS).map(([k,A])=>h('button',{'aria-pressed':String(prefs.axes===k),onclick:()=>{ prefs.axes=k; savePrefs(); renderLook(); rebuildLocators(); buildJointLabels(); }}, h('i',{style:`background:linear-gradient(90deg,${A.x} 0 33%,${A.y} 33% 66%,${A.z} 66%)`}), A.name)));
   m.append(h('div',{}, h('h4',{},'Thème'), seg), h('div',{}, h('h4',{},'Couleur principale'), acc), h('div',{}, h('h4',{},'Plan de travail'), mats), h('div',{}, h('h4',{},'Couleurs des axes X Y Z'), axs),
     h('div',{}, h('h4',{},'Panneaux'), h('div',{class:'seg',style:'margin-bottom:6px'}, ...[['transparent','Transparents'],['leger','Peu transparents'],['opaque','Opaques']].map(([v,l])=>h('button',{class:'btn'+(prefs.glass===v?' on':''),'aria-pressed':String(prefs.glass===v),onclick:()=>{ prefs.glass=v; savePrefs(); applyGlass(); renderLook(); }}, l))), h('button',{class:'btn',style:'width:100%;justify-content:center',onclick:()=>{ resetLayout(); $('#menuLook').hidden=true; }}, svgIcon('reset'),'Remettre les panneaux à leur place')),
+    lv(3)? h('div',{}, h('h4',{},'Arborescence (à gauche)'), h('div',{class:'seg'}, ...[[true,'Affichée'],[false,'Masquée']].map(([v,l])=>{ const on=$('#app').classList.contains('with-tree')===v; return h('button',{class:'btn'+(on?' on':''),'aria-pressed':String(on),onclick:()=>{ setTreeOpen(v); renderLook(); }}, l); }))) : null,
     h('div',{}, h('h4',{},'Barre de navigation (tactile)'), h('div',{class:'seg'}, ...[['auto','Auto'],['show','Affichée'],['hide','Masquée']].map(([v,l])=>h('button',{class:'btn'+(prefs.nav===v?' on':''),'aria-pressed':String(prefs.nav===v),onclick:()=>{ prefs.nav=v; savePrefs(); applyNavBar(); renderLook(); }}, l)))),
     h('p',{class:'jsub',style:'margin:0'},'Ces réglages restent dans ce navigateur.'));
 }
 function afterLook(){ sceneBg(); sync(); skDraw(); }
-$('#bLook').onclick=e=>{ e.stopPropagation(); const m=$('#menuLook'); if(m.hidden) renderLook(); m.hidden=!m.hidden; };
-document.addEventListener('pointerdown',e=>{ if(!e.target.closest('.menu-wrap')) $('#menuLook').hidden=true; });
+$('#bLook').onclick=e=>{ e.stopPropagation(); const m=$('#menuLook'); if(m.hidden) renderLook(); m.hidden=!m.hidden; closeFileMenu(); };
+/* menu Fichier : nouveau, ouvrir, enregistrer, exporter, bibliothèque ; se ferme après un choix */
+function closeFileMenu(){ $('#menuFile').hidden=true; $('#bFile').setAttribute('aria-expanded','false'); }
+$('#bFile').onclick=e=>{ e.stopPropagation(); const m=$('#menuFile'), open=m.hidden; m.hidden=!open; $('#bFile').setAttribute('aria-expanded',String(open)); $('#menuLook').hidden=true; if(open) m.querySelector('button')?.focus(); };
+$$('#menuFile button').forEach(b=>b.addEventListener('click',()=>closeFileMenu()));
+$('#menuFile').addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeFileMenu(); $('#bFile').focus(); } });
+document.addEventListener('pointerdown',e=>{ if(!e.target.closest('.menu-wrap')){ $('#menuLook').hidden=true; closeFileMenu(); } });
 $('#tSolid').onclick=()=>setHole(false); $('#tHole').onclick=()=>setHole(true);
 $('#tGroup').onclick=groupSel; $('#tUngroup').onclick=ungroupSel; $('#tDup').onclick=duplicateSel; $('#tDrop').onclick=dropSel; $('#tDel').onclick=deleteSel;
 $$('#views [data-view], #navBar [data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
@@ -149,7 +156,7 @@ initPanels();
   document.documentElement.dataset.ws='model';
   $$('#lvl [data-lvl]').forEach(b=>b.setAttribute('aria-checked', String(+b.dataset.lvl===prefs.level)));
   if(lv(3) && prefs.tree && !matchMedia('(max-width: 860px)').matches) $('#app').classList.add('with-tree');
-  $('#bTree').classList.toggle('on', $('#app').classList.contains('with-tree'));
+  // (arborescence : réglage dans Apparence)
   let loaded=false;
   try{ const s=localStorage.getItem('etabli3d.autosave'); if(s){ const o=JSON.parse(s); if(o.parts && o.parts.length){ loadProject(o,true); loaded=true; } } }catch(e){}
   if(!loaded){ loadExample('maison'); hist.stack=[hist.stack[hist.stack.length-1]]; hist.idx=0; openGallery(); }

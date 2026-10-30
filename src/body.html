@@ -2,22 +2,23 @@
 <div id="app">
   <header id="top">
     <div class="brand"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M16 3 28 9.5v13L16 29 4 22.5v-13z"/><path d="M4 9.5 16 16l12-6.5M16 16v13"/></svg><span>Établi 3D</span></div>
+    <div class="tb-group tb-hist">
+      <button class="btn icon ghost" id="bUndo" title="Annuler (Ctrl+Z)" aria-label="Annuler"><svg data-i="undo"></svg></button>
+      <button class="btn icon ghost" id="bRedo" title="Rétablir (Ctrl+Y)" aria-label="Rétablir"><svg data-i="redo"></svg></button>
+    </div>
+    <div class="menu-wrap">
+      <button class="btn ghost" id="bFile" aria-haspopup="menu" aria-expanded="false" title="Nouveau, ouvrir, enregistrer, exporter, bibliothèque"><svg data-i="open"></svg><span>Fichier</span><svg data-i="chevDown" class="dd"></svg></button>
+      <div class="menu file" id="menuFile" role="menu" hidden>
+        <button role="menuitem" id="bNew"><svg data-i="new"></svg><span>Nouveau projet</span></button>
+        <button role="menuitem" id="bOpen"><svg data-i="open"></svg><span>Ouvrir un projet…</span><small>.json</small></button>
+        <button role="menuitem" id="bSave"><svg data-i="save"></svg><span>Enregistrer le projet</span><small>.json</small></button>
+        <button role="menuitem" id="bStl"><svg data-i="print"></svg><span>Exporter pour l’impression 3D</span><small>.stl</small></button>
+        <hr>
+        <button role="menuitem" id="bExamples"><svg data-i="book"></svg><span>Bibliothèque : tutos, exercices, exemples</span></button>
+      </div>
+    </div>
     <input id="projName" aria-label="Nom du projet" value="Mon projet">
-    <div class="tb-group">
-      <button class="btn ghost" id="bNew" title="Nouveau projet"><svg data-i="new"></svg><span class="hide-mid">Nouveau</span></button>
-      <button class="btn ghost" id="bExamples" title="Bibliothèque : tutos, exercices et exemples"><svg data-i="book"></svg><span class="hide-narrow">Bibliothèque</span></button>
-      <button class="btn ghost" id="bGuide" aria-pressed="false" title="Guide : tutos pas à pas, fiche de l’exemple, consignes du TP"><svg data-i="guide"></svg><span class="hide-narrow">Guide</span></button>
-      <button class="btn ghost" id="bOpen" title="Ouvrir un projet (.json)"><svg data-i="open"></svg><span class="hide-mid">Ouvrir</span></button>
-      <button class="btn ghost" id="bSave" title="Enregistrer le projet (.json)"><svg data-i="save"></svg><span class="hide-mid">Enregistrer</span></button>
-      <button class="btn" id="bStl" title="Exporter en STL pour l'impression 3D"><svg data-i="print"></svg><span>STL</span></button>
-      <input type="file" id="fileIn" accept=".json,application/json" hidden>
-    </div>
-    <div class="tb-sep hide-narrow"></div>
-    <div class="tb-group">
-      <button class="btn icon ghost" id="bUndo" title="Annuler (Ctrl+Z)"><svg data-i="undo"></svg></button>
-      <button class="btn icon ghost" id="bRedo" title="Rétablir (Ctrl+Y)"><svg data-i="redo"></svg></button>
-    </div>
-    <div class="tb-sep hide-narrow"></div>
+    <input type="file" id="fileIn" accept=".json,application/json" hidden>
     <nav class="flow" id="flow" aria-label="Démarche"></nav>
     <div class="spacer"></div>
     <div class="lvl" id="lvl" role="radiogroup" aria-label="Niveau">
@@ -26,32 +27,34 @@
       <button role="radio" data-lvl="2" title="Intermédiaire : + esquisses cotées et mouvements"><span class="l">Intermédiaire</span><span class="m">Inter.</span><span class="s">2</span></button>
       <button role="radio" data-lvl="3" title="Avancé : toutes les fonctions"><span class="l">Avancé</span><span class="m">Avancé</span><span class="s">3</span></button>
     </div>
-    <button class="btn ghost" id="bTree" data-min="3" aria-pressed="false" title="Afficher l’arborescence des objets"><svg data-i="tree"></svg><span class="hide-mid">Arborescence</span></button>
+    <button class="btn ghost" id="bGuide" aria-pressed="false" title="Guide : tutos pas à pas, fiche de l’exemple, consignes du TP"><svg data-i="guide"></svg><span class="hide-narrow">Guide</span></button>
     <div class="menu-wrap">
-      <button class="btn ghost" id="bLook" aria-haspopup="true" title="Thème et couleurs"><svg data-i="palette"></svg><span class="hide-mid">Apparence</span></button>
+      <button class="btn ghost" id="bLook" aria-haspopup="true" title="Thème et couleurs"><svg data-i="palette"></svg><span class="hide-narrow">Apparence</span></button>
       <div class="menu look" id="menuLook" hidden></div>
     </div>
     <button class="btn" id="mobileInsp"><svg data-i="sliders"></svg>Réglages</button>
-    <button class="btn ghost" id="bHelp" title="Aide et raccourcis"><svg data-i="help"></svg><span class="hide-mid">Aide</span></button>
+    <button class="btn ghost" id="bHelp" title="Aide et raccourcis"><svg data-i="help"></svg><span class="hide-narrow">Aide</span></button>
   </header>
 
 
   <nav id="rack" data-ws="model" aria-label="Créer">
-    <div class="rack-tabs" role="tablist" aria-label="Familles de formes">
-      <button role="tab" class="rack-tab" data-rtab="vol" aria-selected="true" title="Volumes simples"><svg data-i="cube"></svg><span>Volumes</span></button>
-      <button role="tab" class="rack-tab" data-rtab="meca" data-min="3" aria-selected="false" title="Pièces pour la simulation mécanique : roues dentées, crémaillère"><svg data-i="meca"></svg><span>Simulation mécanique</span></button>
+    <div class="rack-tabs" role="tablist" aria-label="Créer">
+      <button role="tab" class="rack-tab" data-rtab="vol" aria-selected="true" title="Volumes simples à poser sur le plan de travail"><svg data-i="cube"></svg><span>Volumes</span></button>
+      <button role="tab" class="rack-tab" data-rtab="sim" aria-selected="false" title="Contrôler les pièces, puis simuler le mouvement ou la déformation"><svg data-i="pivot"></svg><span id="simTabLbl">Simulation mécanique</span></button>
     </div>
-    <div id="rackBasic" class="rack-pane" data-rpane="vol" role="tabpanel" aria-label="Volumes"></div>
-    <div id="rackMeca" class="rack-pane" data-rpane="meca" role="tabpanel" aria-label="Simulation mécanique" hidden></div>
-    <div class="rack-title rack-sk" data-min="2">Esquisse</div>
-    <button class="shape sk-tool" data-min="2" id="bSketch" data-sktool="sketch" title="Nouvelle esquisse : choisir le plan, puis dessiner et coter"><svg data-i="k_sketch"></svg>Esquisse</button>
-    <button class="shape sk-tool" data-min="2" data-sktool="line" title="Esquisse en lignes : choisir le plan, puis tracer"><svg data-i="k_line"></svg>Ligne</button>
-    <button class="shape sk-tool" data-min="2" data-sktool="rect" title="Esquisse en rectangle : choisir le plan, puis tracer"><svg data-i="k_rect"></svg>Rectangle</button>
-    <button class="shape sk-tool" data-min="2" data-sktool="circle" title="Esquisse en cercle : choisir le plan, puis tracer"><svg data-i="k_circle"></svg>Cercle</button>
-    <button class="shape sk-tool" data-min="2" data-sktool="bezier" title="Esquisse en courbe de Bézier : choisir le plan, puis tracer point par point"><svg data-i="k_bez"></svg>Bézier</button>
-    <button class="rackmin-btn" id="rackMin" title="Réduire la barre des formes" aria-label="Réduire la barre des formes"><svg data-i="chevUp"></svg></button>
+    <div class="rack-row">
+      <div id="rackBasic" class="rack-pane" data-rpane="vol" role="tabpanel" aria-label="Volumes"></div>
+      <div id="rackSim" class="rack-pane" data-rpane="sim" role="tabpanel" aria-label="Simulation" hidden></div>
+      <div class="rack-title rack-sk" data-min="2">Esquisse</div>
+      <button class="shape sk-tool" data-min="2" id="bSketch" data-sktool="sketch" title="Nouvelle esquisse : choisir le plan, puis dessiner et coter"><svg data-i="k_sketch"></svg>Esquisse</button>
+      <button class="shape sk-tool" data-min="2" data-sktool="line" title="Esquisse en lignes : choisir le plan, puis tracer"><svg data-i="k_line"></svg>Ligne</button>
+      <button class="shape sk-tool" data-min="2" data-sktool="rect" title="Esquisse en rectangle : choisir le plan, puis tracer"><svg data-i="k_rect"></svg>Rectangle</button>
+      <button class="shape sk-tool" data-min="2" data-sktool="circle" title="Esquisse en cercle : choisir le plan, puis tracer"><svg data-i="k_circle"></svg>Cercle</button>
+      <button class="shape sk-tool" data-min="2" data-sktool="bezier" title="Esquisse en courbe de Bézier : choisir le plan, puis tracer point par point"><svg data-i="k_bez"></svg>Bézier</button>
+      <button class="rackmin-btn" id="rackMin" title="Réduire la barre des formes" aria-label="Réduire la barre des formes"><svg data-i="chevUp"></svg></button>
+    </div>
   </nav>
-  <nav id="toolbar" data-ws="model" aria-label="Édition de la sélection">
+  <nav id="toolbar" data-ws="model" aria-label="Édition de la sélection"><div class="ed-wrap"><div class="ed-shape">
     <div class="ed-head"><b>Édition</b><small id="edSel">Rien de choisi</small></div>
     <div id="tools" data-ws="model" role="toolbar" aria-label="Outils d’édition">
       <div class="ed-grp"><div class="ed-btns">
@@ -68,6 +71,7 @@
         <button class="btn tool danger" id="tDel" title="Supprimer (Suppr)"><svg data-i="trash"></svg><span>Supprimer</span></button>
       </div><small>Pièce</small></div>
     </div>
+  </div></div>
   </nav>
 
   <aside id="outliner" data-ws="model check mech" aria-label="Arborescence">

@@ -40,6 +40,7 @@ function matTexture(){
   for(let i=10;i<MAT;i+=10){ const v=i-MAT/2; g.textAlign='center'; g.fillText(String(v), i*s, N-12); g.textAlign='left'; g.fillText(String(-v), 8, i*s+8); }
   g.strokeStyle=ink(.9); g.lineWidth=5; g.strokeRect(2,2,N-4,N-4);
   g.font='700 30px "Saira Semi Condensed",sans-serif'; g.fillStyle=ink(.55); g.textAlign='right'; g.fillText('mm', N-14, 36);
+  g.font='700 84px "Saira Semi Condensed",sans-serif'; g.fillStyle=ink(.3); g.textAlign='center'; if('letterSpacing' in g) g.letterSpacing='18px'; g.fillText('PLAN DE TRAVAIL', N/2, N-58); if('letterSpacing' in g) g.letterSpacing='0px';
   const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=8; return t;
 }
 const mat=new THREE.Mesh(new THREE.PlaneGeometry(MAT,MAT), new THREE.MeshStandardMaterial({map:matTexture(), roughness:.95, metalness:0}));
