@@ -8,7 +8,11 @@ renderer.setPixelRatio(Math.min(2, window.devicePixelRatio||1));
 renderer.domElement.className='gl';
 stage.prepend(renderer.domElement);
 const scene=new THREE.Scene();
-const camera=new THREE.PerspectiveCamera(38,1,0.5,20000);
+const camP=new THREE.PerspectiveCamera(38,1,0.5,20000);
+/* vue orthographique : même position et même cadrage que la perspective à la distance de la cible
+   (demi-hauteur = distance × tan(fov/2)), mise à jour chaque image par updOrtho() ; fov gardé pour les calculs de cadrage */
+const camO=new THREE.OrthographicCamera(-1,1,1,-1,-20000,40000); camO.fov=camP.fov; camO.aspect=1;
+let camera=camP;
 camera.up.set(0,0,1); camera.position.set(170,-240,180);
 const orbit=new OrbitControls(camera, renderer.domElement);
 orbit.target.set(0,0,10); orbit.enableDamping=true; orbit.dampingFactor=0.14;
@@ -58,7 +62,17 @@ new MutationObserver(()=>{ sceneBg(); sync(); }).observe(document.documentElemen
    STG is the visible stage size; toStage() projects a world point to stage coordinates. */
 const OVR={l:0,r:0,t:0}, STG={w:0,h:0}; const _pv=new THREE.Vector3();
 function resize(){ const r=stage.getBoundingClientRect(); if(r.width<2||r.height<2) return; STG.w=r.width; STG.h=r.height; const W=r.width+OVR.l+OVR.r, H=r.height+OVR.t;
-  renderer.setSize(W,H,false); camera.aspect=W/H; camera.updateProjectionMatrix(); applyViewOffset(); }
+  renderer.setSize(W,H,false); camP.aspect=camO.aspect=W/H; camP.updateProjectionMatrix(); updOrtho(); applyViewOffset(); }
+function updOrtho(){ if(camera!==camO) return; const d=Math.max(1, camO.position.distanceTo(orbit.target)), hh=d*Math.tan(camO.fov*DEG/2);
+  if(camO.top!==hh || camO.right!==hh*camO.aspect){ camO.top=hh; camO.bottom=-hh; camO.right=hh*camO.aspect; camO.left=-hh*camO.aspect; camO.updateProjectionMatrix(); } }
+function setOrtho(on, quiet=false){
+  const from=camera, to= on? camO : camP; if(from===to) return;
+  to.position.copy(from.position); to.quaternion.copy(from.quaternion); to.up.copy(from.up);
+  if(from===camO && camO.zoom!==1){ const off=to.position.clone().sub(orbit.target).divideScalar(camO.zoom); to.position.copy(orbit.target).add(off); camO.zoom=1; camO.updateProjectionMatrix(); }   // le zoom ortho devient une distance
+  camera=to; orbit.object=to; tc.camera=to; prefs.ortho=on; savePrefs(); resize(); orbit.update();
+  const b=$('#orthoBtn'); if(b){ b.setAttribute('aria-pressed',String(on)); b.replaceChildren(svgIcon(on?'ortho':'persp')); b.title= on? 'Vue orthographique (sans perspective) : cliquer pour la perspective' : 'Vue en perspective : cliquer pour la vue orthographique (sans perspective)'; }
+  if(!quiet) toast(on? 'Vue orthographique : les arêtes parallèles restent parallèles.' : 'Vue en perspective.');
+}
 function toStage(v){ _pv.copy(v).project(camera); const W=STG.w+OVR.l+OVR.r, H=STG.h+OVR.t;
   return {x:(_pv.x+1)/2*W-OVR.l, y:(1-_pv.y)/2*H-OVR.t, vis:_pv.z<1 && _pv.z>-1 && Math.abs(_pv.x)<1.2 && Math.abs(_pv.y)<1.2}; }
 /* stage coordinates of a pointer event */
@@ -318,7 +332,7 @@ function showGuides(segs){
 function smartSnap(D, dx, dy){
   const B=D.box0; if(!B || B.isEmpty() || !D.others.length) return {dx,dy};
   const c=B.getCenter(new THREE.Vector3()).add(new THREE.Vector3(dx,dy,0));
-  const wpp=2*camera.position.distanceTo(c)*Math.tan(camera.fov*DEG/2)/Math.max(1,renderer.domElement.clientHeight);   // mm per pixel there
+  const wpp=2*camera.position.distanceTo(c)*Math.tan(camera.fov*DEG/2)/(camera.zoom||1)/Math.max(1,renderer.domElement.clientHeight);   // mm per pixel there
   const thr=9*wpp, segs=[], z=Math.max(0.05, B.min.z+0.05);
   const axis=(k, d)=>{   // k: 'x' | 'y'
     const lo=B.min[k]+d, hi=B.max[k]+d, refs=[lo,(lo+hi)/2,hi]; let best=null;
@@ -336,7 +350,7 @@ renderer.domElement.addEventListener('pointerdown', ev=>beginPointer(ev), true);
 /* also used when a drag starts on the hover buttons in the middle of a part (see hover.js) */
 function beginPointer(ev){
   if(ev.button!==0){ down=null; return; }
-  if(ev.altKey || NAV.space){ down=null; orbit.enabled=true; return; }   // Alt / Espace + clic gauche : la vue tourne ou se décale (OrbitControls)
+  if(ev.altKey || NAV.space || NAV.lock){ down=null; if(NAV.lock!=='zoom') orbit.enabled=true; return; }   // Alt / Espace + clic gauche : la vue tourne ou se décale (OrbitControls)
   const onGizmo = tc.axis!==null && tc.object;
   down={x:ev.clientX,y:ev.clientY,gizmo:onGizmo,drag:null,moved:false};
   if(onGizmo || pickMode) return;

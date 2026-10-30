@@ -91,9 +91,28 @@ function applyLmb(){
   const b=$('#lmbBtn'); if(b){ const e=LMB.find(x=>x[0]===L); b.innerHTML=''; b.append(svgIcon('mouse'), h('span',{class:'lab'}, e[1].replace(/ \(.*\)/,''))); b.title=`Clic gauche dans le vide : ${e[1].toLowerCase()}. ${e[3]} (clic droit dans la vue pour changer)`; }
 }
 /* navigation au clavier + souris : Alt + clic gauche = tourner la vue, Espace + clic gauche = décaler la vue (partout dans la vue 3D) */
-const NAV={space:false, alt:false};
-function navKeys(){ const M=THREE.MOUSE; if(NAV.space) orbit.mouseButtons={...orbit.mouseButtons, LEFT:M.PAN}; else if(NAV.alt) orbit.mouseButtons={...orbit.mouseButtons, LEFT:M.ROTATE}; else applyLmb();
-  renderer.domElement.style.cursor= NAV.space||NAV.alt? 'grab' : ''; }
+/* barre de navigation (tactile) : NAV.lock = 'orbit' | 'pan' | 'zoom' fixe ce que fait le glisser (doigt ou clic gauche), même sur une pièce */
+const NAV={space:false, alt:false, lock:null};
+function navKeys(){ const M=THREE.MOUSE, T=THREE.TOUCH;
+  if(NAV.space) orbit.mouseButtons={...orbit.mouseButtons, LEFT:M.PAN}; else if(NAV.alt) orbit.mouseButtons={...orbit.mouseButtons, LEFT:M.ROTATE};
+  else if(NAV.lock==='orbit'||NAV.lock==='pan'){ applyLmb(); orbit.mouseButtons={...orbit.mouseButtons, LEFT: NAV.lock==='pan'? M.PAN : M.ROTATE}; }
+  else applyLmb();
+  orbit.touches={ONE: NAV.lock==='pan'? T.PAN : T.ROTATE, TWO:T.DOLLY_PAN};
+  renderer.domElement.style.cursor= NAV.space||NAV.alt||NAV.lock==='orbit'||NAV.lock==='pan'? 'grab' : NAV.lock==='zoom'? 'zoom-in' : ''; }
+function setNavLock(k){ NAV.lock= NAV.lock===k? null : k; $$('#navBar [data-nav]').forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.nav===NAV.lock))); navKeys(); }
+/* rapprocher (f < 1) ou éloigner (f > 1) la caméra de la cible ; en orthographique la largeur vue suit la distance */
+function zoomBy(f){ const off=camera.position.clone().sub(orbit.target); const d=clamp(off.length()*f, 5, 15000); camera.position.copy(orbit.target).add(off.setLength(d)); orbit.update(); }
+function navShown(){ return prefs.nav==='show' || (prefs.nav!=='hide' && (matchMedia('(any-pointer: coarse)').matches || navigator.maxTouchPoints>0)); }
+function applyNavBar(){ $('#navBar')?.classList.toggle('nav-off', !navShown()); if(!navShown() && NAV.lock) setNavLock(NAV.lock); }
+(()=>{ const cv=renderer.domElement; let zd=null;
+  cv.addEventListener('pointerdown', ev=>{ if(NAV.lock!=='zoom' || (ev.pointerType==='mouse' && ev.button!==0) || !ev.isPrimary) return;
+    orbit.enabled=false; zd={y:ev.clientY, off:camera.position.clone().sub(orbit.target)}; cv.setPointerCapture(ev.pointerId); }, true);
+  cv.addEventListener('pointermove', ev=>{ if(!zd) return; const f=Math.exp((ev.clientY-zd.y)*0.006); const d=clamp(zd.off.length()*f, 5, 15000); camera.position.copy(orbit.target).add(zd.off.clone().setLength(d)); });
+  const end=()=>{ if(zd){ zd=null; orbit.enabled=true; } }; cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+  $$('#navBar [data-nav]').forEach(b=>b.onclick=()=>setNavLock(b.dataset.nav));
+  $$('#navBar [data-zoom]').forEach(b=>b.onclick=()=>zoomBy(+b.dataset.zoom));
+  $('#orthoBtn').onclick=()=>setOrtho(camera!==camO);
+})();
 function navTarget(e){ return $('#sk').hidden && $('#gallery').hidden && $('#help').hidden && !e.target.closest?.('input,textarea,select,[contenteditable]'); }
 document.addEventListener('keydown', e=>{ if(!navTarget(e)) return;
   if(e.key===' '){ e.preventDefault(); if(!NAV.space){ NAV.space=true; navKeys(); } }

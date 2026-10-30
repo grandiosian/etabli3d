@@ -385,7 +385,8 @@ with sync_playwright() as p:
     check('poignée du haut : hauteur', pg.evaluate(f"()=>{E}.state.parts[0].params.h") > 20)
     x, y = ctr('.tg-rot[data-k="rz"]'); pg.mouse.move(x, y); pg.wait_for_timeout(150)
     hv = pg.evaluate(f"()=>[{E}.TG.ring.visible, [...document.querySelectorAll('.tg-mark')].filter(e=>!e.hidden).length, {E}.TG.ring.children.filter(c=>c.isMesh && c.material.color.getHex()===0xffffff).length, {E}.TG.ring.children.filter(c=>c.isMesh && c.material.color.getHex()===0).length]")
-    check('survol d’une flèche de rotation : rapporteur gradué visible (crans noirs liserés de blanc)', hv[0] and hv[1] >= 4 and hv[2] >= 1 and hv[3] >= 1, hv)
+    hv.append(pg.evaluate(f"()=>{E}.TG.hiL.filter(g=>g.visible).length"))
+    check('survol d’une flèche de rotation : crans noirs, liseré blanc seulement sur le cran survolé', hv[0] and hv[1] >= 4 and hv[2] == 0 and hv[3] >= 1 and hv[4] <= 1, hv)
     pg.mouse.down(); pg.mouse.move(x-220, y-160, steps=12); pg.wait_for_timeout(100)
     hid = pg.evaluate("()=>[[...document.querySelectorAll('#tg .tg-corner,#tg .tg-edge,#tg .tg-lift')].every(e=>e.hidden), ['rx','ry'].every(k=>document.querySelector(`.tg-rot[data-k=${k}]`).hidden), !document.querySelector('.tg-rot[data-k=rz]').hidden]")
     check('pendant une rotation, les autres poignées sont masquées', hid == [True, True, True], hid)
@@ -455,6 +456,28 @@ with sync_playwright() as p:
     moved = lambda a, b, s: sum((a[i]-b[i])**2 for i in s) > 1
     check('Alt + glisser : la vue tourne ; Espace + glisser : la vue se décale ; la pièce ne bouge pas',
           moved(c0, c1, range(3)) and not moved(c0, c1, range(3, 6)) and moved(c1, c2, range(3, 6)) and pg.evaluate(f"()=>{E}.state.parts[0].pos.slice()") == g1, [c0, c1, c2])
+    # Perspective / orthographique (bouton sur le cube de vue)
+    s0 = pg.evaluate(f"()=>{{const E={E}, t=E.orbit_().target, v=t.clone().project(E.cam()); return [v.x, v.y]}}")
+    pg.click('#orthoBtn'); pg.wait_for_timeout(200)
+    r = pg.evaluate(f"()=>{{const E={E}, c=E.cam(), t=E.orbit_().target, v=t.clone().project(c); return [c.isOrthographicCamera, E.orbit_().object===c, Math.abs(v.x-({s0[0]}))+Math.abs(v.y-({s0[1]})), document.querySelector('#orthoBtn').getAttribute('aria-pressed')]}}")
+    pg.mouse.move(st['x']+st['width']/2, st['y']+st['height']/2); pg.mouse.wheel(0, -400); pg.wait_for_timeout(300)
+    d0 = pg.evaluate(f"()=>{E}.cam().position.distanceTo({E}.orbit_().target)/{E}.cam().zoom")
+    pg.click('#orthoBtn'); pg.wait_for_timeout(200)
+    d1 = pg.evaluate(f"()=>[{E}.cam().isPerspectiveCamera, {E}.cam().position.distanceTo({E}.orbit_().target)]")
+    check('bouton perspective / orthographique (même cadrage, le zoom est gardé)', r[0] and r[1] and r[2] < 0.02 and r[3] == 'true' and d1[0] and abs(d1[1]-d0) < 1, [r, d0, d1])
+    # Barre de navigation tactile : modes Tourner / Décaler / Zoom, + et −
+    pg.evaluate(f"()=>{{const E={E}; E.prefs.nav='show'; E.applyNavBar();}}"); pg.wait_for_timeout(100)
+    g1 = pg.evaluate(f"()=>{E}.state.parts[0].pos.slice()")
+    def cam(): return pg.evaluate(f"()=>[...{E}.cam().position.toArray(), ...{E}.orbit_().target.toArray(), {E}.cam().position.distanceTo({E}.orbit_().target)]")
+    pg.click('#navBar [data-nav="orbit"]'); c0 = cam()
+    pa = [st['x']+st['width']*0.45, st['y']+st['height']*0.6]
+    pg.mouse.move(pa[0], pa[1]); pg.mouse.down(); pg.mouse.move(pa[0]+100, pa[1], steps=8); pg.mouse.up(); pg.wait_for_timeout(200); c1 = cam()
+    pg.click('#navBar [data-nav="pan"]'); pg.mouse.move(pa[0], pa[1]); pg.mouse.down(); pg.mouse.move(pa[0]+80, pa[1]+40, steps=8); pg.mouse.up(); pg.wait_for_timeout(200); c2 = cam()
+    pg.click('#navBar [data-nav="zoom"]'); pg.mouse.move(pa[0], pa[1]); pg.mouse.down(); pg.mouse.move(pa[0], pa[1]-120, steps=8); pg.mouse.up(); pg.wait_for_timeout(200); c3 = cam()
+    pg.click('#navBar [data-nav="zoom"]'); pg.click('#navBar [data-zoom="1.25"]'); pg.wait_for_timeout(100); c4 = cam()
+    ok = moved(c0, c1, range(3)) and not moved(c0, c1, range(3, 6)) and moved(c1, c2, range(3, 6)) and c3[6] < c2[6]*0.8 and abs(c4[6]/c3[6]-1.25) < 0.02 \
+         and pg.evaluate(f"()=>{E}.state.parts[0].pos.slice()") == g1 and pg.evaluate(f"()=>{E}.NAV.lock") is None and pg.is_visible('#navBar')
+    check('barre de navigation : tourner, décaler, zoomer (glisser), reculer (bouton), sans bouger la pièce', ok, [c0, c1, c2, c3, c4])
     pg.mouse.click(st['x']+120, st['y']+st['height']-120, button='right'); pg.wait_for_timeout(200)
     vis = pg.is_visible('#ctxMenu')
     pg.locator('#ctxMenu button', has_text='panoramique').click(); pg.wait_for_timeout(100)

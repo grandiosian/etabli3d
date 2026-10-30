@@ -45,6 +45,7 @@ function renderLook(){
   const axs=h('div',{class:'look-sw'}, ...Object.entries(AXCOL_SETS).map(([k,A])=>h('button',{'aria-pressed':String(prefs.axes===k),onclick:()=>{ prefs.axes=k; savePrefs(); renderLook(); rebuildLocators(); buildJointLabels(); }}, h('i',{style:`background:linear-gradient(90deg,${A.x} 0 33%,${A.y} 33% 66%,${A.z} 66%)`}), A.name)));
   m.append(h('div',{}, h('h4',{},'Thème'), seg), h('div',{}, h('h4',{},'Couleur principale'), acc), h('div',{}, h('h4',{},'Plan de travail'), mats), h('div',{}, h('h4',{},'Couleurs des axes X Y Z'), axs),
     h('div',{}, h('h4',{},'Panneaux'), h('div',{class:'seg',style:'margin-bottom:6px'}, ...[['transparent','Transparents'],['leger','Peu transparents'],['opaque','Opaques']].map(([v,l])=>h('button',{class:'btn'+(prefs.glass===v?' on':''),'aria-pressed':String(prefs.glass===v),onclick:()=>{ prefs.glass=v; savePrefs(); applyGlass(); renderLook(); }}, l))), h('button',{class:'btn',style:'width:100%;justify-content:center',onclick:()=>{ resetLayout(); $('#menuLook').hidden=true; }}, svgIcon('reset'),'Remettre les panneaux à leur place')),
+    h('div',{}, h('h4',{},'Barre de navigation (tactile)'), h('div',{class:'seg'}, ...[['auto','Auto'],['show','Affichée'],['hide','Masquée']].map(([v,l])=>h('button',{class:'btn'+(prefs.nav===v?' on':''),'aria-pressed':String(prefs.nav===v),onclick:()=>{ prefs.nav=v; savePrefs(); applyNavBar(); renderLook(); }}, l)))),
     h('p',{class:'jsub',style:'margin:0'},'Ces réglages restent dans ce navigateur.'));
 }
 function afterLook(){ sceneBg(); sync(); skDraw(); }
@@ -52,7 +53,9 @@ $('#bLook').onclick=e=>{ e.stopPropagation(); const m=$('#menuLook'); if(m.hidde
 document.addEventListener('pointerdown',e=>{ if(!e.target.closest('.menu-wrap')) $('#menuLook').hidden=true; });
 $('#tSolid').onclick=()=>setHole(false); $('#tHole').onclick=()=>setHole(true);
 $('#tGroup').onclick=groupSel; $('#tUngroup').onclick=ungroupSel; $('#tDup').onclick=duplicateSel; $('#tDrop').onclick=dropSel; $('#tDel').onclick=deleteSel;
-$$('#views [data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
+$$('#views [data-view], #navBar [data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
+if(prefs.ortho) setOrtho(true, true);
+applyNavBar(); matchMedia('(any-pointer: coarse)').addEventListener?.('change', applyNavBar);
 $('#snapSel').onchange=applySnap;
 $('#sPlay').onclick=simToggle; $('#sReset').onclick=()=>simReset(false);
 $$('#stTools [data-st]').forEach(b=>b.onclick=()=>stSetTool(b.dataset.st));
@@ -156,7 +159,7 @@ function loop(now){
   if(ws==='struct') stAnimTick(now);
   if(ws==='check') locTestTick(now);
   if(!$('#sk').hidden) return;
-  if(!(ws==='struct' && !ST.mode3d)){ stepCam(now); orbit.update(); hoverTick(); renderer.render(scene,camera); vcTick(); }
+  if(!(ws==='struct' && !ST.mode3d)){ stepCam(now); orbit.update(); updOrtho(); hoverTick(); renderer.render(scene,camera); vcTick(); }
   // overlays projected with this frame's camera
   if(ws==='mech') positionJointLabels();
   tgTick(); ppTick();
@@ -164,4 +167,4 @@ function loop(now){
   updateBubbleLink();
 }
 requestAnimationFrame(loop);
-window.__etabli={state, pivot, TG, guides, enterGroupEdit, finishGroupEdit, pickAll, setLmb, openCtxMenu, HOV, groupSel, prefs, orbit_:()=>orbit, SAMPLES, LAYOUT:()=>LAYOUT, resetLayout, togglePanel, CHK, startLocTest, stopLocTest, openStructBubble, openMechBubble, closeBubble, BUB, stAnimPlay, locEdit, locFrame, LOCV, applyStruct3DK, camera, orbit, structGroup, struct3DHit, renderer, ampFactor, structBox, stDraw, arrowHits:()=>stArrowHits, setWs, ws:()=>ws, validateAll, validatePart, vState, mechReady, setJointLoc, ST, SD, computeStruct, solveTruss, buildMesh, solvePlane, beamTheory, makeProxy, getProxyGeo, locGroup, loadExample, openGallery, addPart, groupSel, openSketch, closeSketch, SK, skSolve, tgSnapAngle, setRackTab, GUIDE, startTuto, openPlanePicker, closePlanePicker, choosePlane, PP, planeRot, bzSetType, bzSetInterp, sim, simToggle, simReset, exportStl, stlBinary, zipStore, meshes, selection:()=>selection, setSel:(ids)=>{selection=ids; sync(); renderInspector();}, setTab, openJointForm, saveJoint, jf:()=>jf, skProfiles, getGeometry};
+window.__etabli={state, pivot, TG, guides, enterGroupEdit, finishGroupEdit, pickAll, setLmb, openCtxMenu, HOV, groupSel, prefs, orbit_:()=>orbit, SAMPLES, LAYOUT:()=>LAYOUT, resetLayout, togglePanel, CHK, startLocTest, stopLocTest, openStructBubble, openMechBubble, closeBubble, BUB, stAnimPlay, locEdit, locFrame, LOCV, applyStruct3DK, camera, orbit, structGroup, struct3DHit, renderer, ampFactor, structBox, stDraw, arrowHits:()=>stArrowHits, setWs, ws:()=>ws, validateAll, validatePart, vState, mechReady, setJointLoc, ST, SD, computeStruct, solveTruss, buildMesh, solvePlane, beamTheory, makeProxy, getProxyGeo, locGroup, loadExample, openGallery, addPart, groupSel, openSketch, closeSketch, SK, skSolve, cam:()=>camera, setOrtho, NAV, setNavLock, zoomBy, applyNavBar, tgSnapAngle, setRackTab, GUIDE, startTuto, openPlanePicker, closePlanePicker, choosePlane, PP, planeRot, bzSetType, bzSetInterp, sim, simToggle, simReset, exportStl, stlBinary, zipStore, meshes, selection:()=>selection, setSel:(ids)=>{selection=ids; sync(); renderInspector();}, setTab, openJointForm, saveJoint, jf:()=>jf, skProfiles, getGeometry};

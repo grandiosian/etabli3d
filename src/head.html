@@ -124,7 +124,16 @@ button{cursor:pointer}
 .vc-b{position:absolute;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--ink);display:grid;place-items:center;padding:0;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.15)}
 .vc-b svg{width:17px;height:17px} .vc-b .lab{display:none}
 .vc-b:hover{border-color:var(--accent);color:var(--accent)}
-.vc-tl{left:0;top:0} .vc-tr{right:0;top:0} .vc-bl{left:0;bottom:0} .vc-br{right:0;bottom:0}
+.vc-tl{left:0;top:0} .vc-tr{right:0;top:0} .vc-bl{left:0;bottom:0} .vc-br{right:0;bottom:0} .vc-tm{left:60px;top:-8px}
+.vc-b[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+/* barre de navigation (tactile) : un mode verrouille ce que fait le glisser ; + / − / tout voir */
+#navBar{left:10px;bottom:52px;align-items:center;padding:4px}
+html[data-ws="mech"] #navBar,html[data-ws="check"] #navBar{bottom:10px}
+#navBar.nav-off{display:none!important}
+#navBar .seg .btn{padding:6px 9px;gap:5px;font-size:12.5px}
+#navBar .btn svg{width:20px;height:20px}
+#navBar .btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+@media (pointer: coarse){ #navBar .btn{min-height:40px;min-width:40px} }
 #snapBox{left:10px;bottom:10px;align-items:center;padding:4px 8px;font-size:12px}
 #snapBox select{border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:3px 4px}
 #simbar{left:50%;transform:translateX(-50%);bottom:10px;align-items:center;padding:5px 6px}

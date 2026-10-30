@@ -84,7 +84,18 @@
         <button class="vc-b vc-tl" data-view="iso" title="Vue de départ (perspective)" aria-label="Vue de départ"><svg data-i="home"></svg></button>
         <button class="vc-b vc-tr" data-view="fit" title="Tout voir (F)" aria-label="Tout voir"><svg data-i="fit"></svg></button>
         <button class="vc-b vc-bl" data-view="sel" title="Zoomer sur la sélection" aria-label="Zoomer sur la sélection"><svg data-i="target"></svg></button>
+        <button class="vc-b vc-tm" id="orthoBtn" aria-pressed="false" aria-label="Perspective ou orthographique" title="Vue en perspective : cliquer pour la vue orthographique (sans perspective)"><svg data-i="persp"></svg></button>
       </div>
+    </div>
+    <div class="float" id="navBar" data-ws="model check mech" role="toolbar" aria-label="Navigation dans la vue">
+      <div class="seg nav-modes">
+        <button class="btn" data-nav="orbit" aria-pressed="false" title="Tourner : glisser avec un doigt (ou le clic gauche) fait tourner la vue"><svg data-i="orbit"></svg><span>Tourner</span></button>
+        <button class="btn" data-nav="pan" aria-pressed="false" title="Décaler : glisser avec un doigt (ou le clic gauche) décale la vue"><svg data-i="hand"></svg><span>Décaler</span></button>
+        <button class="btn" data-nav="zoom" aria-pressed="false" title="Zoomer : glisser vers le haut pour approcher, vers le bas pour reculer"><svg data-i="zoom"></svg><span>Zoom</span></button>
+      </div>
+      <button class="btn icon" data-zoom="0.8" title="Approcher" aria-label="Approcher"><svg data-i="zin"></svg></button>
+      <button class="btn icon" data-zoom="1.25" title="Reculer" aria-label="Reculer"><svg data-i="zout"></svg></button>
+      <button class="btn icon" data-view="fit" title="Tout voir" aria-label="Tout voir"><svg data-i="fit"></svg></button>
     </div>
     <div class="float" id="snapBox" data-ws="model">
       <label for="snapSel">Grille</label>

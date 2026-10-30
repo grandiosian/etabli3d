@@ -42,21 +42,20 @@ function tgBuild(){
   // the protractor shown while turning
   const ring=new THREE.Mesh(new THREE.RingGeometry(0.82,1,96), new THREE.MeshBasicMaterial({color:0x3d8bd0, transparent:true, opacity:.28, side:THREE.DoubleSide, depthTest:false}));
   // graduations sombres par-dessus : petites tous les 5°, moyennes tous les 15°, grandes tous les 45° (quadrilatères fins, plus épais quand ils sont grands)
-  // noires avec un liseré blanc (dessous, plus large) pour se voir sur toutes les couleurs
+  // crans noirs ; seul le cran sous le pointeur (ou attrapé) reçoit un liseré blanc (TG.hi)
   const tick=(lvl, a, grow)=>{ const r0=[0.88,0.78,0.66][lvl]-grow, r1=1.02+grow, w=[0.005,0.009,0.016][lvl]+grow; const c=Math.cos(a), s=Math.sin(a), px=-s*w, py=c*w;
     const A=[c*r0+px,s*r0+py], B=[c*r0-px,s*r0-py], C=[c*r1-px,s*r1-py], D=[c*r1+px,s*r1+py]; return [...A,0, ...B,0, ...C,0, ...A,0, ...C,0, ...D,0]; };
   const lvlOf=i=> i%9===0? 2 : i%3===0? 1 : 0;
   const geo=arr=>{ const g=new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(arr,3)); return g; };
   const mat=(c,o)=>new THREE.MeshBasicMaterial({color:c, transparent:true, opacity:o, side:THREE.DoubleSide, depthTest:false});
   const all=g=>{ const t=[]; for(let i=0;i<72;i++) t.push(...tick(lvlOf(i), i/72*Math.PI*2, g)); return t; };
-  const halo=new THREE.Mesh(geo(all(0.008)), mat(0xffffff,.95)); halo.renderOrder=22;
   const ticks=new THREE.Mesh(geo(all(0)), mat(0x000000,1)); ticks.renderOrder=23;
   // graduation sous le pointeur (ou attrapée) : liseré plus épais
-  TG.hi=new THREE.Group(); TG.hiL=[0,1,2].map(l=>{ const g=new THREE.Group(); const w=new THREE.Mesh(geo(tick(l,0,0.03)), mat(0xffffff,1)); w.renderOrder=24; const k=new THREE.Mesh(geo(tick(l,0,0.004)), mat(0x000000,1)); k.renderOrder=25; g.add(w,k); g.visible=false; TG.hi.add(g); return g; });
+  TG.hi=new THREE.Group(); TG.hiL=[0,1,2].map(l=>{ const g=new THREE.Group(); const w=new THREE.Mesh(geo(tick(l,0,0.02)), mat(0xffffff,1)); w.renderOrder=24; const k=new THREE.Mesh(geo(tick(l,0,0.004)), mat(0x000000,1)); k.renderOrder=25; g.add(w,k); g.visible=false; TG.hi.add(g); return g; });
   const needle=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(1.05,0,0)]), new THREE.LineBasicMaterial({color:0xd64035, depthTest:false}));
   needle.renderOrder=26; ring.renderOrder=21;
   window.addEventListener('pointermove', e=>{ TG.ptr={clientX:e.clientX, clientY:e.clientY}; }, {passive:true});
-  TG.ring=new THREE.Group(); TG.ring.add(ring, halo, ticks, needle, TG.hi); TG.needle=needle; TG.ring.visible=false; TG.ring.renderOrder=20; scene.add(TG.ring);
+  TG.ring=new THREE.Group(); TG.ring.add(ring, ticks, needle, TG.hi); TG.needle=needle; TG.ring.visible=false; TG.ring.renderOrder=20; scene.add(TG.ring);
   TG.marks=[0,45,90,135,180,-135,-90,-45].map(a=>{ const e=h('span',{class:'tg-mark',hidden:true},`${a}°`); e.dataset.a=a; root.append(e); return e; });
   for(const k of ['x','y','z']){ for(const e of [TG.rot[k], svg.querySelector(`.tg-arch[data-k="r${k}"]`)]){ e.addEventListener('pointerenter',()=>{ TG.hover=k; }); e.addEventListener('pointerleave',()=>{ if(TG.hover===k) TG.hover=null; }); } }
 }
