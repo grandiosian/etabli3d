@@ -400,7 +400,7 @@ function loadExample(k){
   const S=SAMPLES[k]; if(!S) return;
   if(S.level>prefs.level){ setLevel(S.level,true); setTimeout(()=>toast(`Niveau ${LEVELS[S.level-1].name} activé pour cet exemple.`),50); }
   closeBubble(); ST.anim.on=false; ST.k=1; resetAmpRef(); simReset(true); S.build();
-  state.note={key:k, title:S.title, observe:S.note.observe, try:S.note.try};
+  state.note={key:k, title:S.title, observe:S.note.observe, try:S.note.try}; PROG.seen['ex:'+k]=1; saveProg();
   selection=[]; selJoint=null; jf=null;
   S.after?.();
   $('#projName').value=state.name; demoClosed=false; demoOpen=!matchMedia('(max-width: 860px)').matches; GUIDE.src='note'; GUIDE.noteDone=[]; GUIDE.step=0;
@@ -412,18 +412,40 @@ function loadExample(k){
   $('#gallery').hidden=true;
 }
 
-/* ---- gallery */
+/* ---- bibliothèque : tutos, exercices et exemples, rangés par catégorie ; onglets en haut pour filtrer
+   (type, niveau) ; chaque carte montre son avancement (PROG, dans lessons.js). */
+const LIB={tab:'all', lvl:0};
+function libItems(){
+  const out=[];
+  for(const [k,L] of Object.entries(LESSONS)) out.push({type:L.type, k, cat:L.cat, level:L.level, title:L.title, desc:L.desc, icon:L.type==='exo'?'target':'guide', tags:L.type==='exo'?['Exercice']:[`${L.steps.length} étapes`], st:lessonStatus('l',k), go:()=>startLesson(k)});
+  for(const [k,S] of Object.entries(SAMPLES)) out.push({type:'ex', k, cat:S.cat, level:S.level, title:S.title, desc:S.desc, icon:S.icon, tags:S.tags, st:lessonStatus('ex',k), go:()=>loadExample(k)});
+  return out;
+}
+const LIB_TYPE={tuto:'Tuto', exo:'Exercice', ex:'Exemple'};
 function renderGallery(){
   const wrap=$('#galleryBody'); wrap.innerHTML='';
-  for(const [cat,label] of CATS){
+  const all=libItems(), done=all.filter(i=>i.st.s==='done').length;
+  $('#libProg').innerHTML=`<b>${done}</b> / ${all.length} terminés`; $('#libBar').style.width=Math.round(done/all.length*100)+'%';
+  $$('#libTabs [data-t]').forEach(b=>{ const on=b.dataset.t===LIB.tab; b.classList.toggle('on',on); b.setAttribute('aria-selected',String(on)); });
+  $$('#libLvl [data-l]').forEach(b=>{ const on=+b.dataset.l===LIB.lvl; b.classList.toggle('on',on); b.setAttribute('aria-pressed',String(on)); });
+  const keep=i=> (LIB.tab==='all' || (LIB.tab==='lesson'? i.type!=='ex' : i.type===LIB.tab)) && (!LIB.lvl || i.level===LIB.lvl);
+  let n=0;
+  for(const [cat,label] of LCATS){
+    const items=all.filter(i=>i.cat===cat && keep(i)).sort((a,b)=>a.level-b.level || 'tutoexoex'.indexOf(a.type)-'tutoexoex'.indexOf(b.type));
+    if(!items.length) continue; n+=items.length;
     const grid=h('div',{class:'gal-grid'});
-    for(const [k,S] of Object.entries(SAMPLES)) if(S.cat===cat){
-      grid.append(h('button',{class:'gal-card',onclick:()=>loadExample(k)},
-        svgIcon(S.icon),
-        h('div',{class:'gal-txt'}, h('div',{class:'gal-title'}, h('b',{},S.title), h('span',{class:'gal-lvl l'+S.level},LEVELS[S.level-1].name)), h('span',{},S.desc), h('div',{class:'gal-tags'}, S.tags.map(t=>h('span',{class:'gal-tag'},t))))));
-    }
-    wrap.append(h('section',{class:'gal-sec'}, h('h3',{},label), grid));
+    for(const i of items) grid.append(h('button',{class:'gal-card lb-'+i.type+(i.st.s==='done'?' is-done':''),onclick:i.go,'data-k':i.type+':'+i.k},
+      svgIcon(i.icon),
+      h('div',{class:'gal-txt'}, h('div',{class:'gal-title'}, h('b',{},i.title), h('span',{class:'lb-type '+i.type},LIB_TYPE[i.type]), h('span',{class:'gal-lvl l'+i.level},LEVELS[i.level-1].name)),
+        h('span',{},i.desc), h('div',{class:'gal-tags'}, statusChip(i.st), i.tags.map(t=>h('span',{class:'gal-tag'},t))))));
+    const dn=items.filter(i=>i.st.s==='done').length;
+    wrap.append(h('section',{class:'gal-sec'}, h('h3',{},label, h('span',{class:'lb-count'},` · ${dn} / ${items.length}`)), grid));
   }
+  if(!n) wrap.append(h('p',{class:'empty'},'Rien pour ce filtre.'));
+  hydrateIcons(wrap);
 }
-function openGallery(){ renderGallery(); $('#gallery').hidden=false; $('#galleryBody').scrollTop=0; }
+function openGallery(tab){ if(typeof tab==='string') LIB.tab=tab; renderGallery(); $('#gallery').hidden=false; $('#galleryBody').scrollTop=0; }
+$$('#libTabs [data-t]').forEach(b=>b.onclick=()=>{ LIB.tab=b.dataset.t; renderGallery(); });
+$$('#libLvl [data-l]').forEach(b=>b.onclick=()=>{ LIB.lvl=+b.dataset.l; renderGallery(); });
+$('#libReset').onclick=()=>{ if(confirm('Effacer tout l’avancement (tutos, exercices, exemples) dans ce navigateur ?')){ resetProgress(); renderGallery(); renderDemo(); } };
 

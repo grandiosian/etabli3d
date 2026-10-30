@@ -45,6 +45,7 @@ const I = {
   persp:'<path d="M7 7h10l4 12H3z"/><path d="M12 7v12M9.5 7 8 19M14.5 7 16 19M5 13h14"/>',
   ortho:'<rect x="4" y="5" width="16" height="14"/><path d="M12 5v14M8 5v14M16 5v14M4 12h16"/>',
   zoom:'<circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5.5 5.5M8 10.5h5M10.5 8v5"/>',
+  scaleRef:'<path d="M14 7.5c2-1.5 6-1 6 4 0 4-2.5 7-4 7-1 0-1.3-.6-2-.6s-1 .6-2 .6c-1.5 0-4-3-4-7 0-5 4-5.5 6-4z"/><path d="M14 7.5c0-1.5.5-3 2-4"/><path d="M2 21h8M3 21v-2M5 21v-1.5M7 21v-2M9 21v-1.5"/>',
   zin:'<path d="M12 5v14M5 12h14"/>', zout:'<path d="M5 12h14"/>',
   grp:'<rect x="2.5" y="2.5" width="19" height="19" rx="3" stroke-dasharray="3 2.2"/><rect x="5.5" y="9" width="8" height="8" rx="1" fill="currentColor" fill-opacity=".35"/><circle cx="14.5" cy="10.5" r="4.5" fill="currentColor" fill-opacity=".35"/>',
   ungrp:'<rect x="2" y="12" width="7.5" height="7.5" rx="1" fill="currentColor" fill-opacity=".35"/><circle cx="17.5" cy="7.5" r="4.5" fill="currentColor" fill-opacity=".35"/><path d="M9 9.5 12.5 6M12.5 6h-3M12.5 6v3M15 14.5l-3.5 3.5M11.5 18h3M11.5 18v-3"/>',

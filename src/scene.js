@@ -8,10 +8,10 @@ renderer.setPixelRatio(Math.min(2, window.devicePixelRatio||1));
 renderer.domElement.className='gl';
 stage.prepend(renderer.domElement);
 const scene=new THREE.Scene();
-const camP=new THREE.PerspectiveCamera(38,1,0.5,20000);
+const camP=new THREE.PerspectiveCamera(38,1,0.5,150000);   // loin : les repères d'échelle vont jusqu'à l'avion (38 m)
 /* vue orthographique : même position et même cadrage que la perspective à la distance de la cible
    (demi-hauteur = distance × tan(fov/2)), mise à jour chaque image par updOrtho() ; fov gardé pour les calculs de cadrage */
-const camO=new THREE.OrthographicCamera(-1,1,1,-1,-20000,40000); camO.fov=camP.fov; camO.aspect=1;
+const camO=new THREE.OrthographicCamera(-1,1,1,-1,-150000,150000); camO.fov=camP.fov; camO.aspect=1;
 let camera=camP;
 camera.up.set(0,0,1); camera.position.set(170,-240,180);
 const orbit=new OrbitControls(camera, renderer.domElement);
@@ -227,7 +227,7 @@ function sync(){
   if(simActive()) applyPoses();
   updateGizmo(); updateMarkers(); updateToolButtons();
   rebuildLocators(); updateSteps();
-  renderOutliner();
+  renderOutliner(); if(REF_ON) refUpdate();
 }
 function updateGizmo(){
   if(ws!=='model' || !selection.length || !GZ.mode || simLocked() || pickMode || selParts().some(isLocked) || (GZ.mode==='scale' && selParts().some(p=>!SCALE_MAP[p.kind]))){ tc.detach(); return; }
@@ -514,7 +514,7 @@ function updateToolButtons(){
 /* =========================================================
    Camera
    ========================================================= */
-function sceneBox(){ const b=new THREE.Box3(); for(const r of meshes.values()) b.union(new THREE.Box3().setFromObject(r.mesh)); if(b.isEmpty()) b.set(new THREE.Vector3(-40,-40,0), new THREE.Vector3(40,40,20)); return b; }
+function sceneBox(){ const b=new THREE.Box3(); for(const r of meshes.values()) b.union(new THREE.Box3().setFromObject(r.mesh)); if(REF_ON && REF.group.visible && meshes.size) b.union(new THREE.Box3().setFromObject(REF.group));   /* « tout voir » montre aussi le repère d'échelle */ if(b.isEmpty()) b.set(new THREE.Vector3(-40,-40,0), new THREE.Vector3(40,40,20)); return b; }
 function setView(kind){
   const b = kind==='fit'||!selection.length ? sceneBox() : selBox();
   const c=new THREE.Vector3(); b.getCenter(c); const s=new THREE.Vector3(); b.getSize(s);

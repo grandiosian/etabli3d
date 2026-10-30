@@ -5,7 +5,7 @@
     <input id="projName" aria-label="Nom du projet" value="Mon projet">
     <div class="tb-group">
       <button class="btn ghost" id="bNew" title="Nouveau projet"><svg data-i="new"></svg><span class="hide-mid">Nouveau</span></button>
-      <button class="btn ghost" id="bExamples" title="Exemples de démonstration"><svg data-i="book"></svg><span class="hide-narrow">Exemples</span></button>
+      <button class="btn ghost" id="bExamples" title="Bibliothèque : tutos, exercices et exemples"><svg data-i="book"></svg><span class="hide-narrow">Bibliothèque</span></button>
       <button class="btn ghost" id="bGuide" aria-pressed="false" title="Guide : tutos pas à pas, fiche de l’exemple, consignes du TP"><svg data-i="guide"></svg><span class="hide-narrow">Guide</span></button>
       <button class="btn ghost" id="bOpen" title="Ouvrir un projet (.json)"><svg data-i="open"></svg><span class="hide-mid">Ouvrir</span></button>
       <button class="btn ghost" id="bSave" title="Enregistrer le projet (.json)"><svg data-i="save"></svg><span class="hide-mid">Enregistrer</span></button>
@@ -84,6 +84,7 @@
         <button class="vc-b vc-tl" data-view="iso" title="Vue de départ (perspective)" aria-label="Vue de départ"><svg data-i="home"></svg></button>
         <button class="vc-b vc-tr" data-view="fit" title="Tout voir (F)" aria-label="Tout voir"><svg data-i="fit"></svg></button>
         <button class="vc-b vc-bl" data-view="sel" title="Zoomer sur la sélection" aria-label="Zoomer sur la sélection"><svg data-i="target"></svg></button>
+        <button class="vc-b" id="refBtn" title="Repère d’échelle : un objet connu à côté des pièces (pomme, canette, voiture…)" aria-label="Repère d’échelle" aria-haspopup="menu"><svg data-i="scaleRef"></svg></button>
         <button class="vc-b vc-tm" id="orthoBtn" aria-pressed="false" aria-label="Perspective ou orthographique" title="Vue en perspective : cliquer pour la vue orthographique (sans perspective)"><svg data-i="persp"></svg></button>
       </div>
     </div>
@@ -232,8 +233,15 @@
 </section>
 
 <section id="gallery" class="overlay" hidden>
-  <div class="card gal-card-wrap" role="dialog" aria-label="Exemples de démonstration">
-    <div class="gal-head"><div><h2>Exemples de démonstration</h2><p>Chaque exemple s'ouvre avec une fiche : ce qu'il faut observer, puis ce qu'il faut essayer.</p></div><button class="btn" id="galleryClose">Fermer</button></div>
+  <div class="card gal-card-wrap" role="dialog" aria-label="Bibliothèque : tutos, exercices, exemples">
+    <div class="gal-head"><div><h2>Bibliothèque</h2><p>Des <b>tutos</b> pas à pas pour apprendre, des <b>exercices</b> qui se vérifient tout seuls et des <b>exemples</b> à observer. Votre avancement est gardé dans ce navigateur.</p>
+      <div class="lb-prog"><span id="libProg"></span><span class="gd-prog"><i id="libBar"></i></span><button class="btn ghost lb-reset" id="libReset" title="Effacer l’avancement">Remettre à zéro</button></div></div><button class="btn" id="galleryClose">Fermer</button></div>
+    <div class="lb-filters">
+      <div class="lb-tabs" id="libTabs" role="tablist" aria-label="Type">
+        <button role="tab" data-t="all">Tout</button><button role="tab" data-t="tuto">Tutos</button><button role="tab" data-t="exo">Exercices</button><button role="tab" data-t="ex">Exemples</button>
+      </div>
+      <div class="seg lb-lvl" id="libLvl" aria-label="Niveau"><button class="btn" data-l="0">Tous niveaux</button><button class="btn" data-l="1">Débutant</button><button class="btn" data-l="2">Intermédiaire</button><button class="btn" data-l="3">Avancé</button></div>
+    </div>
     <div id="galleryBody"></div>
   </div>
 </section>

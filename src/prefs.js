@@ -11,7 +11,7 @@ const prefs=(()=>{ let p={}; try{ p=JSON.parse(localStorage.getItem(PREFS_KEY)||
     theme:['auto','light','dark'].includes(p.theme)? p.theme : 'auto',
     accent:p.accent||'vert', mat:p.mat||'vert', tree:p.tree!==false, axes:p.axes||'classique', labels:p.labels!==false,
     glass:['transparent','leger','opaque'].includes(p.glass)? p.glass : 'transparent',
-    lmb:['select','orbit','pan'].includes(p.lmb)? p.lmb : 'orbit', ortho:!!p.ortho, nav:['auto','show','hide'].includes(p.nav)? p.nav : 'auto',
+    lmb:['select','orbit','pan'].includes(p.lmb)? p.lmb : 'orbit', ortho:!!p.ortho, ref:['auto','aucun','pomme','canette','voiture','immeuble','avion'].includes(p.ref)? p.ref : 'auto', nav:['auto','show','hide'].includes(p.nav)? p.nav : 'auto',
     jl: p.jlv===2 && ['orbite','libre','ligne','colonne','carre','rect','cercle'].includes(p.jl)? p.jl : 'orbite', jlv:2 }; })();
 function savePrefs(){ try{ const {firstVisit,...keep}=prefs; localStorage.setItem(PREFS_KEY, JSON.stringify(keep)); }catch(e){} }
 const lv=n=>prefs.level>=n;

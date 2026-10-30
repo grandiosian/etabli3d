@@ -53,9 +53,24 @@ Un exemple d'un niveau supérieur fait passer automatiquement à ce niveau.
 - **Apparence** : thème auto / clair / sombre, couleur principale, couleur du plan de travail.
 - **Fichiers** : projet en `.json` (Enregistrer / Ouvrir), export `.stl` pour l'impression 3D. Sauvegarde automatique dans le navigateur.
 
-## Exemples de démonstration
+## Bibliothèque : tutos, exercices, exemples
 
-Le bouton **Exemples** ouvre une galerie de 22 projets prêts à l'emploi, chacun marqué de son niveau. Chacun s'ouvre avec une fiche « À observer / À essayer ».
+Le bouton **Bibliothèque** range par catégorie (modéliser, esquisser, mouvement, structures) des **tutos pas à pas** dont les étapes se cochent seules, des **exercices** (une consigne, des critères de réussite vérifiés automatiquement, un indice) et les **exemples** de démonstration. Des onglets filtrent par type (Tout, Tutos, Exercices, Exemples) et par niveau ; chaque carte montre son avancement (nouveau, en cours, terminé), gardé dans le navigateur.
+
+| Type | Contenu |
+|---|---|
+| Tutos | Premiers pas · Tailles et positions · Empiler et aligner · Ma première esquisse · Esquisser debout · Courbes de Bézier · Faire tourner une pièce · Deux roues dentées · Calculer un petit pont |
+| Exercices | Dé à jouer · Plaque percée · Tour de 3 étages · Équerre de fixation · Vase en révolution · Barrière qui se lève · Réducteur 1/3 · Pont de 400 mm |
+
+Les exemples s'ouvrent avec une fiche « À observer / À essayer ».
+
+## Repères d'échelle
+
+Un objet connu se pose à côté des pièces pour juger de leur taille réelle : **pomme** (8 cm), **canette** (12 cm), **voiture** (4,2 m), **immeuble** (12 m) ou **avion de ligne** (38 m). En automatique, l'objet suit la taille du modèle ; le bouton pomme près du cube de vue permet de le choisir ou de le masquer. Il n'est ni exporté ni enregistré.
+
+### Exemples de démonstration
+
+22 projets prêts à l'emploi, chacun marqué de son niveau.
 
 | Famille | Exemples |
 |---|---|
@@ -79,7 +94,9 @@ src/sketch.js    éditeur d'esquisse, solveur de contraintes, outil Bézier poin
 src/planes.js    choix du plan de l'esquisse (XY, XZ, YZ)
 src/validate.js  atelier Valider : contrôles, proxy, repères (locators)
 src/struct.js    atelier Structures : treillis, maillage, solveurs, vue 2D et aperçu 3D
-src/examples.js  exemples de démonstration et galerie
+src/examples.js  exemples de démonstration et bibliothèque (onglets, filtres, avancement)
+src/lessons.js   tutos pas à pas, exercices vérifiés automatiquement, suivi de l'avancement
+src/refs.js      repères d'échelle (pomme, canette, voiture, immeuble, avion)
 src/guide.js     Guide : fiche de l'exemple, tutos pas à pas, consignes du TP
 src/outliner.js  arborescence des objets (niveau avancé)
 src/bubble.js    bulle de simulation et étiquettes de liaison

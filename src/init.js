@@ -55,6 +55,12 @@ $('#tSolid').onclick=()=>setHole(false); $('#tHole').onclick=()=>setHole(true);
 $('#tGroup').onclick=groupSel; $('#tUngroup').onclick=ungroupSel; $('#tDup').onclick=duplicateSel; $('#tDrop').onclick=dropSel; $('#tDel').onclick=deleteSel;
 $$('#views [data-view], #navBar [data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
 if(prefs.ortho) setOrtho(true, true);
+$('#refBtn').onclick=e=>{ e.stopPropagation(); openRefMenu($('#refBtn')); };
+/* boutons du cube de vue rangés en cercle autour de lui (en partant du haut, dans le sens des aiguilles d'une montre) */
+function layoutCubeRing(){ const w=$('#views .vc-wrap'); if(!w) return; const order=['orthoBtn','fit','refBtn','lmbBtn','sel','iso'];
+  const btns=order.map(k=>$('#'+k)||w.querySelector(`[data-view="${k}"]`)).filter(Boolean); const W=w.offsetWidth||184, R=W/2-17, c=W/2;
+  btns.forEach((b,i)=>{ const a=-Math.PI/2+i*2*Math.PI/btns.length; b.classList.remove('vc-tl','vc-tr','vc-bl','vc-br','vc-tm'); b.style.left=(c+R*Math.cos(a)-15)+'px'; b.style.top=(c+R*Math.sin(a)-15)+'px'; b.style.right=b.style.bottom='auto'; }); }
+layoutCubeRing();
 applyNavBar(); matchMedia('(any-pointer: coarse)').addEventListener?.('change', applyNavBar);
 $('#snapSel').onchange=applySnap;
 $('#sPlay').onclick=simToggle; $('#sReset').onclick=()=>simReset(false);
@@ -162,9 +168,9 @@ function loop(now){
   if(!(ws==='struct' && !ST.mode3d)){ stepCam(now); orbit.update(); updOrtho(); hoverTick(); renderer.render(scene,camera); vcTick(); }
   // overlays projected with this frame's camera
   if(ws==='mech') positionJointLabels();
-  tgTick(); ppTick();
+  tgTick(); ppTick(); refTick();
   if(ws==='struct' && ST.mode3d) positionStruct3DLabels();
   updateBubbleLink();
 }
 requestAnimationFrame(loop);
-window.__etabli={state, pivot, TG, guides, enterGroupEdit, finishGroupEdit, pickAll, setLmb, openCtxMenu, HOV, groupSel, prefs, orbit_:()=>orbit, SAMPLES, LAYOUT:()=>LAYOUT, resetLayout, togglePanel, CHK, startLocTest, stopLocTest, openStructBubble, openMechBubble, closeBubble, BUB, stAnimPlay, locEdit, locFrame, LOCV, applyStruct3DK, camera, orbit, structGroup, struct3DHit, renderer, ampFactor, structBox, stDraw, arrowHits:()=>stArrowHits, setWs, ws:()=>ws, validateAll, validatePart, vState, mechReady, setJointLoc, ST, SD, computeStruct, solveTruss, buildMesh, solvePlane, beamTheory, makeProxy, getProxyGeo, locGroup, loadExample, openGallery, addPart, groupSel, openSketch, closeSketch, SK, skSolve, cam:()=>camera, setOrtho, NAV, setNavLock, zoomBy, applyNavBar, tgSnapAngle, setRackTab, GUIDE, startTuto, openPlanePicker, closePlanePicker, choosePlane, PP, planeRot, bzSetType, bzSetInterp, sim, simToggle, simReset, exportStl, stlBinary, zipStore, meshes, selection:()=>selection, setSel:(ids)=>{selection=ids; sync(); renderInspector();}, setTab, openJointForm, saveJoint, jf:()=>jf, skProfiles, getGeometry};
+window.__etabli={state, pivot, TG, guides, enterGroupEdit, finishGroupEdit, pickAll, setLmb, openCtxMenu, HOV, groupSel, prefs, orbit_:()=>orbit, SAMPLES, LAYOUT:()=>LAYOUT, resetLayout, togglePanel, CHK, startLocTest, stopLocTest, openStructBubble, openMechBubble, closeBubble, BUB, stAnimPlay, locEdit, locFrame, LOCV, applyStruct3DK, camera, orbit, structGroup, struct3DHit, renderer, ampFactor, structBox, stDraw, arrowHits:()=>stArrowHits, setWs, ws:()=>ws, validateAll, validatePart, vState, mechReady, setJointLoc, ST, SD, computeStruct, solveTruss, buildMesh, solvePlane, beamTheory, makeProxy, getProxyGeo, locGroup, loadExample, openGallery, addPart, groupSel, openSketch, closeSketch, SK, skSolve, LESSONS, startLesson, PROG, LIB, setRef, REF, refAuto, partsBox, cam:()=>camera, setOrtho, NAV, setNavLock, zoomBy, applyNavBar, tgSnapAngle, setRackTab, GUIDE, startTuto, openPlanePicker, closePlanePicker, choosePlane, PP, planeRot, bzSetType, bzSetInterp, sim, simToggle, simReset, exportStl, stlBinary, zipStore, meshes, selection:()=>selection, setSel:(ids)=>{selection=ids; sync(); renderInspector();}, setTab, openJointForm, saveJoint, jf:()=>jf, skProfiles, getGeometry};

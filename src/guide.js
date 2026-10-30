@@ -10,34 +10,6 @@
 let demoClosed=false, demoOpen=true;
 const GUIDE={src:null, tuto:null, step:0, done:[], noteDone:[], editing:false};
 
-const skOpen=()=> !$('#sk').hidden;
-const anyPart=f=> state.parts.some(function walk(p){ return f(p) || (p.children||[]).some(walk); });
-const TUTOS={
-  premiers:{title:'Premiers pas', level:1, desc:'Poser un cube, le percer, l’exporter.', steps:[
-    {t:'Cliquez <b>Cube</b> dans la barre du haut : un cube apparaît sur le tapis.', ok:()=>anyPart(p=>p.kind==='box')},
-    {t:'Cliquez le cube, puis tirez un <b>carré blanc</b> d’un coin pour l’agrandir (plus de 30 mm).', ok:()=>anyPart(p=>p.kind==='box' && Math.max(p.params.L,p.params.l)>=30)},
-    {t:'Ajoutez un <b>Cylindre</b> et glissez-le au milieu du cube.', ok:()=>anyPart(p=>p.kind==='cylinder')},
-    {t:'Cylindre choisi, cliquez <b>Perçage</b> : il devient transparent et hachuré.', ok:()=>anyPart(p=>p.kind==='cylinder' && p.hole)},
-    {t:'Choisissez les deux pièces (<b>Maj</b> + clic), puis <b>Grouper</b> : le trou creuse le cube.', ok:()=>state.parts.some(p=>p.kind==='group' && p.children.some(c=>c.hole))},
-    {t:'Cliquez <b>STL</b> en haut pour obtenir le fichier à imprimer.', ok:null},
-  ]},
-  esquisse:{title:'Ma première esquisse', level:2, desc:'Un rectangle coté avec un trou, extrudé.', steps:[
-    {t:'Cliquez <b>Rectangle</b> à droite de la barre du haut, puis choisissez le plan <b>Dessus</b>.', ok:()=>skOpen()},
-    {t:'Tracez un rectangle : un clic pour un coin, un clic pour le coin opposé.', ok:()=>skOpen() && SK.d.lines.length>=4},
-    {t:'Prenez <b>Cote</b>, cliquez le bas du rectangle et tapez <b>50</b> puis Entrée.', ok:()=>skOpen() && SK.d.cons.some(c=>['dist','dx'].includes(c.type) && Math.abs(c.value-50)<0.01)},
-    {t:'Prenez <b>Cercle</b> et tracez-en un à l’intérieur : il deviendra un trou.', ok:()=>skOpen() && SK.d.circles.length>0},
-    {t:'Cliquez <b>Valider l’esquisse</b> : le profil devient un volume.', ok:()=>anyPart(p=>p.kind==='sketch' && (p.params.sk?.circles||[]).length>0)},
-  ]},
-  bezier:{title:'Courbes de Bézier', level:2, desc:'Tracer une forme courbe point par point.', steps:[
-    {t:'Cliquez <b>Bézier</b> à droite de la barre du haut, puis le plan <b>Face</b>.', ok:()=>skOpen() && SK.plane==='xz'},
-    {t:'Cliquez une fois sur la grille : c’est le <b>premier point</b> (anguleux).', ok:()=>skOpen() && SK.d.pts.some(p=>!p.origin && p.it)},
-    {t:'Plus loin, <b>cliquez et glissez</b> : le point devient lisse et la courbe suit la souris.', ok:()=>skOpen() && SK.d.pts.some(p=>p.it==='bez' && bzOnCurve(p.id))},
-    {t:'Posez un ou deux autres points, puis cliquez le <b>premier point</b> pour fermer.', ok:()=>skOpen() && SK.d.beziers.length>=2 && skProfiles(SK.d).loops.some(l=>l.kind==='poly')},
-    {t:'Outil <b>Sélection</b> : cliquez un point lisse, puis <b>Casser</b> et tirez une poignée.', ok:()=>skOpen() && SK.d.pts.some(p=>p.it==='bez' && p.tm==='free' && bzOnCurve(p.id))},
-    {t:'Cliquez <b>Valider l’esquisse</b> : la pièce est debout, dans le plan de face.', ok:()=>anyPart(p=>p.kind==='sketch' && p.params.plane==='xz' && (p.params.sk?.beziers||[]).length>0)},
-  ]},
-};
-
 function guideSrc(){
   let s=GUIDE.src;
   if(s==='note' && !state.note) s=null;
@@ -65,49 +37,71 @@ function renderDemo(){
   placeDemo(); el.hidden=false; el.classList.toggle('closed',!demoOpen); el.innerHTML='';
   $('#bGuide')?.setAttribute('aria-pressed','true'); $('#bGuide')?.classList.add('on');
   const src=guideSrc(), n=state.note;
-  const T=src==='tuto' && GUIDE.tuto? TUTOS[GUIDE.tuto] : null;
+  const T=src==='tuto' && GUIDE.tuto? LESSONS[GUIDE.tuto] : null;
   const title= src==='note'? n.title : src==='tp'? (state.tp?.title||'Consignes du TP') : T? T.title : 'Tutos pas à pas';
   const grip=h('span',{class:'pgrip demo-grip',title:'Glisser pour déplacer le guide'}, svgIcon('dots')); grip.addEventListener('pointerdown',e=>{ if(!el.classList.contains('in-sk')) startPanelDrag(e, el, 'demo'); });
   el.append(h('div',{class:'demo-head'}, grip,
     h('button',{class:'demo-toggle','aria-expanded':String(demoOpen),onclick:()=>{ demoOpen=!demoOpen; renderDemo(); }},
-      h('span',{class:'demo-kicker'}, src==='note'? 'Guide · exemple' : src==='tp'? 'Guide · mon TP' : 'Guide · tuto'), h('b',{},title), svgIcon(demoOpen?'chevUp':'chevDown')),
+      h('span',{class:'demo-kicker'}, src==='note'? 'Guide · exemple' : src==='tp'? 'Guide · mon TP' : T?.type==='exo'? 'Guide · exercice' : 'Guide · tuto'), h('b',{},title), svgIcon(demoOpen?'chevUp':'chevDown')),
     h('button',{class:'btn icon ghost',title:'Fermer le guide (bouton Guide en haut pour le rouvrir)','aria-label':'Fermer le guide',onclick:()=>{ demoClosed=true; renderDemo(); }}, svgIcon('close'))));
   if(!demoOpen){ applyLayout('demo'); applyViewOffset(); return; }
-  const tab=(k,label)=>h('button',{class:'btn'+(src===k?' on':''),'aria-pressed':String(src===k),onclick:()=>{ GUIDE.src=k; GUIDE.editing=false; GUIDE.step=0; renderDemo(); }}, label);
-  el.append(h('div',{class:'seg gd-tabs'}, n? tab('note','Exemple') : null, tab('tuto','Tutos'), tab('tp','Mon TP')));
+  const tab=(k,label)=>h('button',{class:'btn'+(src===k?' on':''),'aria-pressed':String(src===k),onclick:()=>{ GUIDE.src=k; GUIDE.editing=false; if(k!=='tuto') GUIDE.step=0; renderDemo(); }}, label);
+  el.append(h('div',{class:'seg gd-tabs'}, n? tab('note','Exemple') : null, tab('tuto','Tutos et exercices'), tab('tp','Mon TP')));
   const body=h('div',{class:'gd-body'}); el.append(body); const add=(...k)=>body.append(...k.filter(Boolean));
   if(src==='note'){
     GUIDE.noteDone.length=n.try.length;
     body.append(h('div',{class:'demo-sec'}, h('h4',{},'À observer'), h('ul',{}, n.observe.map(t=>h('li',{html:t})))),
-      h('div',{class:'demo-sec'}, h('h4',{},'À essayer'), stepper(n.try, GUIDE.noteDone, GUIDE.step, {onDone:(i,v)=>{ GUIDE.noteDone[i]=v; if(v && i<n.try.length-1) GUIDE.step=i+1; renderDemo(); }, onGo:i=>{ GUIDE.step=i; renderDemo(); }})),
+      h('div',{class:'demo-sec'}, h('h4',{},'À essayer'), stepper(n.try, GUIDE.noteDone, GUIDE.step, {onDone:(i,v)=>{ GUIDE.noteDone[i]=v; if(v && i<n.try.length-1) GUIDE.step=i+1;
+        if(n.key && n.try.every((t,k)=>GUIDE.noteDone[k]) && markDone('ex:'+n.key)) toast('Exemple terminé : tout est essayé !'); renderDemo(); }, onGo:i=>{ GUIDE.step=i; renderDemo(); }})),
       h('button',{class:'btn demo-more',onclick:openGallery}, svgIcon('book'),'Autres exemples'));
   }
   else if(src==='tuto' && T){
-    add(stepper(T.steps.map(s=>s.t), GUIDE.done, GUIDE.step, {manual:i=>!T.steps[i].ok,
-      onDone:(i,v)=>{ GUIDE.done[i]=v; if(v && i<T.steps.length-1) GUIDE.step=i+1; renderDemo(); }, onGo:i=>{ GUIDE.step=i; renderDemo(); }}),
-      GUIDE.done.filter(Boolean).length===T.steps.length? h('div',{class:'info gd-bravo',html:'<b>Bravo, tuto terminé !</b> Choisissez-en un autre ou ouvrez un exemple.'}) : null,
-      h('button',{class:'btn demo-more',onclick:()=>{ GUIDE.tuto=null; renderDemo(); }}, '‹ Tous les tutos'));
+    const all=GUIDE.done.filter(Boolean).length===T.steps.length;
+    if(T.type==='exo'){   // exercice : la consigne, puis les critères de réussite vérifiés tout seuls
+      add(h('div',{class:'gd-brief',html:T.brief}),
+        h('div',{class:'demo-sec'}, h('h4',{},'Critères de réussite'), h('ul',{class:'gd-crit'}, T.steps.map((c,i)=>h('li',{class:GUIDE.done[i]?'ok':'',html:c.t})))),
+        T.hint? h('details',{class:'gd-tips'}, h('summary',{},'Un indice ?'), h('div',{class:'empty',html:T.hint})) : null,
+        all? h('div',{class:'info gd-bravo',html:'<b>Exercice réussi !</b> Il est marqué terminé dans la bibliothèque.'}) : null);
+    } else add(stepper(T.steps.map(s=>s.t), GUIDE.done, GUIDE.step, {manual:i=>!T.steps[i].ok,
+        onDone:(i,v)=>{ GUIDE.done[i]=v; if(v && i<T.steps.length-1) GUIDE.step=i+1; lessonProgress(); renderDemo(); }, onGo:i=>{ GUIDE.step=i; renderDemo(); }}),
+      all? h('div',{class:'info gd-bravo',html:'<b>Bravo, tuto terminé !</b> Choisissez-en un autre ou ouvrez un exemple.'}) : null);
+    add(h('div',{class:'gd-nav'}, h('button',{class:'btn demo-more',onclick:()=>{ GUIDE.tuto=null; renderDemo(); }}, '‹ Tous les tutos'),
+      h('button',{class:'btn demo-more',onclick:()=>openGallery('lesson')}, svgIcon('book'),'Bibliothèque')));
   }
-  else if(src==='tuto'){
-    body.append(h('div',{class:'gd-tutos'}, Object.entries(TUTOS).map(([k,t])=>h('button',{class:'gd-tuto',onclick:()=>startTuto(k)},
-      h('b',{},t.title), h('span',{class:'gal-lvl l'+t.level}, LEVELS[t.level-1].name), h('small',{},t.desc+` · ${t.steps.length} étapes`)))),
+  else if(src==='tuto'){   // liste courte : tutos et exercices jusqu'au niveau choisi
+    const item=([k,t])=>h('button',{class:'gd-tuto',onclick:()=>startLesson(k)},
+      h('b',{},t.title), h('span',{class:'gal-lvl l'+t.level}, LEVELS[t.level-1].name), h('small',{},t.desc+(t.type==='exo'? ' · exercice' : ` · ${t.steps.length} étapes`)), statusChip(lessonStatus('l',k)));
+    const L=Object.entries(LESSONS).filter(([,t])=>t.level<=prefs.level);
+    add(h('h4',{class:'gd-h'},'Tutos pas à pas'), h('div',{class:'gd-tutos'}, L.filter(([,t])=>t.type==='tuto').map(item)),
+      h('h4',{class:'gd-h'},'Exercices'), h('div',{class:'gd-tutos'}, L.filter(([,t])=>t.type==='exo').map(item)),
+      h('button',{class:'btn demo-more',onclick:()=>openGallery('lesson')}, svgIcon('book'),'Toute la bibliothèque'),
       h('details',{class:'gd-tips'}, h('summary',{},'Rappel des gestes'), h('div',{class:'empty',html:guideTips()})));
   }
   else renderTp(body);
   hydrateIcons(el); applyLayout('demo'); applyViewOffset();
 }
 function guideTips(){ return `Cliquez une forme de la barre du haut pour la poser sur le tapis, ou ouvrez un <b>exemple</b>.<br><br>Cliquez une pièce : des <b>poignées</b> apparaissent. Carrés blancs des coins : longueur et largeur ; petits carrés noirs : une cote ; carré du haut : hauteur ; cône : soulever ; flèches courbes : tourner. Glissez la pièce pour la déplacer. Double-clic sur un <b>groupe</b> : modifier ses pièces.<br><br><span class="kbd">Maj</span> + clic ou <span class="kbd">Maj</span> + glisser dans le vide (cadre) pour en choisir plusieurs ; cliquez encore au même endroit pour prendre la pièce de derrière.<br><br>${(LMB.find(x=>x[0]===(prefs.lmb||'orbit'))||LMB[1])[3]} Molette : zoom. Clic droit : menu.`; }
-function startTuto(k){
-  const T=TUTOS[k]; if(!T) return;
-  if(T.level>prefs.level){ setLevel(T.level,true); toast(`Niveau ${LEVELS[T.level-1].name} activé pour ce tuto.`); }
+/* ouvrir un tuto ou un exercice : niveau si besoin, scène de départ (ou projet vide), guide ouvert dessus */
+function startLesson(k){
+  const T=LESSONS[k]; if(!T) return;
+  if(T.level>prefs.level){ setLevel(T.level,true); toast(`Niveau ${LEVELS[T.level-1].name} activé pour ${T.type==='exo'?'cet exercice':'ce tuto'}.`); }
+  if(!$('#sk').hidden) closeSketch(false);
+  if(T.start) T.start(); else lessonReset(T.title);
+  $('#gallery').hidden=true; SIM_SEEN=false;
   GUIDE.src='tuto'; GUIDE.tuto=k; GUIDE.step=0; GUIDE.done=T.steps.map(()=>false); demoClosed=false; demoOpen=true;
   guideCheck(true); renderDemo();
 }
+const startTuto=startLesson;
+/* progression enregistrée : nombre d'étapes faites, puis « terminé » */
+function lessonProgress(){ const k=GUIDE.tuto, T=LESSONS[k]; if(!T) return; const n=GUIDE.done.filter(Boolean).length; PROG.part[k]=Math.max(PROG.part[k]||0, n); saveProg();
+  if(n===T.steps.length && markDone(T.type+':'+k)) toast(T.type==='exo'? `Exercice « ${T.title} » réussi !` : `Tuto « ${T.title} » terminé, bravo !`, 3200); }
 /* the tutorial steps tick themselves: checked twice a second, a step once done stays done */
 function guideCheck(quiet=false){
-  if(GUIDE.src!=='tuto' || !GUIDE.tuto) return; const T=TUTOS[GUIDE.tuto]; let changed=false;
+  if(sim.playing) SIM_SEEN=true;
+  if(GUIDE.src!=='tuto' || !GUIDE.tuto) return; const T=LESSONS[GUIDE.tuto]; if(!T) return; let changed=false;
   T.steps.forEach((s,i)=>{ if(!GUIDE.done[i] && s.ok){ let v=false; try{ v=!!s.ok(); }catch(e){} if(v){ GUIDE.done[i]=true; changed=true; } } });
   if(!changed) return;
+  lessonProgress();
   const next=GUIDE.done.findIndex(d=>!d); if(GUIDE.done[GUIDE.step]) GUIDE.step= next<0? T.steps.length-1 : next;
   if(!quiet){ renderDemo(); const b=$('#demo .gd-step'); b?.classList.add('flash'); }
 }
