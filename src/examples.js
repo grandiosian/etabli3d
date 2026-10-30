@@ -432,7 +432,8 @@ function renderDemo(){
   const el=$('#demo'); const n=state.note;
   if(!n || demoClosed){ el.hidden=true; applyViewOffset(); return; }
   el.hidden=false; el.classList.toggle('closed',!demoOpen); el.innerHTML='';
-  const head=h('div',{class:'demo-head'},
+  const grip=h('span',{class:'pgrip demo-grip',title:'Glisser pour déplacer la fiche'}, svgIcon('dots')); grip.addEventListener('pointerdown',e=>startPanelDrag(e, el, 'demo'));
+  const head=h('div',{class:'demo-head'}, grip,
     h('button',{class:'demo-toggle','aria-expanded':String(demoOpen),onclick:()=>{ demoOpen=!demoOpen; renderDemo(); }},
       h('span',{class:'demo-kicker'},'Fiche démo'), h('b',{},n.title), svgIcon(demoOpen?'chevUp':'chevDown')),
     h('button',{class:'btn icon ghost',title:'Fermer la fiche','aria-label':'Fermer la fiche',onclick:()=>{ demoClosed=true; renderDemo(); }}, svgIcon('close')));
@@ -442,5 +443,5 @@ function renderDemo(){
     el.append(list('À observer',n.observe), list('À essayer',n.try),
       h('button',{class:'btn demo-more',onclick:openGallery}, svgIcon('book'),'Autres exemples'));
   }
-  applyViewOffset();
+  applyLayout('demo'); applyViewOffset();
 }

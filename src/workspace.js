@@ -12,7 +12,7 @@ const WS=[
 ];
 function setWs(k){
   const W=WS.find(w=>w.k===k)||WS[0]; if(!lv(W.lvl)) k='model';
-  const prev=ws; closeBubble();
+  const prev=ws; closeBubble(); if(CHK.test.on){ CHK.test.on=false; }
   if(prev==='struct' && k!=='struct' && ST.anim.on) stAnimPlay(false);
   if(prev==='mech' && k!=='mech'){ if(simActive()) simReset(true); jf=null; cancelPick(); }
   if(locPick!=null){ locPick=null; $('#pickHint').hidden=true; }
@@ -25,21 +25,31 @@ function setWs(k){
   sync(); renderInspector(); updateSteps(); applyViewOffset(); updateMarkers();
   if(prev!==k && k==='mech' && !mechReady()) toast('Validez d’abord vos pièces : la Mécanique utilise leurs repères.');
 }
+/* Contextual navigation in the top bar (no permanent banner):
+   Modéliser → « Valider pour simulation » → Validation → Mécanique / Structures, with back buttons. */
 function updateSteps(){
-  const host=$('#steps'); if(!host) return;
+  const host=$('#flow'); if(!host) return;
   const parts=state.parts.filter(p=>!p.hole);
   const todo=parts.filter(p=>!['ok','warn'].includes(vState(p))).length;
+  const ready=parts.length>0 && mechReady();
+  const go=(k,label,icon,cls,opt={})=>h('button',{class:'btn '+(cls||''),'data-go':k,disabled:opt.off||null,title:opt.title||null,onclick:()=>setWs(k)},
+    icon? svgIcon(icon) : null, opt.shortLabel? h('span',{}, h('span',{class:'lfull'},label), h('span',{class:'lshort'},opt.shortLabel)) : h('span',{class:opt.short?'hide-mid':null},label), opt.badge? h('span',{class:'flow-b'},opt.badge) : null);
   host.innerHTML='';
-  WS.forEach((W,i)=>{
-    let badge='';
-    if(W.k==='check') badge= !parts.length? '' : todo? `${todo} à valider` : '✓ validé';
-    if(W.k==='mech') badge= !mechReady()&&parts.length? 'verrouillé' : `${state.joints.length} liaison${state.joints.length>1?'s':''}`;
-    if(W.k==='struct') badge= SD().mod==='treillis'? 'treillis' : 'maillage';
-    const b=h('button',{class:'step'+(ws===W.k?' on':'')+(W.k==='check'&&todo?' todo':'')+(W.k==='mech'&&!mechReady()&&parts.length?' locked':''),'data-wsk':W.k,'aria-current':ws===W.k?'step':null,'data-min':W.lvl>1?String(W.lvl):null,onclick:()=>setWs(W.k)},
-      h('span',{class:'step-n'},String(W.n)), h('span',{class:'step-t'}, h('b',{},W.name), h('small',{},W.sub)), badge? h('span',{class:'step-b'},badge) : null);
-    host.append(b);
-    if(i<WS.length-1) host.append(h('span',{class:'step-sep','aria-hidden':'true','data-min':WS[i+1].lvl>1?String(WS[i+1].lvl):null}, i===2? '·' : '›'));
-  });
+  if(ws==='model'){
+    host.append(lv(2)? go('check','Valider pour simulation','check','primary',{shortLabel:'Valider', badge: parts.length? (todo? String(todo) : '✓') : null, title:'Contrôler les pièces, poser les repères, puis simuler'})
+                      : go('check','Vérifier pour l’impression','check','primary',{shortLabel:'Vérifier', title:'Contrôler les pièces avant de les imprimer'}));
+  } else {
+    host.append(go('model','Modélisation','back','ghost',{title:'Revenir à la modélisation'}));
+    if(ws!=='check' && parts.length) host.append(go('check','Validation','check','ghost',{short:true,title:'Revenir à la validation'}));
+    const W=WS.find(w=>w.k===ws);
+    host.append(h('span',{class:'flow-t'}, h('span',{class:'step-n'},String(W.n)), h('b',{},W.name)));
+    if(lv(2)){
+      if(ws==='check'){ host.append(go('mech','Mouvement','pivot', ready?'primary':'', {off:!ready, title: ready? 'Simuler le mouvement (atelier Mécanique)' : 'Validez toutes les pièces pour débloquer la simulation du mouvement'}));
+        host.append(go('struct','Déformation','truss','', {title:'Simuler la déformation (atelier Structures)'})); }
+      if(ws==='mech') host.append(go('struct','Déformation','truss','ghost',{title:'Passer à l’atelier Structures'}));
+      if(ws==='struct') host.append(go('mech','Mouvement','pivot','ghost',{off:!ready, title: ready? 'Passer à l’atelier Mécanique' : 'Validez d’abord les pièces'}));
+    }
+  }
   const W=WS.find(w=>w.k===ws); $('#inspStep').textContent=W.n; $('#inspTitle').textContent=W.name; $('#inspSub').textContent=W.sub;
 }
 function renderMech(body){

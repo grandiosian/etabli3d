@@ -246,7 +246,7 @@ function structBox(){
   return {minx,maxx,miny,maxy};
 }
 function stFit(){ const b=structBox(); const w=Math.max(40,b.maxx-b.minx), hh=Math.max(40,b.maxy-b.miny);
-  const d=$('#demo'); const left= (d && !d.hidden && stW>760)? d.offsetWidth+20 : 0;   // keep clear of the demo card
+  const d=$('#demo'); const left= (d && !d.hidden && stW>760 && !movedDemo())? d.offsetWidth+20 : 0;   // keep clear of the demo card
   ST.view.s=Math.min((stW-left-110)/(w*1.12), (stH-190)/(hh*1.45)); if(!(ST.view.s>0)) ST.view.s=1;
   ST.view.cx=(b.minx+b.maxx)/2 - left/2/ST.view.s; ST.view.cy=(b.miny+b.maxy)/2 - hh*0.05; ST.fitted=true; }
 function stGrid(){ const s=ST.view.s; for(const g of [1,2,5,10,20,50,100,200,500,1000]) if(g*s>=14) return g; return 2000; }

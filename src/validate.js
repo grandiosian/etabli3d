@@ -13,7 +13,7 @@ const vKey=p=>hashStr(geomKey(p));
 function vState(p){ if(!p?.valid) return 'none'; if(p.valid.key!==vKey(p)) return 'stale'; return p.valid.level; }
 const V_LABEL={none:'À valider', stale:'Modifiée depuis la validation', ok:'Validée', warn:'Validée avec remarques', err:'Erreur'};
 const triCount=g=>(g.index? g.index.count : g.attributes.position.count)/3;
-const CHK={showProxy:false};
+const CHK={showProxy:false, test:{on:false, pid:null, lid:null, kind:'rot', t0:0}};
 
 /* ---- geometry checks */
 function meshStats(g){ // closed surface test on welded vertices (exact for primitives, not for CSG output)
@@ -236,6 +236,7 @@ function finishLocPick(hit){
 const V_ICON={ok:'✓', warn:'!', err:'✕', none:'○', stale:'↻', info:'i'};
 function vChip(state){ return h('span',{class:'vchip v-'+state, title:V_LABEL[state]||''}, V_ICON[state]); }
 function renderValidation(body){
+  if(CHK.test.on && !selection.includes(CHK.test.pid)){ CHK.test.on=false; sync(); }
   const parts=state.parts; const n=parts.length;
   const cnt=k=>parts.filter(p=>vState(p)===k).length;
   const todo=cnt('none')+cnt('stale'), err=cnt('err');
@@ -275,7 +276,26 @@ function renderValidation(body){
             h('button',{class:'tr-btn',title:'Inverser le sens de Z','aria-label':'Inverser '+l.name,onclick:()=>locEdit(p,l,'flip')},'⇅'),
             h('button',{class:'tr-btn',title:'Prendre X comme axe principal','aria-label':'Basculer '+l.name,onclick:()=>locEdit(p,l,'swap')},'⤨'),
             !l.auto? h('button',{class:'tr-btn danger',title:'Supprimer ce repère','aria-label':'Supprimer '+l.name,onclick:()=>{ p.locs=p.locs.filter(k=>k!==l); sync(); commit(); renderInspector(); }}, svgIcon('trash')) : null)); })),
-      minLvl(h('button',{class:'btn',style:'justify-content:center',onclick:()=>startLocPick(p)}, svgIcon('target'),'Ajouter un repère sur une face'),3));
+      minLvl(h('button',{class:'btn',style:'justify-content:center',onclick:()=>startLocPick(p)}, svgIcon('target'),'Ajouter un repère sur une face'),2));
     body.append(minLvl(lsec,2));
+    const T=CHK.test, locs=(p.locs||[]).filter(l=>l.kind!=='base');
+    if(locs.length){ if(!locs.some(l=>l.id===T.lid) || T.pid!==p.id){ T.lid=(locs.find(l=>l.kind==='axe')||locs[0]).id; }
+      const ls=h('select',{class:'field','aria-label':'Repère à tester'}, locs.map(l=>h('option',{value:l.id,selected:T.lid===l.id||null},l.name))); ls.onchange=()=>{ T.lid=ls.value; if(T.on) startLocTest(p,T.lid,T.kind); };
+      const running=T.on && T.pid===p.id;
+      body.append(minLvl(sec('Mode test', h('div',{class:'info',html:'Faites bouger la pièce autour d’un repère pour vérifier son <b>axe</b> et son <b>sens</b> avant la Mécanique : c’est ce que fera une liaison accrochée à ce repère.'}),
+        row('Repère', ls), row('Mouvement', bubSeg([['rot','Rotation'],['trans','Glissement']], T.kind, v=>{ T.kind=v; if(running) startLocTest(p,T.lid,v); else renderInspector(); })),
+        h('button',{class:'btn '+(running?'':'primary'),id:'locTestBtn',style:'justify-content:center',onclick:()=>{ if(running) stopLocTest(); else startLocTest(p,T.lid,T.kind); }}, svgIcon(running?'pause':'play'), running?'Arrêter le test':'Tester le repère')),2));
+    }
   }
+}
+function startLocTest(p, lid, kind){ Object.assign(CHK.test,{on:true, pid:p.id, lid, kind, t0:performance.now()}); renderInspector(); }
+function stopLocTest(){ if(!CHK.test.on) return; CHK.test.on=false; sync(); renderInspector(); }
+function locTestTick(now){
+  const T=CHK.test; if(!T.on) return; if(ws!=='check'){ T.on=false; return; }
+  const p=findPart(T.pid), l=p?.locs?.find(k=>k.id===T.lid), r=meshes.get(T.pid); if(!p||!l||!r){ T.on=false; return; }
+  const ph=Math.sin((now-T.t0)/1000/2.4*2*Math.PI); const o=new THREE.Vector3(...l.pos), z=new THREE.Vector3(...l.dir).normalize();
+  let M;
+  if(T.kind==='rot') M=new THREE.Matrix4().makeTranslation(o.x,o.y,o.z).multiply(new THREE.Matrix4().makeRotationAxis(z, ph*50*DEG)).multiply(new THREE.Matrix4().makeTranslation(-o.x,-o.y,-o.z));
+  else { const g=getGeometry(p), s=new THREE.Vector3(); g.boundingBox.getSize(s); const d=z.multiplyScalar(ph*Math.max(s.x,s.y,s.z)*0.3); M=new THREE.Matrix4().makeTranslation(d.x,d.y,d.z); }
+  partMatrix(p).multiply(M).decompose(r.mesh.position, r.mesh.quaternion, r.mesh.scale); r.mesh.updateMatrix(); updateLocatorPoses();
 }

@@ -42,8 +42,11 @@ button{cursor:pointer}
 :focus-visible{outline:2px solid var(--mark);outline-offset:2px}
 .mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 
-#app{height:100%;display:grid;grid-template-rows:auto auto 1fr;grid-template-columns:auto auto 1fr 312px;
-  grid-template-areas:"top top top top" "steps steps steps steps" "rack tree stage insp";}
+#app{height:100%;display:grid;grid-template-rows:auto 1fr;grid-template-columns:auto auto 1fr auto;
+  grid-template-areas:"top top top top" "rack tree stage insp";}
+#insp{width:312px}
+#app.insp-left{grid-template-columns:auto auto auto 1fr;grid-template-areas:"top top top top" "insp rack tree stage"}
+#app.insp-left #insp{border-left:0;border-right:1px solid var(--line)}
 #rack{width:96px}
 #outliner{width:260px}
 
@@ -168,7 +171,9 @@ html[data-level="2"] [data-max="1"], html[data-level="3"] [data-max="1"], html[d
 .lvl button{border:0;background:transparent;border-radius:6px;padding:5px 9px;font-size:13px;color:var(--ink-2);white-space:nowrap}
 .lvl button:hover{background:var(--panel-2);color:var(--ink)}
 .lvl button[aria-checked="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
-.lvl .s{display:none}
+.lvl .s,.lvl .m{display:none}
+@media (max-width: 1600px){ .lvl .l{display:none} .lvl .m{display:inline} .lvl button{padding:5px 7px} #projName{width:130px} .brand span{display:none} }
+@media (max-width: 1500px){ #bExamples span{display:none} .flow .btn:not(.primary) > span:not(.flow-b){display:none} .flow-t b{display:none} #top{gap:6px} .tb-sep{display:none} }
 .menu.look{left:auto;right:0;min-width:280px;padding:12px;gap:12px}
 .look h4{margin:0 0 6px;font-family:var(--f-display);font-weight:600;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
 .look .seg{display:flex}
@@ -426,15 +431,59 @@ button.vrow:hover{background:var(--panel-2)}
 .locbtns .tr-btn{opacity:.8;font-size:14px}
 .locbtns .tr-btn.danger{color:var(--danger)}
 
+
+/* contextual navigation */
+.flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.flow .btn.primary{font-weight:600}
+.flow .lshort{display:none}
+@media (max-width: 1100px){ .flow .lfull{display:none} .flow .lshort{display:inline} }
+.flow-b{font-size:11px;border-radius:9px;padding:1px 7px;background:color-mix(in srgb,var(--accent-ink) 25%,transparent)}
+.flow .btn:not(.primary) .flow-b{background:var(--panel-2)}
+.flow-t{display:flex;align-items:center;gap:7px;padding:0 6px;font-family:var(--f-display);font-size:16px;white-space:nowrap}
+.flow-t .step-n{background:var(--accent);color:var(--accent-ink)}
+
+/* movable, collapsible panels */
+.pgrip{display:flex;align-items:center;gap:1px;color:var(--ink-2);cursor:grab;border-radius:6px;padding:2px 1px;touch-action:none;flex:none}
+.pgrip:hover{background:var(--panel-2);color:var(--ink)}
+.pgrip>svg{width:12px;height:18px}
+.pmin{border:0;background:transparent;padding:3px;border-radius:5px;color:var(--ink-2);display:grid;place-items:center;cursor:pointer}
+.pmin:hover{background:var(--line);color:var(--ink)}
+.pmin svg{width:14px;height:14px;transform:rotate(-90deg);transition:transform .15s}
+.pfloat.collapsed .pmin svg{transform:rotate(90deg)}
+.pfloat.collapsed > :not(.pgrip){display:none!important}
+.pfloat.collapsed{padding:3px}
+.dragging{opacity:.9;cursor:grabbing!important;box-shadow:0 10px 30px rgba(0,0,0,.25)!important;transition:none!important}
+#views .pgrip{align-self:stretch;justify-content:space-between}
+.demo-grip{align-self:center;margin-left:-4px}
+.insp-tt{flex:1;min-width:0}
+.insp-tool svg{width:16px;height:16px}
+#inspMin svg{transform:rotate(90deg)}
+#app.insp-left #inspMin svg{transform:rotate(-90deg)}
+#app.insp-min #insp{width:50px}
+#app.insp-min #inspBody,#app.insp-min .insp-tt,#app.insp-min #inspSide{display:none}
+#app.insp-min .insp-head{flex-direction:column;padding:10px 4px;border-bottom:0}
+#app.insp-min #inspMin svg{transform:rotate(-90deg)}
+#app.insp-left.insp-min #inspMin svg{transform:rotate(90deg)}
+.rackmin-btn{margin-top:auto;border:0;background:transparent;border-radius:8px;padding:6px;color:var(--ink-2);display:grid;place-items:center}
+.rackmin-btn:hover{background:var(--panel-2)}
+.rackmin-btn svg{width:16px;height:16px;transform:rotate(-90deg)}
+#app.rack-min #rack{width:58px}
+#app.rack-min .shape{font-size:0;gap:0;padding:6px 0}
+#app.rack-min .shape svg{width:32px;height:32px}
+#app.rack-min .rack-title{display:none}
+#app.rack-min .rackmin-btn svg{transform:rotate(90deg)}
+
 /* ---------- narrow screens */
 @media (max-width: 860px){
-  #app, html[data-level="3"] #app.with-tree{grid-template-columns:1fr;grid-template-rows:auto auto 1fr auto;grid-template-areas:"top" "steps" "stage" "rack"}
+  #app, #app.insp-left, html[data-level="3"] #app.with-tree{grid-template-columns:1fr;grid-template-rows:auto 1fr auto;grid-template-areas:"top" "stage" "rack"}
+  #insp{width:auto} .insp-tool,.rackmin-btn{display:none!important} #app.insp-min #inspBody{display:flex} #app.insp-min .insp-tt{display:block}
+  .flow-t{display:none}
   #rack{width:auto}
   #steps .step small{display:none} #steps{padding-block:5px} .step{padding:5px 8px}
   #stHint{display:none}
   html[data-level="3"] #app.with-tree #outliner{position:fixed;left:0;top:0;bottom:0;width:min(300px,86vw);z-index:25;box-shadow:var(--shadow);padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-left,0px)}
   #treeClose{display:inline-flex}
-  .lvl .l{display:none} .lvl .s{display:inline}
+  .lvl .l,.lvl .m{display:none} .lvl .s{display:inline}
   .tr-btn{opacity:1}
   #rack{flex-direction:row;overflow-x:auto;overflow-y:hidden;border-right:0;border-top:1px solid var(--line);padding:4px 8px;gap:2px}
   .rack-title{display:none}

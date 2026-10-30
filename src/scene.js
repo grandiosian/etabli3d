@@ -58,7 +58,7 @@ function resize(){ const r=stage.getBoundingClientRect(); if(r.width<2||r.height
 /* On wide screens the demo card covers the left of the scene: shift the picture right by half its width. */
 function applyViewOffset(){
   const r=stage.getBoundingClientRect(); if(r.width<2||r.height<2) return; const d=document.getElementById('demo');
-  const shift = (d && !d.hidden && r.width>760) ? Math.round((d.offsetWidth+10)/2) : 0;
+  const shift = (d && !d.hidden && r.width>760 && !movedDemo()) ? Math.round((d.offsetWidth+10)/2) : 0;
   if(shift) camera.setViewOffset(r.width,r.height,-shift,0,r.width,r.height); else camera.clearViewOffset();
 }
 new ResizeObserver(resize).observe(stage);

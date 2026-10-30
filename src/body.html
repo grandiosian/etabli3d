@@ -16,12 +16,14 @@
       <button class="btn icon ghost" id="bUndo" title="Annuler (Ctrl+Z)"><svg data-i="undo"></svg></button>
       <button class="btn icon ghost" id="bRedo" title="Rétablir (Ctrl+Y)"><svg data-i="redo"></svg></button>
     </div>
+    <div class="tb-sep hide-narrow"></div>
+    <nav class="flow" id="flow" aria-label="Démarche"></nav>
     <div class="spacer"></div>
     <div class="lvl" id="lvl" role="radiogroup" aria-label="Niveau">
       <span class="lvl-lbl">Niveau</span>
-      <button role="radio" data-lvl="1" title="Débutant : volumes, perçages, groupes"><span class="l">Débutant</span><span class="s">1</span></button>
-      <button role="radio" data-lvl="2" title="Intermédiaire : + esquisses cotées et mouvements"><span class="l">Intermédiaire</span><span class="s">2</span></button>
-      <button role="radio" data-lvl="3" title="Avancé : toutes les fonctions"><span class="l">Avancé</span><span class="s">3</span></button>
+      <button role="radio" data-lvl="1" title="Débutant : volumes, perçages, groupes"><span class="l">Débutant</span><span class="m">Déb.</span><span class="s">1</span></button>
+      <button role="radio" data-lvl="2" title="Intermédiaire : + esquisses cotées et mouvements"><span class="l">Intermédiaire</span><span class="m">Inter.</span><span class="s">2</span></button>
+      <button role="radio" data-lvl="3" title="Avancé : toutes les fonctions"><span class="l">Avancé</span><span class="m">Avancé</span><span class="s">3</span></button>
     </div>
     <button class="btn ghost" id="bTree" data-min="3" aria-pressed="false" title="Afficher l’arborescence des objets"><svg data-i="tree"></svg><span class="hide-mid">Arborescence</span></button>
     <div class="menu-wrap">
@@ -32,7 +34,6 @@
     <button class="btn ghost" id="bHelp" title="Aide et raccourcis"><svg data-i="help"></svg><span class="hide-mid">Aide</span></button>
   </header>
 
-  <nav id="steps" aria-label="Ateliers"></nav>
 
   <nav id="rack" data-ws="model" aria-label="Formes">
     <div class="rack-title" data-min="2">Créer</div>
@@ -41,6 +42,7 @@
     <div id="rackBasic" style="display:contents"></div>
     <div class="rack-title" data-min="3">Mécanique</div>
     <div id="rackMeca" style="display:contents"></div>
+    <button class="rackmin-btn" id="rackMin" title="Réduire la barre des formes" aria-label="Réduire la barre des formes"><svg data-i="chevUp"></svg></button>
   </nav>
 
   <aside id="outliner" data-ws="model check mech" aria-label="Arborescence">
@@ -112,7 +114,9 @@
   </main>
 
   <aside id="insp">
-    <div class="insp-head"><span class="step-n" id="inspStep">1</span><div><b id="inspTitle">Modéliser</b><small id="inspSub"></small></div>
+    <div class="insp-head"><span class="step-n" id="inspStep">1</span><div class="insp-tt"><b id="inspTitle">Modéliser</b><small id="inspSub"></small></div>
+      <button class="btn icon ghost insp-tool" id="inspSide" title="Placer le panneau de l’autre côté" aria-label="Placer le panneau de l’autre côté"><svg data-i="side"></svg></button>
+      <button class="btn icon ghost insp-tool" id="inspMin" title="Réduire le panneau" aria-label="Réduire le panneau"><svg data-i="chevUp"></svg></button>
     </div>
     <div id="inspBody"></div>
   </aside>
@@ -197,7 +201,9 @@
         <li>Validez pour extruder ou faire une révolution autour de l'axe vertical.</li>
         <li>Double-cliquez une esquisse dans la scène pour la modifier.</li>
       </ul></div>
-      <div><h4>Les quatre ateliers</h4><ul>
+      <div><h4>La démarche</h4><ul>
+        <li>En Modélisation, le bouton <b>Valider pour simulation</b> ouvre la validation ; de là, <b>Mouvement</b> ou <b>Déformation</b> lancent les simulations. Le bouton ← revient en arrière.</li>
+        <li>Les panneaux se <b>déplacent</b> par leur poignée ⋮⋮ et se <b>réduisent</b> avec leur flèche.</li>
         <li><b>1 · Modéliser</b> : créer les pièces, les percer, les grouper.</li>
         <li><b>2 · Valider</b> : contrôler chaque pièce (forme, épaisseur, position), mesurer sa complexité, créer un <b>proxy</b> allégé et poser des <b>repères</b> (centres, axes).</li>
         <li><b>3 · Mécanique</b> : accrocher les liaisons aux repères (clic sur un repère), ajouter des moteurs, simuler. Les pièces doivent être validées. <b>Cliquez une pièce</b> pour ouvrir sa bulle : moteur, vitesse, relancer.</li>

@@ -4,16 +4,22 @@ Modeleur 3D pour les cours de technologie, dans l'esprit de Tinkercad, qui fonct
 
 **Application en ligne :** https://grandiosian.github.io/etabli3d/
 
-## Quatre ateliers
+## La démarche
 
-L'application suit la démarche de conception, avec une barre d'étapes en haut :
+Il n'y a plus de bandeau d'étapes : la navigation suit la démarche.
 
-| Atelier | Rôle |
+1. **Modéliser** : créer les pièces. En haut, le bouton **Valider pour simulation** (ou **Vérifier pour l'impression** au niveau Débutant) mène à la validation.
+2. **Valider** : une interface réduite aux panneaux utiles. On contrôle chaque pièce (forme vide ou plate, surface non fermée, contour d'esquisse qui se croise, épaisseur < 1 mm, pièce sous le plan ou en l'air, perçage isolé), on mesure sa complexité, on crée un **proxy basse résolution** pour les pièces lourdes, on règle et ajoute des **repères**, et le **mode test** fait tourner ou glisser la pièce autour d'un repère pour vérifier son axe et son sens. Les boutons **Mouvement** et **Déformation** mènent aux simulations (Mouvement se débloque quand toutes les pièces sont validées).
+3. **Mécanique** (mouvement) et **Structures** (déformation) : seulement un bouton de retour et le passage de l'une à l'autre. Chaque liaison a une **étiquette** ; un clic sur une pièce ou sur la structure ouvre une **bulle** pour animer, régler et relancer.
+
+| Simulation | Contenu |
 |---|---|
-| **1 · Modéliser** | Créer les pièces : volumes, esquisses, perçages, groupes |
-| **2 · Valider** | Contrôler chaque pièce (forme vide ou plate, surface non fermée, contour d'esquisse qui se croise, épaisseur < 1 mm, pièce sous le plan ou en l'air, perçage isolé), mesurer sa complexité (triangles), créer un **proxy basse résolution** pour les pièces lourdes et poser des **repères** (centre, base, axes de révolution, axes des perçages) |
-| **3 · Mécanique** | Liaisons, moteurs et simulation. Verrouillée tant que les pièces ne sont pas validées ; les liaisons s'accrochent aux repères (clic direct dans la vue 3D) et les pièces lourdes sont affichées en proxy. Chaque liaison a une **étiquette** (« Roue menante tourne sur Platine · axe Z »). Un clic sur une pièce ouvre une **bulle** : moteur, vitesse, course, relancer |
-| **4 · Structures** | Un clic sur la structure ouvre une **bulle** : animer la déformation en boucle, régler force / diamètre / hauteur / matériau, relancer. Simulation de déformation, indépendante des pièces : **Treillis** (barres articulées en cylindre plein, tube = cylindres imbriqués, ou câble en traction seule ; flambage d'Euler, réactions, masse) et **Maillage** (éléments finis 2D simplifiés en contraintes planes : flèche, von Mises, traction / compression, comparaison avec le calcul RDM) |
+| **Mécanique** | Liaisons accrochées aux repères (clic direct dans la vue 3D), moteurs, transmissions, pièces lourdes affichées en proxy |
+| **Structures** | **Treillis** (barres articulées en cylindre plein, tube = cylindres imbriqués, ou câble en traction seule ; flambage d'Euler, réactions, masse) et **Maillage** (éléments finis 2D simplifiés en contraintes planes : flèche, von Mises, traction / compression, comparaison avec le calcul RDM) |
+
+## Panneaux
+
+Chaque panneau flottant (outils, vues, grille, simulation, légende, fiche démo) se **déplace** par sa poignée ⋮⋮ et se **réduit** avec sa flèche. Le panneau de droite se réduit en rail ou passe à gauche ; la barre des formes se réduit aux icônes. La disposition est mémorisée dans le navigateur ; **Apparence → Remettre les panneaux à leur place** la réinitialise.
 
 Unités des structures : mm, N, MPa. Matériaux : bois, acier, aluminium, PLA, pierre, béton.
 
@@ -71,7 +77,8 @@ src/struct.js    atelier Structures : treillis, maillage, solveurs, vue 2D et ap
 src/examples.js  exemples de démonstration, galerie et fiche démo
 src/outliner.js  arborescence des objets (niveau avancé)
 src/bubble.js    bulle de simulation et étiquettes de liaison
-src/workspace.js navigation entre les ateliers
+src/workspace.js navigation dans la démarche (boutons contextuels)
+src/panels.js    panneaux déplaçables et réductibles, disposition mémorisée
 src/init.js      exemples, raccourcis clavier, démarrage
 build.py         assemble src/ en une seule page dans dist/
 ```
