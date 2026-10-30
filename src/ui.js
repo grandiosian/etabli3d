@@ -21,10 +21,11 @@ function row(label, ctrl){ return h('div',{class:'row'}, h('label',{},label), ct
 function sec(title, ...kids){ return h('div',{class:'sec'}, title? h('h3',{},title):null, ...kids); }
 const minLvl=(el,n)=>{ if(n>1) el.dataset.min=n; return el; };
 
-function setTab(t){ if(t==='move' && !lv(2)) t='part'; tab=t; $('#tabPart').classList.toggle('on',t==='part'); $('#tabMove').classList.toggle('on',t==='move'); if(t!=='move') cancelPick(); renderInspector(); updateMarkers(); }
+/* kept for older calls: 'move' opens the Mécanique atelier, 'part' the Modéliser one */
+function setTab(t){ if(t==='move') setWs('mech'); else if(ws==='mech'||ws==='struct') setWs('model'); else renderInspector(); }
 function renderInspector(){
   const body=$('#inspBody'); const st=body.scrollTop; body.innerHTML='';
-  if(tab==='move') renderJoints(body); else renderPart(body);
+  if(ws==='check') renderValidation(body); else if(ws==='mech') renderMech(body); else if(ws==='struct') renderStruct(body); else renderPart(body);
   hydrateIcons(body); body.scrollTop=st;
 }
 function partChanged(p, rerender=false){ sync(); commit(); if(rerender) renderInspector(); else liveInspector(); }
@@ -118,7 +119,7 @@ function renderPart(body){
   const j=state.joints.find(j=>j.child===p.id);
   const supports=state.joints.filter(j=>j.parent===p.id);
   body.append(minLvl(sec('Mouvement', h('div',{class:'info',html: j? `Reliée à <b>${partName(j.parent)}</b> par une liaison <b>${jointLabel(j.type).toLowerCase()}</b>.` : supports.length? `Support de ${supports.length} liaison${supports.length>1?'s':''}.` : 'Aucune liaison.'}),
-    h('button',{class:'btn',style:'justify-content:center',onclick:()=>{ if(!j) openJointForm(null,p.id); else selJoint=j.id; setTab('move'); }}, svgIcon('link'), j?'Voir la liaison':'Ajouter une liaison')),2));
+    h('button',{class:'btn',style:'justify-content:center',onclick:()=>{ setWs('mech'); if(!j){ if(mechReady()) openJointForm(null,p.id); } else selJoint=j.id; renderInspector(); updateMarkers(); }}, svgIcon('link'), j?'Voir la liaison':'Ajouter une liaison')),2));
   body.append(sceneList());
 }
 
@@ -144,14 +145,21 @@ function nearestAxis(a){ const ax=['x','y','z']; let best='z',bv=-1; ax.forEach(
 
 function openJointForm(j=null, childId=null){
   if(j){ const {o,a}=jointWorld(j); jf={edit:j.id,name:j.name,type:j.type,child:j.child,parent:j.parent,axis:nearestAxis(a),origin:[o.x,o.y,o.z].map(v=>+v.toFixed(3)),
-      min:j.min, max:j.max, motor:j.motor?.mode||'none', speed:j.motor?.speed??45, driver:j.driver?.joint??null, ratio:j.driver?.ratio??1, calc:'gear'}; }
+      min:j.min, max:j.max, motor:j.motor?.mode||'none', speed:j.motor?.speed??45, driver:j.driver?.joint??null, ratio:j.driver?.ratio??1, calc:'gear', loc:j.loc||null};
+    if(j.loc){ const lp=findPart(j.loc.pid), l=lp?.locs?.find(k=>k.id===j.loc.lid); if(l){ jf.axis='loc'; jf.locDir=[a.x,a.y,a.z]; } else jf.loc=null; } }
   else {
     const free=state.parts.filter(p=>!state.joints.some(k=>k.child===p.id));
     const c = childId ?? (selection.find(id=>!state.joints.some(k=>k.child===id)) ?? free[0]?.id ?? null);
-    jf={edit:null,name:'',type:'pivot',child:c,parent:null,axis:'z',origin:[0,0,0],min:null,max:null,motor:'none',speed:45,driver:null,ratio:1,calc:'gear'};
-    centerOrigin();
+    jf={edit:null,name:'',type:'pivot',child:c,parent:null,axis:'z',origin:[0,0,0],min:null,max:null,motor:'none',speed:45,driver:null,ratio:1,calc:'gear',loc:null};
+    centerOrigin(); defaultJointLoc();
   }
   updateMarkers();
+}
+function defaultJointLoc(){ if(!jf||jf.child==null) return; const p=findPart(jf.child); const l=p?.locs?.find(k=>k.kind==='axe') || p?.locs?.find(k=>k.kind==='centre'); if(l) setJointLoc(p.id,l.id,true); }
+function setJointLoc(pid, lid, quiet=false){
+  if(!jf) return; const p=findPart(pid), l=p?.locs?.find(k=>k.id===lid); if(!l) return;
+  const {o,d}=locWorld(p,l); jf.loc={pid,lid}; jf.origin=[o.x,o.y,o.z].map(v=>+v.toFixed(3)); jf.axis='loc'; jf.locDir=[d.x,d.y,d.z];
+  if(!quiet){ toast(`Repère choisi : ${l.name} (${p.name})`); renderInspector(); updateMarkers(); }
 }
 function centerOrigin(){ if(!jf||jf.child==null) return; const b=selBox([jf.child]); if(b.isEmpty()) return; const c=new THREE.Vector3(); b.getCenter(c); jf.origin=[c.x,c.y,c.z].map(v=>+v.toFixed(2)); }
 let pickMode=null;
@@ -174,11 +182,11 @@ function saveJoint(){
   if(f.driver!=null && f.edit!=null && driverChainHas(f.driver, f.edit)) return toast('Impossible : ces liaisons s’entraîneraient en boucle.');
   if(f.min!=null && f.max!=null && f.min>f.max) [f.min,f.max]=[f.max,f.min];
   const PR=restMatrix(f.parent), inv=PR.clone().invert(), rotInv=new THREE.Matrix4().extractRotation(inv);
-  const o=new THREE.Vector3(...f.origin).applyMatrix4(inv); const a=new THREE.Vector3(...AX[f.axis]).applyMatrix4(rotInv).normalize();
+  const o=new THREE.Vector3(...f.origin).applyMatrix4(inv); const a=new THREE.Vector3(...(f.axis==='loc'&&f.locDir? f.locDir : AX[f.axis])).applyMatrix4(rotInv).normalize();
   const data={type:f.type, child:f.child, parent:f.parent, origin:[o.x,o.y,o.z].map(v=>+v.toFixed(5)), axis:[a.x,a.y,a.z].map(v=>+v.toFixed(6)),
     min:f.type==='fixe'?null:f.min, max:f.type==='fixe'?null:f.max,
     motor: f.type!=='fixe' && f.driver==null && f.motor!=='none' ? {mode:f.motor, speed:+f.speed||0} : null,
-    driver: f.type!=='fixe' && f.driver!=null ? {joint:f.driver, ratio:+f.ratio||0} : null};
+    driver: f.type!=='fixe' && f.driver!=null ? {joint:f.driver, ratio:+f.ratio||0} : null, loc: f.axis==='loc'? f.loc : null};
   if(f.edit!=null){ const j=state.joints.find(k=>k.id===f.edit); Object.assign(j,data); if(f.name) j.name=f.name; selJoint=j.id; }
   else { const n=state.joints.length+1; const j={id:state.nextId++, name:f.name||`L${n} ${jointLabel(f.type)}`, ...data}; state.joints.push(j); selJoint=j.id; }
   jf=null; simReset(true); sync(); commit(); renderInspector();
@@ -198,7 +206,8 @@ function renderJoints(body){
       h('button',{class:'btn icon ghost',title:'Modifier',disabled:lock||null,onclick:()=>{ openJointForm(j); renderInspector(); }}, svgIcon('edit')),
       h('button',{class:'btn icon ghost danger',title:'Supprimer la liaison',disabled:lock||null,onclick:()=>deleteJoint(j.id)}, svgIcon('trash'))));
     const ax=nearestAxis(jointWorld(j).a).toUpperCase();
-    card.append(h('div',{class:'jsub',html:`<b>${partName(j.child)}</b> sur ${partName(j.parent)}${j.type!=='fixe'?` · axe ${ax}`:''}`}));
+    const lp=j.loc? findPart(j.loc.pid)?.locs?.find(l=>l.id===j.loc.lid) : null;
+    card.append(h('div',{class:'jsub',html:`<b>${partName(j.child)}</b> sur ${partName(j.parent)}${j.type!=='fixe'?` · axe ${ax}`:''}${lp?` · repère « ${lp.name} »`:''}`}));
     if(j.type!=='fixe'){
       if(j.driver){ const d=state.joints.find(k=>k.id===j.driver.joint); card.append(h('div',{class:'jsub',html:`Entraînée par <b>${d?.name||'?'}</b> · rapport <span class="mono">${fmt(j.driver.ratio,4)}</span> ${j.type==='glissiere'?(d?.type==='glissiere'?'mm/mm':'mm/°'):(d?.type==='glissiere'?'°/mm':'')}`}));
         card.append(h('div',{class:'jslider'}, h('span',{class:'jsub'},'Valeur'), h('span',{class:'jval','data-jv':j.id},`${fmt(val,1)} ${unitOf(j)}`))); }
@@ -225,11 +234,15 @@ function jointForm(){
   const typeBtns=h('div',{style:'display:grid;grid-template-columns:repeat(3,1fr);gap:4px'}, ...['fixe','pivot','glissiere'].map(t=>h('button',{class:'btn'+(f.type===t?' on':''),style:'justify-content:center;flex-direction:column;gap:2px;padding:6px 2px;font-size:12px',onclick:()=>{ f.type=t; if(t==='glissiere'&&f.speed===45) f.speed=10; if(t==='pivot'&&f.speed===10) f.speed=45; rer(); }}, svgIcon(t==='fixe'?'link':t==='pivot'?'pivot':'slide'), jointLabel(t))));
   form.append(typeBtns);
   const partOpts=state.parts.map(p=>[p.id,p.name]);
-  form.append(row('Pièce mobile', sel(partOpts, f.child, v=>{ f.child=+v; centerOrigin(); rer(); }, 'Pièce mobile')));
+  form.append(row('Pièce mobile', sel(partOpts, f.child, v=>{ f.child=+v; f.loc=null; f.axis='z'; centerOrigin(); defaultJointLoc(); rer(); }, 'Pièce mobile')));
   form.append(row('Support', sel([['null','Bâti (fixe)'],...partOpts.filter(([id])=>id!==f.child)], f.parent, v=>{ f.parent= v==='null'?null:+v; rer(); }, 'Support')));
   if(f.type!=='fixe'){
-    form.append(row('Axe', h('div',{class:'seg'}, ...['x','y','z'].map(a=>h('button',{class:'btn'+(f.axis===a?' on':''),style:'flex:1;justify-content:center',onclick:()=>{ f.axis=a; rer(); }}, a.toUpperCase())))));
-    form.append(h('div',{class:'sec'}, h('label',{style:'color:var(--ink-2);font-size:13px'}, f.type==='pivot'?'Centre de rotation (mm)':'Point de l’axe (mm)'),
+    const locOpts=[]; for(const pid of [f.child, f.parent]){ const p=pid!=null? findPart(pid):null; if(!p?.locs) continue; for(const l of p.locs) if(l.kind!=='base') locOpts.push([pid+':'+l.id, (pid===f.child?'':'Support · ')+l.name]); }
+    locOpts.push(['libre', lv(3)? 'Point et axe libres' : 'Aucun repère']);
+    form.append(row('Repère', sel(locOpts, f.loc && f.axis==='loc'? f.loc.pid+':'+f.loc.lid : 'libre', v=>{ if(v==='libre'){ f.loc=null; if(f.axis==='loc') f.axis=nearestAxis(new THREE.Vector3(...f.locDir)); rer(); return; } const [pid,lid]=v.split(':'); setJointLoc(+pid,lid); }, 'Repère')));
+    form.append(h('div',{class:'jsub'},'Astuce : cliquez directement un repère (rond, flèche) dans la vue 3D.'));
+    form.append(row('Axe', h('div',{class:'seg'}, ...(f.loc?[['loc','Repère']]:[]).concat([['x','X'],['y','Y'],['z','Z']]).map(([a,l])=>h('button',{class:'btn'+(f.axis===a?' on':''),style:'flex:1;justify-content:center;padding:6px 4px',onclick:()=>{ f.axis=a; rer(); }}, l)))));
+    if(!f.loc || lv(3)) form.append(h('div',{class:'sec'}, h('label',{style:'color:var(--ink-2);font-size:13px'}, f.type==='pivot'?'Centre de rotation (mm)':'Point de l’axe (mm)'),
       h('div',{class:'xyz'}, ...[0,1,2].map(i=>h('div',{}, h('b',{class:'xyz'[i]},'XYZ'[i]), numInput('Origine '+'XYZ'[i], f.origin[i],'', v=>{ f.origin[i]=v; updateMarkers(); },{min:-1e5,max:1e5,step:1})))),
       h('div',{style:'display:flex;flex-wrap:wrap;gap:6px'}, h('button',{class:'btn',style:'flex:1 1 auto;justify-content:center;font-size:12.5px',onclick:()=>{ centerOrigin(); rer(); }}, 'Centre de la pièce'), h('button',{class:'btn',style:'flex:1 1 auto;justify-content:center;font-size:12.5px',onclick:startPick}, svgIcon('target'),'Cliquer un point'))));
     const u=f.type==='glissiere'?'mm':'°';
@@ -302,7 +315,7 @@ function curMatrix(id, depth=0){
 function applyPoses(){
   curCache=new Map();
   for(const p of state.parts){ const r=meshes.get(p.id); if(!r) continue; const M=curMatrix(p.id); M.decompose(r.mesh.position,r.mesh.quaternion,r.mesh.scale); r.mesh.updateMatrix(); }
-  curCache=null;
+  curCache=null; updateLocatorPoses();
 }
 function simStep(dt){
   sim.t+=dt;
@@ -333,7 +346,8 @@ function simUI(){
   updateToolButtons();
 }
 function simToggle(){
-  if(!state.joints.length){ toast('Ajoutez d’abord une liaison dans l’onglet Mouvements.'); setTab('move'); return; }
+  if(!mechReady()){ toast('Validez d’abord les pièces (atelier 2 · Valider).'); return; }
+  if(!state.joints.length){ toast('Ajoutez d’abord une liaison.'); return; }
   if(!sim.playing && !state.joints.some(j=>j.motor && !j.driver)) toast('Aucun moteur : utilisez les curseurs, ou ajoutez un moteur à une liaison.');
   cancelPick(); sim.playing=!sim.playing; tc.detach(); simUI(); renderInspector();
 }
@@ -356,12 +370,12 @@ function markerFor(type, o, a, color){
 }
 function updateMarkers(){
   for(const c of [...markers.children]){ markers.remove(c); c.traverse(x=>x.material?.dispose?.()); }
-  if(tab!=='move') return;
+  if(ws!=='mech') return;
   const acc=cssVar('--accent')||'#1d7656', mark=cssVar('--mark')||'#df9a00';
   curCache=simActive()? new Map(): null;
   for(const j of state.joints){ if(jf && jf.edit===j.id) continue; const {o,a}=jointWorld(j, simActive()); markers.add(markerFor(j.type,o,a, selJoint===j.id? mark : acc)); }
   curCache=null;
-  if(jf && jf.child!=null) markers.add(markerFor(jf.type, new THREE.Vector3(...jf.origin), new THREE.Vector3(...AX[jf.axis]), mark));
+  if(jf && jf.child!=null) markers.add(markerFor(jf.type, new THREE.Vector3(...jf.origin), new THREE.Vector3(...(jf.axis==='loc'&&jf.locDir? jf.locDir : AX[jf.axis])).normalize(), mark));
 }
 
 /* =========================================================
@@ -375,7 +389,7 @@ async function offerFile(filename, data){
   catch(e){ toast('Le téléchargement est bloqué dans cette fenêtre.'); }
 }
 const slug=s=>(s||'projet').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase()||'projet';
-function saveProject(){ offerFile(slug(state.name)+'.json', JSON.stringify({app:'etabli3d',version:1,name:state.name,parts:state.parts,joints:state.joints,nextId:state.nextId,note:state.note||null})); }
+function saveProject(){ offerFile(slug(state.name)+'.json', JSON.stringify({app:'etabli3d',version:1,name:state.name,parts:state.parts,joints:state.joints,nextId:state.nextId,note:state.note||null,struct:state.struct||null})); }
 function stlBinary(list){
   let tris=0; const geos=list.map(r=>{ const g=r.mesh.geometry; const n=g.index?g.index.count/3:g.attributes.position.count/3; tris+=n; return {g, m:r.mesh.matrixWorld}; });
   const buf=new ArrayBuffer(84+tris*50), dv=new DataView(buf);

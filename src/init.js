@@ -15,10 +15,11 @@ $('#bSketch').addEventListener('click',()=>{ if(simLocked()){ toast('Réinitiali
 function setLevel(n, quiet=false){
   const prev=prefs.level; prefs.level=n; savePrefs(); applyLevelAttr();
   $$('#lvl [data-lvl]').forEach(b=>b.setAttribute('aria-checked', String(+b.dataset.lvl===n)));
-  if(!lv(2)){ if(simActive()) simReset(true); if(tab==='move') setTab('part'); if(!$('#sk').hidden) closeSketch(false); jf=null; }
+  if(!lv(2)){ if(simActive()) simReset(true); if(!$('#sk').hidden) closeSketch(false); jf=null; }
+  if((WS.find(w=>w.k===ws)?.lvl||1)>n) setWs('model');
   if(!lv(3) && SK.tool==='bezier') setSkTool('select');
   if(lv(3) && prefs.tree && !$('#app').classList.contains('with-tree') && !matchMedia('(max-width: 860px)').matches) setTreeOpen(true);
-  sync(); renderInspector(); applyViewOffset();
+  sync(); renderInspector(); applyViewOffset(); updateSteps();
   if(!quiet && n!==prev) toast(`Niveau ${LEVELS[n-1].name} : ${LEVELS[n-1].desc}`, 3400);
 }
 $$('#lvl [data-lvl]').forEach(b=>b.onclick=()=>setLevel(+b.dataset.lvl));
@@ -47,7 +48,9 @@ $('#tGroup').onclick=groupSel; $('#tUngroup').onclick=ungroupSel; $('#tDup').onc
 $$('#views [data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
 $('#snapSel').onchange=applySnap;
 $('#sPlay').onclick=simToggle; $('#sReset').onclick=()=>simReset(false);
-$('#tabPart').onclick=()=>setTab('part'); $('#tabMove').onclick=()=>setTab('move');
+$$('#stTools [data-st]').forEach(b=>b.onclick=()=>stSetTool(b.dataset.st));
+$$('#stTools [data-v3]').forEach(b=>b.onclick=()=>setStructView3D(b.dataset.v3==='1'));
+$('#stFit').onclick=()=>{ if(ST.mode3d) setStructView3D(true); else { ST.fitted=false; stFit(); stDraw(); } };
 $('#bUndo').onclick=undo; $('#bRedo').onclick=redo;
 $('#bSave').onclick=saveProject; $('#bStl').onclick=exportStl;
 $('#bOpen').onclick=()=>$('#fileIn').click();
@@ -91,6 +94,13 @@ document.addEventListener('keydown', e=>{
   if(!$('#gallery').hidden){ if(k==='escape') $('#gallery').hidden=true; return; }
   if(k==='escape' && !$('#menuLook').hidden){ $('#menuLook').hidden=true; return; }
   if(e.target.closest?.('input,select,textarea')) return;
+  if(ws!=='model' && !mod){
+    if(k==='escape'){ if(locPick!=null){ locPick=null; $('#pickHint').hidden=true; } else if(pickMode) cancelPick(); else if(ws==='struct'){ ST.chain=null; ST.sel=null; renderInspector(); stDraw(); } else { selection=[]; sync(); renderInspector(); } }
+    else if(ws==='struct' && (k==='delete'||k==='backspace') && ST.sel){ e.preventDefault(); const T=SD().truss; if(ST.sel.t==='node'){ T.bars=T.bars.filter(b=>b.a!==ST.sel.id&&b.b!==ST.sel.id); T.nodes=T.nodes.filter(n=>n.id!==ST.sel.id); } else T.bars=T.bars.filter(b=>b.id!==ST.sel.id); ST.sel=null; structChanged(); }
+    else if(k==='f' && ws!=='struct') setView('fit');
+    return;
+  }
+  if(ws!=='model' && mod && !['z','y','s'].includes(k)) return;
   if(mod&&k==='z'){ e.preventDefault(); e.shiftKey?redo():undo(); }
   else if(mod&&k==='y'){ e.preventDefault(); redo(); }
   else if(mod&&k==='g'){ e.preventDefault(); e.shiftKey?ungroupSel():groupSel(); }
@@ -116,6 +126,7 @@ document.addEventListener('keydown', e=>{
 setGizmoMode('translate'); applySnap();
 csgReady.then(()=>{ for(const k of [...geoCache.keys()]) if(k.startsWith('g:')) geoCache.delete(k); for(const r of meshes.values()) r.key=null; sync(); });
 (function boot(){
+  document.documentElement.dataset.ws='model';
   $$('#lvl [data-lvl]').forEach(b=>b.setAttribute('aria-checked', String(+b.dataset.lvl===prefs.level)));
   if(lv(3) && prefs.tree && !matchMedia('(max-width: 860px)').matches) $('#app').classList.add('with-tree');
   $('#bTree').classList.toggle('on', $('#app').classList.contains('with-tree'));
@@ -123,16 +134,16 @@ csgReady.then(()=>{ for(const k of [...geoCache.keys()]) if(k.startsWith('g:')) 
   try{ const s=localStorage.getItem('etabli3d.autosave'); if(s){ const o=JSON.parse(s); if(o.parts && o.parts.length){ loadProject(o,true); loaded=true; } } }catch(e){}
   if(!loaded){ loadExample('maison'); hist.stack=[hist.stack[hist.stack.length-1]]; hist.idx=0; openGallery(); }
   else { renderInspector(); renderDemo(); }
-  simUI(); updateUndo();
+  simUI(); updateUndo(); updateSteps();
 })();
 resize();
 let lastT=performance.now(), frame=0;
 function loop(now){
   requestAnimationFrame(loop);
   const dt=Math.min(0.05,(now-lastT)/1000); lastT=now; frame++;
-  if(sim.playing){ simStep(dt*(+$('#sSpeed').value||1)); applyPoses(); if(tab==='move') updateMarkers(); if(frame%4===0){ refreshJointValues(); $('#sTime').textContent=fmt(sim.t,1)+' s'; } }
-  if(!$('#sk').hidden) return;
+  if(sim.playing){ simStep(dt*(+$('#sSpeed').value||1)); applyPoses(); if(ws==='mech') updateMarkers(); if(frame%4===0){ refreshJointValues(); $('#sTime').textContent=fmt(sim.t,1)+' s'; } }
+  if(!$('#sk').hidden || (ws==='struct' && !ST.mode3d)) return;
   stepCam(now); orbit.update(); renderer.render(scene,camera);
 }
 requestAnimationFrame(loop);
-window.__etabli={state, SAMPLES, loadExample, openGallery, addPart, groupSel, openSketch, closeSketch, SK, skSolve, sim, simToggle, simReset, exportStl, stlBinary, zipStore, meshes, selection:()=>selection, setSel:(ids)=>{selection=ids; sync(); renderInspector();}, setTab, openJointForm, saveJoint, jf:()=>jf, skProfiles, getGeometry};
+window.__etabli={state, SAMPLES, setWs, ws:()=>ws, validateAll, validatePart, vState, mechReady, setJointLoc, ST, SD, computeStruct, solveTruss, buildMesh, solvePlane, beamTheory, makeProxy, getProxyGeo, locGroup, loadExample, openGallery, addPart, groupSel, openSketch, closeSketch, SK, skSolve, sim, simToggle, simReset, exportStl, stlBinary, zipStore, meshes, selection:()=>selection, setSel:(ids)=>{selection=ids; sync(); renderInspector();}, setTab, openJointForm, saveJoint, jf:()=>jf, skProfiles, getGeometry};

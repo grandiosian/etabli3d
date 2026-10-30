@@ -15,7 +15,7 @@ function J_(o){ // origin/axis given in world coordinates at rest
   const j={id:state.nextId++, name:o.name, type:o.type, child:o.child, parent:o.parent??null, origin:[og.x,og.y,og.z], axis:[a.x,a.y,a.z], min:o.min??null, max:o.max??null, motor:o.motor||null, driver:o.driver||null};
   state.joints.push(j); return j;
 }
-function resetFor(name){ state.name=name; state.parts=[]; state.joints=[]; state.nextId=1; state.note=null; }
+function resetFor(name){ state.name=name; state.parts=[]; state.joints=[]; state.nextId=1; state.note=null; state.struct=defaultStruct(); }
 
 /* Sketch builder: points, closed polylines (automatic H / V), circles, dimensions. */
 function SKB(){
@@ -45,7 +45,7 @@ const SAMPLES={
     desc:'Murs creusés par des perçages, toit fait de deux coins.',
     build(){
       resetFor('Maison');
-      const body=G_('Maison (murs)', '#e6a23a', [0,0,0], [
+      const body=G_('Maison (murs)', '#e6a23a', [0,0,2], [
         P_('box',{name:'Murs',params:{L:40,l:30,h:24},pos:[0,0,0]}),
         P_('box',{name:'Intérieur',params:{L:36,l:26,h:21},hole:true,pos:[0,0,2]}),
         P_('box',{name:'Porte',params:{L:9,l:6,h:15},hole:true,pos:[0,-15,1]}),
@@ -53,17 +53,17 @@ const SAMPLES={
         P_('box',{name:'Fenêtre droite',params:{L:8,l:6,h:7},hole:true,pos:[12,-15,10]}),
         P_('box',{name:'Fenêtre arrière',params:{L:10,l:6,h:8},hole:true,pos:[0,15,10]}),
       ]);
-      const roof=G_('Toit', '#c4473c', [0,0,24], [
+      const roof=G_('Toit', '#c4473c', [0,0,26], [
         P_('wedge',{name:'Pan droit',params:{L:22,l:36,h:15},pos:[11,0,0]}),
         P_('wedge',{name:'Pan gauche',params:{L:22,l:36,h:15},pos:[-11,0,0],rot:[0,0,180]}),
         P_('box',{name:'Cheminée',params:{L:5,l:5,h:14},pos:[11,7,2]}),
       ]);
-      const ground=P_('box',{name:'Terrain',params:{L:70,l:56,h:2},color:'#4aa36b',pos:[0,-6,-2]});
-      const path=P_('box',{name:'Allée',params:{L:9,l:13,h:0.6},color:WHITE,pos:[0,-21.5,0]});
+      const ground=P_('box',{name:'Terrain',params:{L:70,l:56,h:2},color:'#4aa36b',pos:[0,-6,0]});
+      const path=P_('box',{name:'Allée',params:{L:9,l:13,h:1},color:WHITE,pos:[0,-21.5,2]});
       state.parts.push(ground,path,body,roof);
     },
     note:{observe:['La maison est un <b>groupe</b> : un cube plein et cinq <b>perçages</b> (intérieur, porte, fenêtres).','Le toit est un autre groupe : deux <b>coins</b> dos à dos et une cheminée.'],
-      try:['Sélectionnez les murs puis <b>Dégrouper</b> : les perçages apparaissent en gris transparent.','Agrandissez une fenêtre dans l’onglet Pièce, puis regroupez avec <span class="kbd">Ctrl</span>+<span class="kbd">G</span>.']}},
+      try:['Sélectionnez les murs puis <b>Dégrouper</b> : les perçages apparaissent en gris transparent.','Agrandissez une fenêtre dans le panneau de droite, puis regroupez avec <span class="kbd">Ctrl</span>+<span class="kbd">G</span>.']}},
 
   crayons:{level:1, cat:'model', title:'Pot à crayons gravé', icon:'ex_cup', tags:['Texte','Perçage','Gravure'],
     desc:'Un bloc percé de cinq trous, avec un nom gravé en creux.',
@@ -110,7 +110,7 @@ const SAMPLES={
         P_('text',{name:'Texte',params:{txt:'TECHNO',size:6,h:1.5,font:'round'},color:WHITE,pos:[3,0,3]}));
     },
     note:{observe:['La plaque est une <b>esquisse</b> : un rectangle de 50 × 20 mm et un cercle de 5 mm qui devient un trou.','Le texte est posé à Z = 3 mm, exactement sur la plaque.'],
-      try:['Double-cliquez la plaque pour ouvrir l’esquisse, puis double-cliquez la cote 50 et tapez 60.','Changez le texte dans l’onglet Pièce.']}},
+      try:['Double-cliquez la plaque pour ouvrir l’esquisse, puis double-cliquez la cote 50 et tapez 60.','Changez le texte dans le panneau de droite.']}},
 
   /* ---------------- Esquisser ---------------- */
   plaque:{level:2, cat:'sketch', title:'Plaque de fixation', icon:'ex_plate', tags:['Cotes','Contraintes','Extrusion'],
@@ -208,7 +208,7 @@ const SAMPLES={
       J_({name:'L4 Manivelle',type:'fixe',child:crank.id,parent:g1.id,origin:[0,13,11]});
     },
     note:{observe:['Le pignon Z10 tourne <b>2 fois plus vite</b> et en <b>sens inverse</b> : rapport −20/10 = −2.','La crémaillère avance de π × d / 360 = <b>0,35 mm par degré</b> (d = 40 mm).'],
-      try:['Cliquez la roue menante : l’onglet Pièce donne son diamètre primitif d = m × Z.','Modifiez L2 et utilisez <b>Calculer le rapport</b> avec d’autres nombres de dents.']}},
+      try:['Cliquez la roue menante : le panneau de droite donne son diamètre primitif d = m × Z.','Modifiez L2 et utilisez <b>Calculer le rapport</b> avec d’autres nombres de dents.']}},
 
   reducteur:{level:3, cat:'move', title:'Réducteur à deux étages', icon:'ex_reducer', tags:['Train d’engrenages','Rapport','Moteur continu'],
     desc:'Deux étages Z10 → Z30 : la sortie tourne 9 fois moins vite.',
@@ -323,8 +323,77 @@ const SAMPLES={
     },
     note:{observe:['Le rotor est un <b>groupe</b> (moyeu + 3 pales tournées de 120°) : une seule liaison suffit.','L2 est posée sur la nacelle : quand la nacelle s’oriente, l’axe du rotor tourne avec elle.'],
       try:['Changez la vitesse du rotor (Modifier → Vitesse).','Dégroupez le rotor pour voir l’angle de chaque pale (Rotation X).']}},
+
+  /* ---------------- Structures ---------------- */
+  pontWarren:{level:2, cat:'struct', mod:'treillis', title:'Pont en treillis', icon:'ex_bridge', tags:['Treillis','Traction','Compression'],
+    desc:'Un pont de 40 cm en baguettes de bois chargé de 60 kg.',
+    build(){
+      resetFor('Pont en treillis'); const S=state.struct; S.mod='treillis'; const T=S.truss; T.mat='bois'; T.sec='plein'; T.D=6;
+      const bot=[0,80,160,240,320,400].map(x=>newNode(x,0)), top=[40,120,200,280,360].map(x=>newNode(x,70));
+      for(let i=0;i<5;i++){ newBar(bot[i].id,bot[i+1].id); newBar(bot[i].id,top[i].id); newBar(top[i].id,bot[i+1].id); if(i<4) newBar(top[i].id,top[i+1].id); }
+      bot[0].sup='fixe'; bot[5].sup='glissant'; for(let i=1;i<5;i++) bot[i].fy=-150;
+    },
+    note:{observe:['Les barres du haut sont <b>comprimées</b> (rouge), celles du bas <b>tendues</b> (bleu).','Le triangle est la forme qui ne se déforme pas : c’est le principe du treillis.'],
+      try:['Augmentez les forces (outil Sélection, cliquez un nœud du bas) jusqu’à ce qu’une barre casse.','Supprimez une diagonale : la structure devient instable.','Passez les barres du haut en <b>tube</b> pour éviter le flambage.']}},
+
+  grue:{level:2, cat:'struct', mod:'treillis', title:'Grue en tubes', icon:'ex_crane', tags:['Tube','Cylindres imbriqués','Porte-à-faux'],
+    desc:'Un mât et une flèche en tubes d’aluminium portent 8 kg au bout.',
+    build(){
+      resetFor('Grue en tubes'); const S=state.struct; S.mod='treillis'; const T=S.truss; T.mat='alu'; T.sec='tube'; T.D=10; T.d=8; T.labels=false;
+      const L=[], R=[]; for(let k=0;k<=5;k++){ L.push(newNode(0,k*60)); R.push(newNode(40,k*60)); }
+      for(let k=0;k<5;k++){ newBar(L[k].id,L[k+1].id); newBar(R[k].id,R[k+1].id); newBar(L[k+1].id,R[k+1].id); newBar(k%2?L[k].id:R[k].id, k%2?R[k+1].id:L[k+1].id); }
+      newBar(L[0].id,R[0].id); L[0].sup='fixe'; R[0].sup='fixe';
+      const tp=[R[5]], bt=[R[4]]; for(const x of [100,160,220,280]){ tp.push(newNode(x,300)); bt.push(newNode(x,240)); }
+      for(let k=0;k<4;k++){ newBar(tp[k].id,tp[k+1].id); newBar(bt[k].id,bt[k+1].id); newBar(tp[k+1].id,bt[k+1].id); newBar(tp[k].id,bt[k+1].id); }
+      bt[4].fy=-80;
+    },
+    note:{observe:['Chaque barre est un <b>tube</b> : deux cylindres imbriqués, Ø 10 mm dehors et Ø 8 mm dedans.','La flèche travaille en porte-à-faux : le dessus est tendu, le dessous comprimé.'],
+      try:['Cliquez une barre et passez-la en <b>cylindre plein</b> Ø 10 : la masse augmente beaucoup, la flèche change peu.','Ajoutez 20 kg (Fy = −200 N) au bout : quelle barre lâche en premier ?']}},
+
+  pontSuspendu:{level:2, cat:'struct', mod:'treillis', title:'Pont suspendu', icon:'ex_suspension', tags:['Câbles','Traction seule','Pylônes'],
+    desc:'Le tablier est pendu à un câble porteur tenu par deux pylônes.',
+    build(){
+      resetFor('Pont suspendu'); const S=state.struct; S.mod='treillis'; const T=S.truss; T.mat='acier'; T.sec='cable'; T.D=1.5; T.labels=false;
+      const deck=[], top=[]; for(let x=100;x<=500;x+=50){ deck.push(newNode(x,40)); top.push(newNode(x,60)); }
+      deck[0].sup='fixe'; deck[deck.length-1].sup='glissant';
+      const T1=newNode(100,220), T2=newNode(500,220), A1=newNode(-40,40), A2=newNode(640,40); A1.sup='fixe'; A2.sup='fixe';
+      const tw=(a,b)=>Object.assign(newBar(a,b),{sec:'tube',D:12,d:9,mat:'alu'}), wd=(a,b)=>Object.assign(newBar(a,b),{sec:'plein',D:6,mat:'bois'});
+      tw(top[0].id,T1.id); tw(top[top.length-1].id,T2.id);
+      // tablier : poutre de rigidité en treillis
+      for(let k=0;k<deck.length;k++){ wd(deck[k].id,top[k].id); if(k<deck.length-1){ wd(deck[k].id,deck[k+1].id); wd(top[k].id,top[k+1].id); wd(k<4?deck[k].id:top[k].id, k<4?top[k+1].id:deck[k+1].id); } }
+      const cab=[T1]; for(let x=150;x<=450;x+=50) cab.push(newNode(x, +(90+130*((x-300)/200)**2).toFixed(2))); cab.push(T2);
+      newBar(A1.id,T1.id); newBar(T2.id,A2.id); for(let k=0;k<cab.length-1;k++) newBar(cab[k].id,cab[k+1].id);
+      for(let k=1;k<cab.length-1;k++) Object.assign(newBar(cab[k].id,top[k].id),{D:1});
+      for(let k=1;k<top.length-1;k++) top[k].fy=-40;
+    },
+    note:{observe:['Les <b>câbles</b> ne travaillent qu’en traction : ils sont fins mais très résistants.','Le câble porteur forme une parabole ; les suspentes y accrochent le tablier, raidi par une <b>poutre en treillis</b>.'],
+      try:['Mettez une forte force vers le haut sur le tablier : des suspentes se <b>détendent</b> (gris pointillé).','Supprimez un câble d’ancrage : le pylône bascule, la structure devient instable.','Supprimez les diagonales du tablier : sans poutre de rigidité, le pont devient un mécanisme.']}},
+
+  plongeoir:{level:2, cat:'struct', mod:'maillage', title:'Plongeoir', icon:'ex_board', tags:['Maillage','Encastrement','Flèche'],
+    desc:'Une planche de 2,40 m encastrée, un plongeur de 80 kg au bout.',
+    build(){ resetFor('Plongeoir'); const S=state.struct; S.mod='maillage'; Object.assign(S.mesh,{shape:'poutre', t:500, mat:'bois', sup:'encastre', load:'pointe', F:800, grav:true, dens:2, view:'vm'}); Object.assign(S.mesh.P,{L:2400,h:60}); },
+    note:{observe:['La planche est <b>encastrée</b> à gauche : la contrainte est la plus forte près de l’encastrement.','Le calcul à la main (RDM) et le maillage donnent presque la même flèche.'],
+      try:['Mettez la déformée en <b>Réelle (×1)</b> : c’est vraiment ce que l’on voit au bord de la piscine.','Doublez l’épaisseur (Hauteur 120) : la flèche est divisée par 8, pas par 2 !']}},
+
+  plancher:{level:2, cat:'struct', mod:'maillage', title:'Plancher simple', icon:'ex_floor', tags:['Deux appuis','Charge répartie','Traction / compression'],
+    desc:'Une solive de 3 m posée sur deux murs, chargée sur toute sa longueur.',
+    build(){ resetFor('Plancher simple'); const S=state.struct; S.mod='maillage'; Object.assign(S.mesh,{shape:'poutre', t:75, mat:'bois', sup:'appuis', load:'reparti', F:4000, grav:true, dens:2, view:'tc'}); Object.assign(S.mesh.P,{L:3000,h:150}); },
+    note:{observe:['Le dessus de la solive est <b>comprimé</b> (rouge), le dessous <b>tendu</b> (bleu).','Au milieu de la hauteur, la fibre neutre ne travaille presque pas.'],
+      try:['Passez le matériau en <b>béton</b> : la traction en bas dépasse ce que le béton supporte. C’est pour cela qu’on y met des armatures d’acier.','Comparez « Charge répartie » et « Force au milieu » avec la même force totale.']}},
+
+  voute:{level:2, cat:'struct', mod:'maillage', title:'Voûte en pierre', icon:'ex_vault', tags:['Arc','Compression','Pierre'],
+    desc:'Un arc de pierre de 3 m qui porte 5 tonnes au sommet.',
+    build(){ resetFor('Voûte en pierre'); const S=state.struct; S.mod='maillage'; Object.assign(S.mesh,{shape:'arc', t:1000, mat:'pierre', sup:'pieds', load:'centre', F:50000, grav:true, dens:1, view:'tc'}); Object.assign(S.mesh.P,{Ri:1500,e:300}); },
+    note:{observe:['Presque toute la voûte est <b>comprimée</b> : la pierre y résiste très bien.','C’est pourquoi les ponts et les cathédrales en pierre utilisent des arcs, pas des poutres droites.'],
+      try:['Passez la forme en <b>Poutre</b> de même portée et même matériau : la pierre casse en traction.','Diminuez l’épaisseur de l’arc jusqu’à la limite.']}},
+
+  potence:{level:2, cat:'struct', mod:'maillage', title:'Point suspendu', icon:'ex_hook', tags:['Potence','Charge suspendue','Concentration'],
+    desc:'Une potence en bois porte une charge de 50 kg suspendue au bout du bras.',
+    build(){ resetFor('Point suspendu'); const S=state.struct; S.mod='maillage'; Object.assign(S.mesh,{shape:'L', t:80, mat:'bois', sup:'pieds', load:'suspendu', F:500, grav:true, dens:2, view:'vm'}); Object.assign(S.mesh.P,{H:1200,w:80,La:900,ha:80}); },
+    note:{observe:['La contrainte se concentre dans l’<b>angle</b> entre le poteau et le bras.','Le pied du poteau travaille aussi beaucoup : il retient tout le bras.'],
+      try:['Augmentez la hauteur du bras : la flèche au bout diminue nettement.','Essayez l’<b>acier</b> avec des dimensions plus petites.']}},
 };
-const CATS=[['model','Modéliser avec des volumes'],['sketch','Esquisser et coter'],['move','Mettre en mouvement']];
+const CATS=[['model','Modéliser avec des volumes'],['sketch','Esquisser et coter'],['move','Mettre en mouvement'],['struct','Simuler la déformation']];
 
 function loadExample(k){
   const S=SAMPLES[k]; if(!S) return;
@@ -334,8 +403,11 @@ function loadExample(k){
   selection=[]; selJoint=null; jf=null;
   S.after?.();
   $('#projName').value=state.name; demoClosed=false; demoOpen=!matchMedia('(max-width: 860px)').matches;
+  ST.sel=null; ST.fitted=false;
+  const target= S.cat==='struct'? 'struct' : S.cat==='move'? 'mech' : 'model';
+  if(target==='mech') for(const p of state.parts) validatePart(p);
   sync(); commit(); renderDemo(); fitView();
-  setTab(state.joints.length? 'move':'part');
+  setWs(target);
   $('#gallery').hidden=true;
 }
 

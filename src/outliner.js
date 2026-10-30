@@ -16,7 +16,7 @@ function setTreeOpen(v){
 function selectFromTree(id, e){
   if(e?.shiftKey) selection = selection.includes(id)? selection.filter(i=>i!==id) : [...selection,id];
   else selection=[id];
-  sync(); setTab('part');
+  sync(); renderInspector();
 }
 function startRename(obj, span){
   const inp=h('input',{class:'tr-rename',value:obj.name,'aria-label':'Nouveau nom'});
@@ -33,7 +33,7 @@ function treeRow({depth, obj, top, kind, name, badges=[], expandable=false, open
   if(kind){ const ic=svgIcon(kind); ic.classList.add('tr-ic'); row.append(ic); }
   const nm=h('span',{class:'tr-name',title:info?null:'Double-clic pour renommer'}, name);
   row.append(nm, ...badges);
-  if(joint){ row.append(h('button',{class:'badge tr-joint'+(joint.type==='fixe'?' fixe':''),title:'Voir la liaison '+joint.name,onclick:e=>{ e.stopPropagation(); selJoint=joint.id; jf=null; setTab('move'); }}, jointLabel(joint.type))); }
+  if(joint){ row.append(h('button',{class:'badge tr-joint'+(joint.type==='fixe'?' fixe':''),title:'Voir la liaison '+joint.name,onclick:e=>{ e.stopPropagation(); selJoint=joint.id; jf=null; setWs('mech'); }}, jointLabel(joint.type))); }
   if(isTop && !info){
     const hid=!!obj.hidden, lk=!!obj.locked;
     row.append(h('span',{class:'tr-act'},

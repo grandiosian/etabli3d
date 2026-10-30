@@ -4,6 +4,19 @@ Modeleur 3D pour les cours de technologie, dans l'esprit de Tinkercad, qui fonct
 
 **Application en ligne :** https://grandiosian.github.io/etabli3d/
 
+## Quatre ateliers
+
+L'application suit la démarche de conception, avec une barre d'étapes en haut :
+
+| Atelier | Rôle |
+|---|---|
+| **1 · Modéliser** | Créer les pièces : volumes, esquisses, perçages, groupes |
+| **2 · Valider** | Contrôler chaque pièce (forme vide ou plate, surface non fermée, contour d'esquisse qui se croise, épaisseur < 1 mm, pièce sous le plan ou en l'air, perçage isolé), mesurer sa complexité (triangles), créer un **proxy basse résolution** pour les pièces lourdes et poser des **repères** (centre, base, axes de révolution, axes des perçages) |
+| **3 · Mécanique** | Liaisons, moteurs et simulation. Verrouillée tant que les pièces ne sont pas validées ; les liaisons s'accrochent aux repères (clic direct dans la vue 3D) et les pièces lourdes sont affichées en proxy |
+| **4 · Structures** | Simulation de déformation, indépendante des pièces : **Treillis** (barres articulées en cylindre plein, tube = cylindres imbriqués, ou câble en traction seule ; flambage d'Euler, réactions, masse) et **Maillage** (éléments finis 2D simplifiés en contraintes planes : flèche, von Mises, traction / compression, comparaison avec le calcul RDM) |
+
+Unités des structures : mm, N, MPa. Matériaux : bois, acier, aluminium, PLA, pierre, béton.
+
 ## Trois niveaux
 
 Le niveau se choisit en haut à droite (mémorisé dans le navigateur) :
@@ -28,12 +41,13 @@ Un exemple d'un niveau supérieur fait passer automatiquement à ce niveau.
 
 ## Exemples de démonstration
 
-Le bouton **Exemples** ouvre une galerie de 15 projets prêts à l'emploi, chacun marqué de son niveau. Chacun s'ouvre avec une fiche « À observer / À essayer ».
+Le bouton **Exemples** ouvre une galerie de 22 projets prêts à l'emploi, chacun marqué de son niveau. Chacun s'ouvre avec une fiche « À observer / À essayer ».
 
 | Famille | Exemples |
 |---|---|
 | Modéliser avec des volumes | Maison (perçages, groupes, coins) · Pot à crayons gravé (texte en creux) · Dé à jouer (sphères en perçage) · Porte-clés |
 | Esquisser et coter | Plaque de fixation (esquisse totalement contrainte) · Pion d'échecs (révolution) · Pendentif cœur (Bézier) · Vase (Bézier + révolution) |
+| Simuler la déformation | Pont en treillis · Grue en tubes (cylindres imbriqués) · Pont suspendu (câbles) · Plongeoir · Plancher simple · Voûte en pierre · Point suspendu (potence) |
 | Mettre en mouvement | Barrière de parking (pivot, butées) · Engrenages et crémaillère · Réducteur à deux étages (rapport 1/9) · Poulies et courroie · Étau (vis-écrou) · Bras articulé · Éolienne |
 
 Pour ajouter un exemple, complétez l'objet `SAMPLES` dans `src/examples.js`.
@@ -48,8 +62,11 @@ src/prefs.js     niveaux, thème et couleurs (mémorisés dans le navigateur)
 src/scene.js     scène 3D, sélection, déplacements, historique, opérations d'édition
 src/ui.js        panneau de réglages, liaisons, simulation, fichiers (.json, .stl)
 src/sketch.js    éditeur d'esquisse et solveur de contraintes
+src/validate.js  atelier Valider : contrôles, proxy, repères (locators)
+src/struct.js    atelier Structures : treillis, maillage, solveurs, vue 2D et aperçu 3D
 src/examples.js  exemples de démonstration, galerie et fiche démo
 src/outliner.js  arborescence des objets (niveau avancé)
+src/workspace.js navigation entre les ateliers
 src/init.js      exemples, raccourcis clavier, démarrage
 build.py         assemble src/ en une seule page dans dist/
 ```

@@ -78,22 +78,23 @@ const markers=new THREE.Group(); markers.renderOrder=10; scene.add(markers);
    ========================================================= */
 let state={name:'Mon projet', parts:[], joints:[], nextId:1, note:null};
 let selection=[];
-let tab='part';
+let ws='model';   // atelier: model | check | mech | struct
 let selJoint=null;
 const meshes=new Map();
 const hist={stack:[],idx:-1};
-function snapshot(){ return JSON.stringify({name:state.name,parts:state.parts,joints:state.joints,nextId:state.nextId,note:state.note||null}); }
+function snapshot(){ return JSON.stringify({name:state.name,parts:state.parts,joints:state.joints,nextId:state.nextId,note:state.note||null,struct:state.struct||null}); }
 function commit(){
   const s=snapshot(); if(hist.stack[hist.idx]===s) return;
   hist.stack=hist.stack.slice(0,hist.idx+1); hist.stack.push(s); if(hist.stack.length>80) hist.stack.shift(); hist.idx=hist.stack.length-1;
   autosave(); updateUndo();
 }
 function restore(s, keepSel=true){
-  const o=JSON.parse(s); state.name=o.name||'Mon projet'; state.parts=o.parts||[]; state.joints=o.joints||[]; state.nextId=o.nextId||1; state.note=o.note||null;
+  const o=JSON.parse(s); state.name=o.name||'Mon projet'; state.parts=o.parts||[]; state.joints=o.joints||[]; state.nextId=o.nextId||1; state.note=o.note||null; state.struct=o.struct||null;
   $('#projName').value=state.name;
   selection = keepSel? selection.filter(id=>findPart(id)) : []; renderDemo();
   if(selJoint && !state.joints.find(j=>j.id===selJoint)) selJoint=null;
-  simReset(true); sync(); renderInspector(); autosave(); updateUndo();
+  simReset(true); sync(); renderInspector(); autosave(); updateUndo(); updateSteps();
+  if(ws==='struct'){ computeStruct(); stDraw(); if(ST.mode3d) buildStruct3D(); }
 }
 function undo(){ if(hist.idx>0){ hist.idx--; restore(hist.stack[hist.idx]); } }
 function redo(){ if(hist.idx<hist.stack.length-1){ hist.idx++; restore(hist.stack[hist.idx]); } }
@@ -102,7 +103,7 @@ let saveTimer=0;
 function autosave(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>{ try{ localStorage.setItem('etabli3d.autosave', snapshot()); }catch(e){} }, 400); }
 function loadProject(obj, push=true){
   if(!obj || !Array.isArray(obj.parts)) throw new Error('format');
-  state.name=obj.name||'Projet'; state.parts=obj.parts; state.joints=obj.joints||[]; state.nextId=obj.nextId|| (maxId(obj.parts)+1); state.note=obj.note||null; demoClosed=false;
+  state.name=obj.name||'Projet'; state.parts=obj.parts; state.joints=obj.joints||[]; state.nextId=obj.nextId|| (maxId(obj.parts)+1); state.note=obj.note||null; state.struct=obj.struct||null; demoClosed=false;
   $('#projName').value=state.name; selection=[]; selJoint=null; simReset(true); sync(); renderInspector(); renderDemo();
   if(push){ hist.stack=[]; hist.idx=-1; commit(); }
   fitView();
@@ -162,8 +163,8 @@ function sync(){
     ids.add(p.id);
     let r=meshes.get(p.id);
     if(!r){ const m=new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial({roughness:.5,metalness:.04})); m.userData.id=p.id; m.matrixAutoUpdate=true; scene.add(m); r={mesh:m,key:null,line:null}; meshes.set(p.id,r); }
-    const key=geomKey(p);
-    if(r.key!==key){ r.mesh.geometry=getGeometry(p); r.key=key; if(r.line){ r.mesh.remove(r.line); r.line=null; } }
+    const px=usesProxy(p); const key=geomKey(p)+(px?'#proxy':'');
+    if(r.key!==key){ r.mesh.geometry= px? getProxyGeo(p) : getGeometry(p); r.key=key; if(r.line){ r.mesh.remove(r.line); r.line=null; } r.mesh.material.flatShading=px; r.mesh.material.needsUpdate=true; }
     const mt=r.mesh.material; const sel=selection.includes(p.id);
     if(p.hole){ mt.color.set(holeCol); mt.transparent=true; mt.opacity=.36; mt.depthWrite=false; }
     else { mt.color.set(p.color); mt.transparent=false; mt.opacity=1; mt.depthWrite=true; }
@@ -172,16 +173,17 @@ function sync(){
     const wantLine = sel || p.hole;
     if(wantLine){ if(!r.line){ r.line=new THREE.LineSegments(edgesOf(r.mesh.geometry, p.kind==='group'), selLineMat); r.mesh.add(r.line); } r.line.material= sel? selLineMat : holeLineMat; }
     else if(r.line){ r.mesh.remove(r.line); r.line=null; }
-    r.mesh.visible=!isHidden(p);
+    r.mesh.visible=!isHidden(p) && ws!=='struct';
     if(!simActive()){ partMatrix(p, r.mesh.matrix); r.mesh.matrix.decompose(r.mesh.position, r.mesh.quaternion, r.mesh.scale); }
   }
   for(const [id,r] of meshes) if(!ids.has(id)){ scene.remove(r.mesh); r.mesh.material.dispose(); meshes.delete(id); }
   if(simActive()) applyPoses();
-  updateGizmo(); updateMarkers(); updateToolButtons(); $('#jCount').textContent=state.joints.length;
+  updateGizmo(); updateMarkers(); updateToolButtons();
+  rebuildLocators(); updateSteps();
   renderOutliner();
 }
 function updateGizmo(){
-  if(!selection.length || simLocked() || pickMode || selParts().some(isLocked)){ tc.detach(); return; }
+  if(ws!=='model' || !selection.length || simLocked() || pickMode || selParts().some(isLocked)){ tc.detach(); return; }
   resetPivot(); tc.attach(pivot);
 }
 function selBox(ids=selection){ const b=new THREE.Box3(); for(const id of ids){ const r=meshes.get(id); if(r) b.union(new THREE.Box3().setFromObject(r.mesh, true)); } return b; }
@@ -228,7 +230,7 @@ renderer.domElement.addEventListener('pointerdown', ev=>{
   down={x:ev.clientX,y:ev.clientY,gizmo:onGizmo,drag:null,moved:false};
   if(onGizmo || pickMode) return;
   const hit=pickAt(ev);
-  if(hit && !simLocked()){
+  if(hit && !simLocked() && ws==='model'){
     const id=hit.object.userData.id;
     if(!selection.includes(id) && !ev.shiftKey){ selection=[id]; sync(); renderInspector(); }
     if(selection.includes(id)){
@@ -256,6 +258,8 @@ renderer.domElement.addEventListener('pointerup', ev=>{
   if(d.gizmo) return;
   if(Math.hypot(ev.clientX-d.x, ev.clientY-d.y)>4) return;
   const hit=pickAt(ev);
+  if(locPick!=null){ finishLocPick(hit); return; }
+  if(ws==='mech' && jf){ const L=pickLocator(ev); if(L){ setJointLoc(L.pid,L.lid); return; } }
   if(pickMode){ pickMode(hit?hit.point:null, hit); return; }
   if(!hit){ if(!ev.shiftKey && selection.length){ selection=[]; sync(); renderInspector(); } return; }
   const id=hit.object.userData.id;
@@ -285,7 +289,8 @@ function startPaletteDrag(kind, ev){
 /* =========================================================
    Editing operations
    ========================================================= */
-function guard(){ if(simLocked()){ toast('Réinitialisez la simulation (bouton ⟲) pour modifier les pièces.'); return false; }
+function guard(){ if(ws!=='model'){ toast('Pour modifier les pièces, revenez à l’atelier 1 · Modéliser.'); return false; }
+  if(simLocked()){ toast('Réinitialisez la simulation (bouton ⟲) pour modifier les pièces.'); return false; }
   if(selParts().some(isLocked)){ toast('Pièce verrouillée : déverrouillez-la dans l’arborescence (cadenas).'); return false; } return true; }
 function selParts(){ return selection.map(findPart).filter(Boolean); }
 function removeJointsOf(ids){

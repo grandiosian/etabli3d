@@ -32,7 +32,9 @@
     <button class="btn ghost" id="bHelp" title="Aide et raccourcis"><svg data-i="help"></svg><span class="hide-mid">Aide</span></button>
   </header>
 
-  <nav id="rack" aria-label="Formes">
+  <nav id="steps" aria-label="Ateliers"></nav>
+
+  <nav id="rack" data-ws="model" aria-label="Formes">
     <div class="rack-title" data-min="2">Créer</div>
     <button class="shape sketch" data-min="2" id="bSketch" title="Dessiner une esquisse cotée puis l'extruder"><svg data-i="k_sketch"></svg>Esquisse</button>
     <div class="rack-title">Volumes</div>
@@ -41,7 +43,7 @@
     <div id="rackMeca" style="display:contents"></div>
   </nav>
 
-  <aside id="outliner" aria-label="Arborescence">
+  <aside id="outliner" data-ws="model check mech" aria-label="Arborescence">
     <div class="tree-head"><svg data-i="tree"></svg><b>Arborescence</b><button class="btn icon ghost" id="treeClose" title="Fermer l’arborescence" aria-label="Fermer l’arborescence"><svg data-i="close"></svg></button></div>
     <div class="seg tree-mode" id="treeMode"><button class="btn" data-mode="parts">Pièces</button><button class="btn" data-mode="kin">Liaisons</button></div>
     <div class="tree-count" id="treeCount"></div>
@@ -49,7 +51,7 @@
   </aside>
 
   <main id="stage">
-    <div class="float" id="tools" role="toolbar" aria-label="Outils">
+    <div class="float" id="tools" data-ws="model" role="toolbar" aria-label="Outils">
       <div class="seg">
         <button class="btn icon" id="tMove" title="Déplacer (M)"><svg data-i="move"></svg></button>
         <button class="btn icon" id="tRot" title="Tourner (R)"><svg data-i="rotate"></svg></button>
@@ -64,26 +66,43 @@
       <button class="btn icon" id="tDrop" title="Poser sur le plan (D)"><svg data-i="drop"></svg></button>
       <button class="btn icon danger" id="tDel" title="Supprimer (Suppr)"><svg data-i="trash"></svg></button>
     </div>
-    <div class="float" id="views" aria-label="Vues">
+    <div class="float" id="views" data-ws="model check mech" aria-label="Vues">
       <button class="btn ghost" data-view="iso" title="Vue en perspective"><svg data-i="cube"></svg><span class="lab">Perspective</span></button>
       <button class="btn ghost" data-view="top" title="Vue de dessus"><svg data-i="vtop"></svg><span class="lab">Dessus</span></button>
       <button class="btn ghost" data-view="front" title="Vue de face"><svg data-i="vfront"></svg><span class="lab">Face</span></button>
       <button class="btn ghost" data-view="right" title="Vue de droite"><svg data-i="vright"></svg><span class="lab">Droite</span></button>
       <button class="btn ghost" data-view="fit" title="Tout voir (F)"><svg data-i="fit"></svg><span class="lab">Tout voir</span></button>
     </div>
-    <div class="float" id="snapBox">
+    <div class="float" id="snapBox" data-ws="model">
       <label for="snapSel">Grille</label>
       <select id="snapSel">
         <option value="0">libre</option><option value="0.1">0,1 mm</option><option value="0.5">0,5 mm</option>
         <option value="1" selected>1 mm</option><option value="2">2 mm</option><option value="5">5 mm</option><option value="10">10 mm</option>
       </select>
     </div>
-    <div class="float" id="simbar" data-min="2" aria-label="Simulation">
+    <div class="float" id="simbar" data-ws="mech" data-min="2" aria-label="Simulation">
       <button class="btn primary" id="sPlay"><svg data-i="play"></svg><span>Simuler</span></button>
       <button class="btn icon" id="sReset" title="Revenir à la position de départ"><svg data-i="reset"></svg></button>
       <select id="sSpeed" aria-label="Vitesse de simulation"><option value="0.25">×0,25</option><option value="0.5">×0,5</option><option value="1" selected>×1</option><option value="2">×2</option></select>
       <span class="t" id="sTime">0,0 s</span>
     </div>
+    <div id="stWrap" data-ws="struct"><canvas id="stCanvas"></canvas></div>
+    <div class="float" id="stTools" data-ws="struct" role="toolbar" aria-label="Outils de structure">
+      <div class="seg st-truss">
+        <button class="btn" data-st="select" title="Sélectionner et déplacer les nœuds"><svg data-i="cursor"></svg><span class="hide-mid">Sélection</span></button>
+        <button class="btn" data-st="bar" title="Tracer des barres"><svg data-i="truss"></svg><span class="hide-mid">Barre</span></button>
+        <button class="btn" data-st="fixe" title="Appui fixe"><svg data-i="supFix"></svg><span class="hide-mid">Appui fixe</span></button>
+        <button class="btn" data-st="glissant" title="Appui glissant"><svg data-i="supRoll"></svg><span class="hide-mid">Glissant</span></button>
+        <button class="btn" data-st="charge" title="Ajouter une force"><svg data-i="force"></svg><span class="hide-mid">Charge</span></button>
+        <button class="btn danger" data-st="del" title="Supprimer un nœud ou une barre"><svg data-i="trash"></svg></button>
+      </div>
+      <label class="st-truss st-snap">Grille <select id="stSnapSel"><option value="0">libre</option><option value="5">5 mm</option><option value="10" selected>10 mm</option><option value="20">20 mm</option><option value="50">50 mm</option></select></label>
+      <div class="vsep st-truss"></div>
+      <div class="seg"><button class="btn on" data-v3="0" title="Vue de face, à plat">2D</button><button class="btn" data-v3="1" title="Aperçu en volume">3D</button></div>
+      <button class="btn icon" id="stFit" title="Tout voir"><svg data-i="fit"></svg></button>
+    </div>
+    <div class="float" id="stLegendBox" data-ws="struct"><div id="stLegend"></div></div>
+    <div id="stHint" data-ws="struct"></div>
     <div id="demo" hidden></div>
     <div id="banner" hidden></div>
     <div id="pickHint" hidden></div>
@@ -91,9 +110,7 @@
   </main>
 
   <aside id="insp">
-    <div class="tabs" role="tablist">
-      <button role="tab" id="tabPart" class="on">Pièce</button>
-      <button role="tab" id="tabMove" data-min="2">Mouvements<span class="count" id="jCount">0</span></button>
+    <div class="insp-head"><span class="step-n" id="inspStep">1</span><div><b id="inspTitle">Modéliser</b><small id="inspSub"></small></div>
     </div>
     <div id="inspBody"></div>
   </aside>
@@ -166,7 +183,7 @@
     <div class="cols">
       <div><h4>Modéliser</h4><ul>
         <li>Cliquez sur une forme (ou glissez-la sur le tapis) pour l'ajouter.</li>
-        <li>Réglez les cotes, la position et la rotation dans l'onglet <b>Pièce</b>.</li>
+        <li>Réglez les cotes, la position et la rotation dans le panneau de droite.</li>
         <li><b>Perçage</b> : la forme devient un trou. <b>Grouper</b> une forme et un perçage creuse la forme.</li>
         <li>Maj + clic pour sélectionner plusieurs pièces, puis <b>Aligner</b>.</li>
         <li>Clic droit + glisser : tourner la vue. Molette : zoomer. Clic milieu : décaler.</li>
@@ -178,11 +195,11 @@
         <li>Validez pour extruder ou faire une révolution autour de l'axe vertical.</li>
         <li>Double-cliquez une esquisse dans la scène pour la modifier.</li>
       </ul></div>
-      <div><h4>Mettre en mouvement</h4><ul>
-        <li>Onglet <b>Mouvements</b> : choisissez la pièce mobile et son support.</li>
-        <li><b>Encastrement</b> : la pièce suit son support. <b>Pivot</b> : rotation autour d'un axe. <b>Glissière</b> : translation.</li>
-        <li>Ajoutez un moteur, ou faites entraîner une liaison par une autre (engrenages, poulies, pignon-crémaillère).</li>
-        <li>Lancez <b>Simuler</b>. Réinitialisez pour modifier les pièces.</li>
+      <div><h4>Les quatre ateliers</h4><ul>
+        <li><b>1 · Modéliser</b> : créer les pièces, les percer, les grouper.</li>
+        <li><b>2 · Valider</b> : contrôler chaque pièce (forme, épaisseur, position), mesurer sa complexité, créer un <b>proxy</b> allégé et poser des <b>repères</b> (centres, axes).</li>
+        <li><b>3 · Mécanique</b> : accrocher les liaisons aux repères (clic sur un repère), ajouter des moteurs, simuler. Les pièces doivent être validées.</li>
+        <li><b>4 · Structures</b> : <b>treillis</b> (barres en cylindre plein, tube ou câble) et <b>maillage</b> (plongeoir, plancher, voûte, potence) pour voir la déformation.</li>
       </ul></div>
       <div><h4>Niveaux</h4><ul>
         <li><b>Débutant</b> : volumes simples, perçages, groupes, couleurs, export STL.</li>
