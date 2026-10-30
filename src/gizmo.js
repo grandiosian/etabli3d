@@ -81,16 +81,18 @@ function tgTick(){
   TG.svg.querySelector('.tg-base').setAttribute('d', 'M'+base.map(p=>`${p.x},${p.y}`).join('L')+'Z');
   const c0=S(cx,cy,z0), cT=S(cx,cy,z1), mids=TG_EDGE.map(([sx,sy])=>S(sx? X[(sx+1)/2]:cx, sy? Y[(sy+1)/2]:cy, z0));
   TG.svg.querySelector('.tg-axes').setAttribute('d', `M${mids[0].x},${mids[0].y}L${mids[2].x},${mids[2].y}M${mids[1].x},${mids[1].y}L${mids[3].x},${mids[3].y}M${c0.x},${c0.y}L${cT.x},${cT.y}`);
-  const scal= F.single && !!SCALE_MAP[F.p.kind];
+  const turning= TG.drag?.kind==='rot' ? TG.drag.ax : null;   // pendant une rotation, seule la poignée utilisée reste affichée
+  TG.el.classList.toggle('turning', !!turning);
+  const scal= F.single && !!SCALE_MAP[F.p.kind] && !turning;
   TG.corners.forEach((e,i)=>tgPlace(e, base[i], scal)); TG.edges.forEach((e,i)=>tgPlace(e, mids[i], scal)); tgPlace(TG.top, cT, scal);
-  tgPlace(TG.lift, {x:cT.x, y:cT.y-26, vis:cT.vis});
+  tgPlace(TG.lift, {x:cT.x, y:cT.y-26, vis:cT.vis}, !turning);
   // rotation arrows: short arcs lying in the plane of each rotation, on the edges nearest to the camera
   const cam=camera.position, near=(a,b2)=>tgW(F,...a).distanceTo(cam) < tgW(F,...b2).distanceTo(cam);
   const fy= near([cx,Y[0],z1],[cx,Y[1],z1])? Y[0] : Y[1], fx= near([X[0],cy,z1],[X[1],cy,z1])? X[0] : X[1];
   const xz= S(X[1],fy,z0).x > S(X[0],fy,z0).x ? X[1] : X[0], cz=(z0+z1)/2, C=axisColors();
-  tgArc('z', a=>[cx+Math.cos(a), cy+Math.sin(a), z0], [cx,cy,z0], [xz,fy,z0], C.z);
-  tgArc('x', a=>[cx, cy+Math.cos(a), cz+Math.sin(a)], [cx,cy,cz], [cx,fy,z1], C.x);
-  tgArc('y', a=>[cx+Math.cos(a), cy, cz+Math.sin(a)], [cx,cy,cz], [fx,cy,z1], C.y);
+  tgArc('z', a=>[cx+Math.cos(a), cy+Math.sin(a), z0], [cx,cy,z0], [xz,fy,z0], C.z, turning && turning!=='z');
+  tgArc('x', a=>[cx, cy+Math.cos(a), cz+Math.sin(a)], [cx,cy,cz], [cx,fy,z1], C.x, turning && turning!=='x');
+  tgArc('y', a=>[cx+Math.cos(a), cy, cz+Math.sin(a)], [cx,cy,cz], [fx,cy,z1], C.y, turning && turning!=='y');
   // dimensions
   const showDim= scal && (performance.now()<TG.dimUntil || (TG.drag && TG.drag.kind==='scale') || TG.editing);
   let dpath='';
@@ -112,8 +114,9 @@ function tgTick(){
 
 /* one rotation arrow: an arc of the circle around the axis through the box centre, passing just outside the
    anchor edge, about 60 px long on screen, with arrowheads at both ends and a round grip in the middle */
-function tgArc(k, unit, c, anchor, color){
+function tgArc(k, unit, c, anchor, color, off=false){
   const F=TG.frame; const g=TG.svg.querySelector(`.tg-arcg[data-k="r${k}"]`); const grip=TG.rot[k];
+  if(off){ g.style.display='none'; grip.hidden=true; return; }
   // circle parameters in the frame: unit(a) gives c + (cos a, sin a) along the two plane axes when c is subtracted
   const u0=unit(0), u1=unit(Math.PI/2); const ax=[u0[0]-c[0],u0[1]-c[1],u0[2]-c[2]], ay=[u1[0]-c[0],u1[1]-c[1],u1[2]-c[2]];
   const d=[anchor[0]-c[0],anchor[1]-c[1],anchor[2]-c[2]], px=d[0]*ax[0]+d[1]*ax[1]+d[2]*ax[2], py=d[0]*ay[0]+d[1]*ay[1]+d[2]*ay[2];
@@ -127,13 +130,18 @@ function tgArc(k, unit, c, anchor, color){
     for(const s of [1,-1]){ const cs=Math.cos(0.5), sn=s*Math.sin(0.5); dpath+=`M${e.x.toFixed(1)},${e.y.toFixed(1)}l${(-(ux*cs-uy*sn)*8).toFixed(1)},${(-(uy*cs+ux*sn)*8).toFixed(1)}`; } }
   for(const p of g.children) p.setAttribute('d', dpath); g.children[1].style.stroke=color;
   tgPlace(grip, m);
+  (TG.gripW||(TG.gripW={}))[k]=tgW(F, c[0]+r*(Math.cos(a0)*ax[0]+Math.sin(a0)*ay[0]), c[1]+r*(Math.cos(a0)*ax[1]+Math.sin(a0)*ay[1]), c[2]+r*(Math.cos(a0)*ax[2]+Math.sin(a0)*ay[2]));   // where the grip is, in the world
 }
 /* the protractor around axis ax of the frame: centre, axis, start direction u, radius; also measures how many
    screen pixels one radian makes on its rim (used to make the graduations magnetic at a distance in pixels) */
-function tgRingSetup(F, ax){
+function tgRingSetup(F, ax, toward=null){
   const b=F.b, i='xyz'.indexOf(ax); const R=new THREE.Matrix4().extractRotation(F.M); const axis=new THREE.Vector3().setFromMatrixColumn(R,i).normalize();
   const c=new THREE.Vector3((b.min.x+b.max.x)/2,(b.min.y+b.max.y)/2,(b.min.z+b.max.z)/2).applyMatrix4(F.M);
-  const u=new THREE.Vector3().setFromMatrixColumn(R,(i+1)%3).normalize(), v=new THREE.Vector3().crossVectors(axis,u);
+  // 0° du rapporteur sous la poignée (ou le point attrapé) : les crans vus sous le pointeur sont ceux où l'angle s'aimante
+  let u=null; const pt= toward || TG.gripW?.[ax];
+  if(pt){ u=pt.clone().sub(c); u.addScaledVector(axis, -u.dot(axis)); if(u.lengthSq()<1e-9) u=null; else u.normalize(); }
+  if(!u) u=new THREE.Vector3().setFromMatrixColumn(R,(i+1)%3).normalize();
+  const v=new THREE.Vector3().crossVectors(axis,u);
   const Rr=new THREE.Vector3().subVectors(b.max,b.min).length()*0.62+2;
   TG.ring.position.copy(c); TG.ring.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1), axis); TG.ring.scale.setScalar(Rr); TG.ring.visible=true;
   TG.ring.children[0].material.color.set(axisColors()[ax]); TG.needle.rotation.z=0;
@@ -141,9 +149,9 @@ function tgRingSetup(F, ax){
   let ppr=0; for(let k=0;k<8;k++){ const a=k*Math.PI/4, p=(t)=>toStage(c.clone().addScaledVector(u,Math.cos(t)*Rr).addScaledVector(v,Math.sin(t)*Rr)); const A=p(a), B=p(a+0.02); ppr=Math.max(ppr, Math.hypot(B.x-A.x,B.y-A.y)/0.02); }
   return {axis, c, u, v, R:Rr, ppr, ax};
 }
-/* magnetic graduations: within 12 px of a 45° mark, 8 px of a 15° mark or 5 px of a 5° mark the angle snaps to it;
+/* magnetic graduations: within 16 px of a 45° mark, 10 px of a 15° mark or 6 px of a 5° mark the angle snaps to it;
    elsewhere it moves freely by whole degrees. free (Maj) : no snapping. Returns the angle and the level caught. */
-const TG_SNAP=[[45,12,3],[15,8,2],[5,5,1]];
+const TG_SNAP=[[45,16,3],[15,10,2],[5,6,1]];
 function tgSnapAngle(a, ppr, free=false){
   if(!free) for(const [st,px,lvl] of TG_SNAP){ const t=Math.round(a/(st*DEG))*st*DEG; if(Math.abs(a-t)*ppr<=px) return {a:t, lvl}; }
   return {a:Math.round(a/DEG)*DEG, lvl:0};
@@ -171,8 +179,8 @@ function tgStart(ev, k){
   const items=selParts().map(p=>({p, pos:[...p.pos], rot:[...p.rot], params:clone(p.params), M:partMatrix(p)}));
   let d={k, F, items, ev0:ev, moved:false};
   if(k==='lift'){ const c=tgW(F,(b.min.x+b.max.x)/2,(b.min.y+b.max.y)/2,b.max.z); d.kind='lift'; d.plane=tgFacingPlane(new THREE.Vector3(0,0,1), c); d.h0=tgHit(ev,d.plane); }
-  else if(k[0]==='r'){ const g=tgRingSetup(F, k[1]);
-    d.kind='rot'; Object.assign(d, g); d.ang=0; d.plane=new THREE.Plane().setFromNormalAndCoplanarPoint(g.axis,g.c); d.h0=tgHit(ev,d.plane); }
+  else if(k[0]==='r'){ let g=tgRingSetup(F, k[1]); const h0=tgHit(ev, new THREE.Plane().setFromNormalAndCoplanarPoint(g.axis,g.c)); if(h0) g=tgRingSetup(F, k[1], h0);
+    d.kind='rot'; Object.assign(d, g); d.ang=0; d.plane=new THREE.Plane().setFromNormalAndCoplanarPoint(g.axis,g.c); d.h0=h0; }
   else { if(!F.single || !SCALE_MAP[F.p.kind]) return;
     const s= k==='top'? [0,0,1] : k[0]==='c'? [...TG_BASE[+k[1]],0] : [...TG_EDGE[+k[1]],0];
     d.kind='scale'; d.s=s; d.b0=b.clone(); d.Minv=F.M.clone().invert(); d.R=new THREE.Matrix4().extractRotation(F.M);

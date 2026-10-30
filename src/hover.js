@@ -82,14 +82,24 @@ function finishSelRect(R, ev){
 }
 
 /* ---- left button preference + right-click menu */
-const LMB=[['select','Sélection par cadre','selbox','Glisser dans le vide trace un cadre de sélection. Tourner la vue : clic droit + glisser.'],
-  ['orbit','Tourner la vue (orbite)','orbit','Glisser dans le vide fait tourner la vue. Décaler : clic droit + glisser.'],
-  ['pan','Décaler la vue (panoramique)','hand','Glisser dans le vide décale la vue. Tourner : clic droit + glisser.']];
+const LMB=[['select','Sélection par cadre','selbox','Glisser dans le vide trace un cadre de sélection. Tourner la vue : Alt + glisser ; décaler : Espace + glisser.'],
+  ['orbit','Tourner la vue (orbite)','orbit','Glisser dans le vide fait tourner la vue. Alt + glisser : tourner ; Espace + glisser : décaler.'],
+  ['pan','Décaler la vue (panoramique)','hand','Glisser dans le vide décale la vue. Alt + glisser : tourner ; Espace + glisser : décaler.']];
 function applyLmb(){
   const M=THREE.MOUSE, L=prefs.lmb||'orbit';
   orbit.mouseButtons= L==='pan'? {LEFT:M.PAN, MIDDLE:M.DOLLY, RIGHT:M.ROTATE} : L==='select'? {LEFT:M.ROTATE, MIDDLE:M.PAN, RIGHT:M.ROTATE} : {LEFT:M.ROTATE, MIDDLE:M.PAN, RIGHT:M.PAN};
   const b=$('#lmbBtn'); if(b){ const e=LMB.find(x=>x[0]===L); b.innerHTML=''; b.append(svgIcon('mouse'), h('span',{class:'lab'}, e[1].replace(/ \(.*\)/,''))); b.title=`Clic gauche dans le vide : ${e[1].toLowerCase()}. ${e[3]} (clic droit dans la vue pour changer)`; }
 }
+/* navigation au clavier + souris : Alt + clic gauche = tourner la vue, Espace + clic gauche = décaler la vue (partout dans la vue 3D) */
+const NAV={space:false, alt:false};
+function navKeys(){ const M=THREE.MOUSE; if(NAV.space) orbit.mouseButtons={...orbit.mouseButtons, LEFT:M.PAN}; else if(NAV.alt) orbit.mouseButtons={...orbit.mouseButtons, LEFT:M.ROTATE}; else applyLmb();
+  renderer.domElement.style.cursor= NAV.space||NAV.alt? 'grab' : ''; }
+function navTarget(e){ return $('#sk').hidden && $('#gallery').hidden && $('#help').hidden && !e.target.closest?.('input,textarea,select,[contenteditable]'); }
+document.addEventListener('keydown', e=>{ if(!navTarget(e)) return;
+  if(e.key===' '){ e.preventDefault(); if(!NAV.space){ NAV.space=true; navKeys(); } }
+  else if(e.key==='Alt'){ e.preventDefault(); if(!NAV.alt){ NAV.alt=true; navKeys(); } } });
+document.addEventListener('keyup', e=>{ if(e.key===' ' && NAV.space){ e.preventDefault(); NAV.space=false; navKeys(); } if(e.key==='Alt' && NAV.alt){ e.preventDefault(); NAV.alt=false; navKeys(); } });
+window.addEventListener('blur', ()=>{ if(NAV.space||NAV.alt){ NAV.space=NAV.alt=false; navKeys(); } });
 function setLmb(k){ prefs.lmb=k; savePrefs(); applyLmb(); closeCtxMenu(); const e=LMB.find(x=>x[0]===k); toast(`Clic gauche : ${e[1].toLowerCase()}. ${e[3]}`); if(ws==='model') renderInspector(); }
 const RMB={down:null};
 function closeCtxMenu(){ $('#ctxMenu').hidden=true; }

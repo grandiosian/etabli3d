@@ -336,6 +336,7 @@ renderer.domElement.addEventListener('pointerdown', ev=>beginPointer(ev), true);
 /* also used when a drag starts on the hover buttons in the middle of a part (see hover.js) */
 function beginPointer(ev){
   if(ev.button!==0){ down=null; return; }
+  if(ev.altKey || NAV.space){ down=null; orbit.enabled=true; return; }   // Alt / Espace + clic gauche : la vue tourne ou se décale (OrbitControls)
   const onGizmo = tc.axis!==null && tc.object;
   down={x:ev.clientX,y:ev.clientY,gizmo:onGizmo,drag:null,moved:false};
   if(onGizmo || pickMode) return;
