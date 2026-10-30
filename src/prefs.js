@@ -9,7 +9,7 @@ const PREFS_KEY='etabli3d.prefs';
 const prefs=(()=>{ let p={}; try{ p=JSON.parse(localStorage.getItem(PREFS_KEY)||'{}')||{}; }catch(e){}
   return { level:[1,2,3].includes(p.level)? p.level : 1, firstVisit:!p.level,
     theme:['auto','light','dark'].includes(p.theme)? p.theme : 'auto',
-    accent:p.accent||'vert', mat:p.mat||'vert', tree:p.tree!==false }; })();
+    accent:p.accent||'vert', mat:p.mat||'vert', tree:p.tree!==false, axes:p.axes||'classique', labels:p.labels!==false }; })();
 function savePrefs(){ try{ const {firstVisit,...keep}=prefs; localStorage.setItem(PREFS_KEY, JSON.stringify(keep)); }catch(e){} }
 const lv=n=>prefs.level>=n;
 

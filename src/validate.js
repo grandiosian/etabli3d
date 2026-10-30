@@ -109,7 +109,8 @@ function validatePart(p){
   const keepProxy = p.valid?.proxy && p.valid.key===vKey(p);
   p.valid={key:vKey(p), level, tris:Math.round(tris), proxy: heavy || !!keepProxy, issues};
   if(p.valid.proxy) p.valid.proxyTris=Math.round(triCount(getProxyGeo(p)));
-  p.locs=[...defaultLocators(p,g), ...(p.locs||[]).filter(l=>!l.auto)];
+  const old=new Map((p.locs||[]).filter(l=>l.auto&&l.edited).map(l=>[l.id,l]));
+  p.locs=[...defaultLocators(p,g).map(l=>old.has(l.id)? {...l, dir:old.get(l.id).dir, x:old.get(l.id).x, edited:true} : l), ...(p.locs||[]).filter(l=>!l.auto)];
   return level;
 }
 function validateAll(quiet=false){
@@ -127,48 +128,86 @@ function locWorld(p, l, cur=false){
   return {o:new THREE.Vector3(...l.pos).applyMatrix4(M), d:new THREE.Vector3(...l.dir).applyMatrix4(new THREE.Matrix4().extractRotation(M)).normalize()};
 }
 
-/* ---- locator display (schematic, drawn on top of the parts) */
+/* ---- locator display: a local frame (X, Y, Z) whose axes fade in towards an arrow head,
+        so the eye reads the positive direction. Z is the main direction (`dir`). */
 const locGroup=new THREE.Group(); locGroup.renderOrder=15; scene.add(locGroup);
-const LOC_COL={centre:0xdf9a00, base:0x7d8a86, axe:0x1d7656, face:0x8c5ac2};
-function locGlyph(l, size, colorHex){
-  const g=new THREE.Group(); g.userData.loc=l.id;
-  const mat=new THREE.MeshBasicMaterial({color:colorHex, depthTest:false, transparent:true, opacity:.95});
-  const lm=c=>new THREE.LineBasicMaterial({color:c, depthTest:false, transparent:true, opacity:.9});
-  const s=clamp(size*0.045,0.8,3.2), L=Math.max(10,size*0.6);
-  const o=new THREE.Vector3(...l.pos), d=new THREE.Vector3(...l.dir).normalize();
-  const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1), d);
-  const add=m=>{ m.renderOrder=16; g.add(m); return m; };
-  if(l.kind==='centre'){
-    add(new THREE.Mesh(new THREE.OctahedronGeometry(s), mat)).position.copy(o);
-    for(const [v,c] of [[[1,0,0],0xd2453a],[[0,1,0],0x2f9a4a],[[0,0,1],0x3a6fd8]]){ const e=new THREE.Vector3(...v).multiplyScalar(L*0.45);
-      add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([o, o.clone().add(e)]), lm(c))); }
-  } else if(l.kind==='base'){
-    const ring=add(new THREE.Mesh(new THREE.TorusGeometry(s*1.4, s*0.25, 6, 24), mat)); ring.position.copy(o); ring.quaternion.copy(q);
-    add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([o, o.clone().addScaledVector(d,L*0.3)]), lm(colorHex)));
-  } else {
-    const a=o.clone().addScaledVector(d,-L*0.5), b=o.clone().addScaledVector(d,L*0.5);
-    const line=add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([a,b]), new THREE.LineDashedMaterial({color:colorHex,dashSize:s*1.4,gapSize:s,depthTest:false,transparent:true}))); line.computeLineDistances();
-    const head=add(new THREE.Mesh(new THREE.ConeGeometry(s*0.8, s*2.4, 12), mat)); head.position.copy(b); head.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), d);
-    add(new THREE.Mesh(l.kind==='face'? new THREE.OctahedronGeometry(s*0.9) : new THREE.SphereGeometry(s*0.8,12,8), mat)).position.copy(o);
-  }
-  g.traverse(m=>{ if(m.isMesh) m.userData.loc=l.id; });
+const AXCOL_SETS={
+  classique:{name:'Classique',  x:'#e5484d', y:'#30a46c', z:'#3e63dd'},
+  contraste:{name:'Contrastée', x:'#f76b15', y:'#8e4ec6', z:'#0b9fc0'},
+  doux:     {name:'Pastel',     x:'#f08a84', y:'#7fcf9e', z:'#86a6f0'},
+};
+const axisColors=()=>AXCOL_SETS[prefs.axes]||AXCOL_SETS.classique;
+const LOCV={mode:'auto'};   // Mécanique: 'auto' (repères utilisés + pièce choisie), 'tous', 'aucun'
+const LOC_KIND={centre:'Centre', base:'Base', axe:'Axe', face:'Face'};
+function locX(l){ // local X of the frame, perpendicular to dir
+  const z=new THREE.Vector3(...l.dir).normalize();
+  let x= l.x? new THREE.Vector3(...l.x) : (Math.abs(z.x)<0.9? new THREE.Vector3(1,0,0) : new THREE.Vector3(0,1,0));
+  x.addScaledVector(z,-x.dot(z)); if(x.lengthSq()<1e-9) x=new THREE.Vector3(0,1,0).addScaledVector(z,-z.y); return x.normalize();
+}
+function locFrame(l){ const z=new THREE.Vector3(...l.dir).normalize(), x=locX(l), y=z.clone().cross(x).normalize(); return {o:new THREE.Vector3(...l.pos), x, y, z}; }
+/* a shaft from 0 to len along +Z, coloured from faint to full, with a cone at the tip */
+function gradShaft(len, r, colorHex, {head=true, from=0, alpha0=0.12}={}){
+  const g=new THREE.Group(); const c=new THREE.Color(colorHex), pale=c.clone().lerp(new THREE.Color(0xffffff),0.55);
+  const geo=new THREE.CylinderGeometry(r, r, len-from, 10, 8, true); geo.rotateX(Math.PI/2); geo.translate(0,0,from+(len-from)/2);
+  const pos=geo.attributes.position, col=new Float32Array(pos.count*4);
+  for(let i=0;i<pos.count;i++){ const t=clamp((pos.getZ(i)-from)/(len-from),0,1), k=Math.pow(t,0.8); const m=pale.clone().lerp(c,k); col.set([m.r,m.g,m.b, alpha0+(1-alpha0)*k], i*4); }
+  geo.setAttribute('color', new THREE.BufferAttribute(col,4));
+  g.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({vertexColors:true, transparent:true, depthTest:false, side:THREE.DoubleSide})));
+  if(head){ const cone=new THREE.Mesh(new THREE.ConeGeometry(r*2.7, r*7, 14), new THREE.MeshBasicMaterial({color:c, depthTest:false, transparent:true})); cone.rotation.x=Math.PI/2; cone.position.z=len+r*3.2; g.add(cone); }
+  g.traverse(m=>m.renderOrder=17); return g;
+}
+function locGlyph(l, size, emph=false){
+  const g=new THREE.Group(); g.userData.loc=l.id; const C=axisColors(); const F=locFrame(l);
+  const s=clamp(size*0.035,0.7,2.6)*(emph?1.35:1), L=Math.max(9,size*0.5)*(emph?1.25:1);
+  g.position.copy(F.o); g.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(F.x,F.y,F.z));
+  const ax=(v,len,col)=>{ const sh=gradShaft(len, s*0.32, col); sh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1), v); g.add(sh); };
+  ax(new THREE.Vector3(1,0,0), L*0.55, C.x); ax(new THREE.Vector3(0,1,0), L*0.55, C.y);
+  if(l.kind==='axe'){ const back=gradShaft(L*0.5, s*0.26, C.z, {head:false, alpha0:0.05}); back.rotation.x=Math.PI; g.add(back); }
+  ax(new THREE.Vector3(0,0,1), L*(l.kind==='axe'?0.95:0.75), C.z);
+  const om=new THREE.MeshBasicMaterial({color: emph? 0xffffff : 0xf4f6f5, depthTest:false, transparent:true, opacity:.95});
+  const ring=new THREE.MeshBasicMaterial({color:0x2c3331, depthTest:false, transparent:true, opacity:.85});
+  const shape = l.kind==='centre'? new THREE.OctahedronGeometry(s*1.1) : l.kind==='face'? new THREE.OctahedronGeometry(s*0.9) : l.kind==='base'? new THREE.TorusGeometry(s*1.2,s*0.3,6,24) : new THREE.SphereGeometry(s*0.85,14,10);
+  const core=new THREE.Mesh(shape, l.kind==='base'? ring : om); g.add(core);
+  if(l.kind!=='base'){ const halo=new THREE.Mesh(new THREE.SphereGeometry(s*1.25,14,10), new THREE.MeshBasicMaterial({color:0x2c3331, depthTest:false, transparent:true, opacity:.35, side:THREE.BackSide})); g.add(halo); }
+  g.traverse(m=>{ m.renderOrder=17; if(m.isMesh) m.userData.loc=l.id; });
   return g;
 }
+function usedLocs(){ const s=new Set(); for(const j of state.joints) if(j.loc) s.add(j.loc.pid+':'+j.loc.lid); if(jf?.loc) s.add(jf.loc.pid+':'+jf.loc.lid); return s; }
 function rebuildLocators(){
   for(const c of [...locGroup.children]){ locGroup.remove(c); c.traverse(m=>{ m.geometry?.dispose(); m.material?.dispose(); }); }
   const show = (ws==='check' || ws==='mech') && lv(2);
-  if(!show) return;
-  const acc=parseInt((cssVar('--accent')||'#1d7656').slice(1),16);
+  if(!show || (ws==='mech' && LOCV.mode==='aucun')) return;
+  const used=usedLocs();
   for(const p of state.parts){
     if(!p.locs?.length || isHidden(p) || p.hole) continue;
     if(ws==='check' && selection.length && !selection.includes(p.id)) continue;
     const g=getGeometry(p); const sz=new THREE.Vector3(); g.boundingBox.getSize(sz); const size=Math.max(sz.x,sz.y,sz.z);
     const pg=new THREE.Group(); pg.userData.pid=p.id; pg.matrixAutoUpdate=false;
-    for(const l of p.locs){ if(ws==='mech' && l.kind==='base') continue; pg.add(locGlyph(l, size, l.kind==='axe'? acc : LOC_COL[l.kind]||0x8c5ac2)); }
-    locGroup.add(pg);
+    for(const l of p.locs){
+      const key=p.id+':'+l.id, isUsed=used.has(key);
+      if(ws==='mech'){ if(l.kind==='base') continue;
+        if(LOCV.mode==='auto' && !jf && !isUsed && !selection.includes(p.id)) continue; }
+      pg.add(locGlyph(l, size, ws==='mech' && isUsed));
+    }
+    if(pg.children.length) locGroup.add(pg);
   }
   updateLocatorPoses();
 }
+/* ---- orientation of a locator (rotate, flip, swap the main axis) — joints hooked to it follow */
+function locEdit(p, l, op){
+  const F=locFrame(l); const r=v=>v.toArray().map(c=>+c.toFixed(6));
+  if(op==='rot'){ l.x=r(F.y); }                              // quart de tour autour de Z
+  else if(op==='flip'){ l.dir=r(F.z.clone().negate()); l.x=r(F.x); }   // inverser le sens de Z
+  else if(op==='swap'){ l.dir=r(F.x); l.x=r(F.z.clone().negate()); }   // X devient l'axe principal
+  l.edited=true; updateJointsForLoc(p,l); sync(); commit(); renderInspector();
+}
+function updateJointsForLoc(p,l){
+  for(const j of state.joints){ if(!j.loc || j.loc.pid!==p.id || j.loc.lid!==l.id) continue;
+    const {o,d}=locWorld(p,l); const PR=restMatrix(j.parent), inv=PR.clone().invert(), rotInv=new THREE.Matrix4().extractRotation(inv);
+    o.applyMatrix4(inv); d.applyMatrix4(rotInv).normalize(); j.origin=o.toArray().map(v=>+v.toFixed(5)); j.axis=d.toArray().map(v=>+v.toFixed(6)); }
+  if(jf?.loc && jf.loc.pid===p.id && jf.loc.lid===l.id) setJointLoc(p.id,l.id,true);
+}
+function locLegend(){ const C=axisColors(); return h('div',{class:'axleg'}, ...['x','y','z'].map(a=>h('span',{}, h('i',{style:`background:linear-gradient(90deg,transparent,${C[a]})`}), a.toUpperCase()))); }
 function updateLocatorPoses(){ for(const pg of locGroup.children){ const r=meshes.get(pg.userData.pid); if(r){ r.mesh.updateMatrix(); pg.matrix.copy(r.mesh.matrix); pg.matrixWorldNeedsUpdate=true; } } }
 function pickLocator(ev){
   if(!locGroup.children.length) return null;
@@ -228,8 +267,14 @@ function renderValidation(body){
         p.valid.proxy? h('label',{class:'chk'}, (()=>{ const c=h('input',{type:'checkbox',checked:CHK.showProxy||null}); c.onchange=()=>{ CHK.showProxy=c.checked; sync(); }; return c; })(), 'Voir le proxy') : null));
     body.append(minLvl(px,2));
     const lsec=sec(`Repères (${(p.locs||[]).length})`, h('div',{class:'info',html:'Les repères marquent les <b>centres</b> et les <b>directions</b> de la pièce. En Mécanique, on accroche les liaisons à ces repères : c’est plus léger que de viser la pièce elle-même.'}),
-      h('div',{class:'loclist'}, (p.locs||[]).map(l=>h('div',{class:'locrow'}, h('i',{class:'lk lk-'+l.kind}), h('span',{},l.name), h('span',{class:'mono jsub'}, l.kind==='centre'||l.kind==='base'?'':`dir ${nearestAxis(new THREE.Vector3(...l.dir)).toUpperCase()}`),
-        !l.auto? h('button',{class:'btn icon ghost danger',title:'Supprimer ce repère',onclick:()=>{ p.locs=p.locs.filter(k=>k!==l); sync(); commit(); renderInspector(); }}, svgIcon('trash')) : null))),
+      locLegend(),
+      h('div',{class:'loclist'}, (p.locs||[]).map(l=>{ const F=locFrame(l); const C=axisColors();
+        return h('div',{class:'locrow'}, h('i',{class:'lk lk-'+l.kind}), h('span',{class:'locname'},l.name, h('small',{}, `Z ≈ ${nearestAxis(F.z).toUpperCase()}${F.z.getComponent('xyz'.indexOf(nearestAxis(F.z)))<0?'−':'+'}`)),
+          h('span',{class:'locbtns'},
+            h('button',{class:'tr-btn',title:'Tourner d’un quart de tour autour de Z','aria-label':'Tourner '+l.name,onclick:()=>locEdit(p,l,'rot')},'↻'),
+            h('button',{class:'tr-btn',title:'Inverser le sens de Z','aria-label':'Inverser '+l.name,onclick:()=>locEdit(p,l,'flip')},'⇅'),
+            h('button',{class:'tr-btn',title:'Prendre X comme axe principal','aria-label':'Basculer '+l.name,onclick:()=>locEdit(p,l,'swap')},'⤨'),
+            !l.auto? h('button',{class:'tr-btn danger',title:'Supprimer ce repère','aria-label':'Supprimer '+l.name,onclick:()=>{ p.locs=p.locs.filter(k=>k!==l); sync(); commit(); renderInspector(); }}, svgIcon('trash')) : null)); })),
       minLvl(h('button',{class:'btn',style:'justify-content:center',onclick:()=>startLocPick(p)}, svgIcon('target'),'Ajouter un repère sur une face'),3));
     body.append(minLvl(lsec,2));
   }

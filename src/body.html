@@ -103,6 +103,8 @@
     </div>
     <div class="float" id="stLegendBox" data-ws="struct"><div id="stLegend"></div></div>
     <div id="stHint" data-ws="struct"></div>
+    <div id="jlabels" data-ws="mech" hidden></div>
+    <div id="bubble" hidden role="dialog" aria-label="Bulle de simulation"></div>
     <div id="demo" hidden></div>
     <div id="banner" hidden></div>
     <div id="pickHint" hidden></div>
@@ -198,8 +200,9 @@
       <div><h4>Les quatre ateliers</h4><ul>
         <li><b>1 · Modéliser</b> : créer les pièces, les percer, les grouper.</li>
         <li><b>2 · Valider</b> : contrôler chaque pièce (forme, épaisseur, position), mesurer sa complexité, créer un <b>proxy</b> allégé et poser des <b>repères</b> (centres, axes).</li>
-        <li><b>3 · Mécanique</b> : accrocher les liaisons aux repères (clic sur un repère), ajouter des moteurs, simuler. Les pièces doivent être validées.</li>
-        <li><b>4 · Structures</b> : <b>treillis</b> (barres en cylindre plein, tube ou câble) et <b>maillage</b> (plongeoir, plancher, voûte, potence) pour voir la déformation.</li>
+        <li><b>3 · Mécanique</b> : accrocher les liaisons aux repères (clic sur un repère), ajouter des moteurs, simuler. Les pièces doivent être validées. <b>Cliquez une pièce</b> pour ouvrir sa bulle : moteur, vitesse, relancer.</li>
+        <li><b>4 · Structures</b> : <b>treillis</b> (barres en cylindre plein, tube ou câble) et <b>maillage</b> (plongeoir, plancher, voûte, potence). <b>Cliquez la structure</b> : la bulle anime la déformation en boucle et règle la force, les dimensions, le matériau.</li>
+        <li><b>Repères</b> : X, Y, Z en couleur ; le dégradé et la flèche montrent le sens. Réglez-les dans Valider (↻ tourner, ⇅ inverser, ⤨ basculer).</li>
       </ul></div>
       <div><h4>Niveaux</h4><ul>
         <li><b>Débutant</b> : volumes simples, perçages, groupes, couleurs, export STL.</li>

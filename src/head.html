@@ -371,6 +371,61 @@ button.vrow:hover{background:var(--panel-2)}
 .exlist .btn{font-size:12.5px;padding:4px 8px 4px 4px}
 .exlist .btn svg{width:24px;height:24px}
 
+
+/* simulation bubble */
+#bubble{position:absolute;z-index:22;width:min(300px,calc(100% - 16px));background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 2px 6px rgba(0,0,0,.12),0 14px 34px rgba(0,0,0,.18);padding:10px 12px 12px;display:flex;flex-direction:column;gap:10px}
+#bubble::after{content:"";position:absolute;width:14px;height:14px;background:var(--panel);border:1px solid var(--line);transform:rotate(45deg)}
+#bubble[data-side="bl"]::after{left:-8px;bottom:12px;border-top:0;border-right:0}
+#bubble[data-side="br"]::after{right:-8px;bottom:12px;border-bottom:0;border-left:0}
+#bubble[data-side="tl"]::after{left:-8px;top:12px;border-top:0;border-right:0}
+#bubble[data-side="tr"]::after{right:-8px;top:12px;border-bottom:0;border-left:0}
+.bub-head{display:flex;align-items:center;gap:8px}
+.bub-head>svg{width:28px;height:28px;flex:none;color:var(--accent)}
+.bub-t{flex:1;min-width:0;display:flex;flex-direction:column}
+.bub-t b{font-family:var(--f-display);font-weight:600;font-size:16px;line-height:1.15}
+.bub-t small{font-size:11.5px;color:var(--ink-2);line-height:1.3}
+.bub-x{border:0;background:transparent;border-radius:6px;padding:3px;display:grid;place-items:center;color:var(--ink-2)}
+.bub-x:hover{background:var(--panel-2)} .bub-x svg{width:16px;height:16px}
+.bub-chip{font-size:11px;font-weight:600;border-radius:10px;padding:2px 8px;white-space:nowrap}
+.bub-chip.v-ok{background:color-mix(in srgb,#2f9a4a 18%,var(--panel));color:var(--ink)}
+.bub-chip.v-warn{background:var(--mark-soft)} .bub-chip.v-err{background:color-mix(in srgb,var(--danger) 20%,var(--panel))}
+.bub-actions{display:flex;gap:6px}
+.bub-actions .btn{flex:1;justify-content:center;padding:8px}
+.bub-params{display:flex;flex-direction:column;gap:8px}
+.bub-row{display:grid;grid-template-columns:82px 1fr auto;gap:8px;align-items:center;font-size:12.5px}
+.bub-row label{color:var(--ink-2)}
+.bub-row input[type=range]{width:100%;accent-color:var(--accent)}
+.bub-row .field{grid-column:2 / span 2}
+.bub-row .bub-seg{grid-column:2 / span 2}
+.bub-v{font-size:12px;min-width:58px;text-align:right}
+.bub-seg{display:flex}.bub-seg .btn{flex:1;justify-content:center;padding:5px 4px;font-size:12px}
+.bub-seg .btn.on{background:var(--accent-soft);border-color:var(--accent)}
+.bub-note{font-size:12px;color:var(--ink-2);line-height:1.4}
+.bub-read{border-top:1px solid var(--line);padding-top:8px;font-size:12.5px}
+.bub-warn{grid-column:1 / -1;color:var(--danger);font-weight:600}
+
+/* joint labels */
+#jlabels{position:absolute;inset:0;z-index:4;pointer-events:none}
+.jl-lines{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.jl-lines line{stroke-width:1.6;stroke-dasharray:3 3}
+.jl{position:absolute;left:0;top:0;pointer-events:auto;display:flex;flex-direction:column;align-items:flex-start;gap:1px;max-width:230px;text-align:left;
+  background:color-mix(in srgb,var(--panel) 94%,transparent);border:1px solid var(--line);border-left:4px solid var(--jc);border-radius:9px;padding:4px 9px 5px;box-shadow:var(--shadow);font-size:11.5px;line-height:1.3;color:var(--ink);will-change:transform}
+.jl b{font-family:var(--f-display);font-weight:600;font-size:13px}
+.jl span{color:var(--ink-2)}
+.jl .jl-m{font-style:normal;font-size:10.5px;background:var(--panel-2);border-radius:5px;padding:0 5px;margin-top:2px}
+.jl.sel{box-shadow:0 0 0 2px var(--mark)}
+.jl:hover{border-color:var(--jc)}
+
+/* axis legend and locator rows */
+.axleg{display:flex;gap:12px;font-size:11.5px;font-family:var(--f-mono)}
+.axleg span{display:flex;align-items:center;gap:5px}
+.axleg i{width:26px;height:5px;border-radius:3px;display:block}
+.locname{flex:1;display:flex;flex-direction:column;min-width:0}
+.locname small{font-family:var(--f-mono);font-size:11px;color:var(--ink-2)}
+.locbtns{display:flex;gap:1px}
+.locbtns .tr-btn{opacity:.8;font-size:14px}
+.locbtns .tr-btn.danger{color:var(--danger)}
+
 /* ---------- narrow screens */
 @media (max-width: 860px){
   #app, html[data-level="3"] #app.with-tree{grid-template-columns:1fr;grid-template-rows:auto auto 1fr auto;grid-template-areas:"top" "steps" "stage" "rack"}

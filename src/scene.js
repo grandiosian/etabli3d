@@ -257,10 +257,12 @@ renderer.domElement.addEventListener('pointerup', ev=>{
   if(d.drag && d.moved){ sync(); commit(); renderInspector(); return; }
   if(d.gizmo) return;
   if(Math.hypot(ev.clientX-d.x, ev.clientY-d.y)>4) return;
+  if(ws==='struct'){ if(ST.mode3d) struct3DClick(ev); return; }
   const hit=pickAt(ev);
   if(locPick!=null){ finishLocPick(hit); return; }
   if(ws==='mech' && jf){ const L=pickLocator(ev); if(L){ setJointLoc(L.pid,L.lid); return; } }
   if(pickMode){ pickMode(hit?hit.point:null, hit); return; }
+  if(ws==='mech' && !jf){ if(hit){ const id=hit.object.userData.id; selection=[id]; sync(); renderInspector(); openMechBubble(findPart(id), ev); } else { closeBubble(); if(selection.length){ selection=[]; sync(); renderInspector(); } } return; }
   if(!hit){ if(!ev.shiftKey && selection.length){ selection=[]; sync(); renderInspector(); } return; }
   const id=hit.object.userData.id;
   if(ev.shiftKey){ selection = selection.includes(id)? selection.filter(i=>i!==id) : [...selection,id]; }

@@ -12,10 +12,14 @@ L'application suit la démarche de conception, avec une barre d'étapes en haut 
 |---|---|
 | **1 · Modéliser** | Créer les pièces : volumes, esquisses, perçages, groupes |
 | **2 · Valider** | Contrôler chaque pièce (forme vide ou plate, surface non fermée, contour d'esquisse qui se croise, épaisseur < 1 mm, pièce sous le plan ou en l'air, perçage isolé), mesurer sa complexité (triangles), créer un **proxy basse résolution** pour les pièces lourdes et poser des **repères** (centre, base, axes de révolution, axes des perçages) |
-| **3 · Mécanique** | Liaisons, moteurs et simulation. Verrouillée tant que les pièces ne sont pas validées ; les liaisons s'accrochent aux repères (clic direct dans la vue 3D) et les pièces lourdes sont affichées en proxy |
-| **4 · Structures** | Simulation de déformation, indépendante des pièces : **Treillis** (barres articulées en cylindre plein, tube = cylindres imbriqués, ou câble en traction seule ; flambage d'Euler, réactions, masse) et **Maillage** (éléments finis 2D simplifiés en contraintes planes : flèche, von Mises, traction / compression, comparaison avec le calcul RDM) |
+| **3 · Mécanique** | Liaisons, moteurs et simulation. Verrouillée tant que les pièces ne sont pas validées ; les liaisons s'accrochent aux repères (clic direct dans la vue 3D) et les pièces lourdes sont affichées en proxy. Chaque liaison a une **étiquette** (« Roue menante tourne sur Platine · axe Z »). Un clic sur une pièce ouvre une **bulle** : moteur, vitesse, course, relancer |
+| **4 · Structures** | Un clic sur la structure ouvre une **bulle** : animer la déformation en boucle, régler force / diamètre / hauteur / matériau, relancer. Simulation de déformation, indépendante des pièces : **Treillis** (barres articulées en cylindre plein, tube = cylindres imbriqués, ou câble en traction seule ; flambage d'Euler, réactions, masse) et **Maillage** (éléments finis 2D simplifiés en contraintes planes : flèche, von Mises, traction / compression, comparaison avec le calcul RDM) |
 
 Unités des structures : mm, N, MPa. Matériaux : bois, acier, aluminium, PLA, pierre, béton.
+
+## Repères (locators)
+
+Chaque repère est un trièdre X, Y, Z coloré (palette réglable dans **Apparence** : classique, contrastée, pastel). Le dégradé et la pointe de flèche indiquent le sens positif ; Z est l'axe principal, celui des liaisons. Dans **Valider**, chaque repère se règle : ↻ quart de tour autour de Z, ⇅ inverser Z, ⤨ prendre X comme axe principal. Les liaisons accrochées au repère suivent.
 
 ## Trois niveaux
 
@@ -66,6 +70,7 @@ src/validate.js  atelier Valider : contrôles, proxy, repères (locators)
 src/struct.js    atelier Structures : treillis, maillage, solveurs, vue 2D et aperçu 3D
 src/examples.js  exemples de démonstration, galerie et fiche démo
 src/outliner.js  arborescence des objets (niveau avancé)
+src/bubble.js    bulle de simulation et étiquettes de liaison
 src/workspace.js navigation entre les ateliers
 src/init.js      exemples, raccourcis clavier, démarrage
 build.py         assemble src/ en une seule page dans dist/

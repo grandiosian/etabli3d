@@ -21,7 +21,8 @@ function secProps(b){ const D=Math.max(0.1,+b.D||1), d=b.sec==='tube'? clamp(+b.
 
 function defaultStruct(){ return {mod:'treillis', truss:{nodes:[], bars:[], nid:1, mat:'bois', sec:'plein', D:6, d:4, grav:true, labels:true},
   mesh:{shape:'poutre', P:{L:2400,h:60,Ri:1500,e:300,H:1200,w:80,La:900,ha:80}, t:500, mat:'bois', sup:'encastre', load:'pointe', F:800, grav:true, dens:2, view:'vm', part:null}}; }
-const ST={tool:'select', sel:null, view:{cx:0,cy:0,s:1}, fitted:false, mode3d:false, amp:'auto', res:null, mres:null, chain:null, drag:null, mouse:null};
+const ST={tool:'select', sel:null, view:{cx:0,cy:0,s:1}, fitted:false, mode3d:false, amp:'auto', res:null, mres:null, chain:null, drag:null, mouse:null,
+  anim:{on:false, t0:0, T:2.4}, k:1, g3:null};   // k : part of the deformation shown (animated from 0 to 1 in a loop)
 function SD(){ if(!state.struct) state.struct=defaultStruct(); return state.struct; }
 
 /* =========================================================
@@ -258,6 +259,7 @@ function ramp(k){ k=clamp(k,0,1)*(RAMP.length-1); const i=Math.min(RAMP.length-2
 function divergent(v, lim){ const k=clamp(v/lim,-1,1); const w=[236,238,236], r=[200,52,44], b=[44,96,200]; const t=Math.abs(k), c=k>=0? b : r; return w.map((x,i)=>Math.round(x+(c[i]-x)*Math.pow(t,0.7))); }
 
 function stDraw(){
+  $('#stTools').dataset.mod=SD().mod;
   if(ws!=='struct') return;   // in 3D the hidden canvas is still drawn so the legend stays right
   const g=stCtx, S=SD(); const col={bg:cssVar('--scene'),line:cssVar('--line'),ink:cssVar('--ink'),ink2:cssVar('--ink-2'),acc:cssVar('--accent'),mark:cssVar('--mark'),panel:cssVar('--panel'),danger:cssVar('--danger')};
   g.clearRect(0,0,stW,stH); g.fillStyle=col.bg; g.fillRect(0,0,stW,stH);
@@ -283,7 +285,7 @@ function supGlyph(g, X, Y, type, col){
 }
 function drawTruss(g, T, col){
   const R=ST.res, N=new Map(T.nodes.map(n=>[n.id,n]));
-  const b=structBox(); const amp= R?.ok? ampFactor(Math.max(b.maxx-b.minx,b.maxy-b.miny), R.umax, 0.035) : 1;
+  const b=structBox(); const ampF= R?.ok? ampFactor(Math.max(b.maxx-b.minx,b.maxy-b.miny), R.umax, 0.035) : 1, amp=ampF*ST.k;
   const P=id=>{ const n=N.get(id); const d=R?.ok? R.disp.get(id) : null; return d? [n.x+d[0]*amp, n.y+d[1]*amp] : [n.x,n.y]; };
   // undeformed ghost
   if(R?.ok){ g.strokeStyle=col.ink2; g.globalAlpha=.25; g.lineWidth=1; g.setLineDash([4,4]); g.beginPath(); for(const bar of T.bars){ const a=N.get(bar.a), c=N.get(bar.b); if(!a||!c) continue; const [ax,ay]=sToS(a.x,a.y), [cx,cy]=sToS(c.x,c.y); g.moveTo(ax,ay); g.lineTo(cx,cy); } g.stroke(); g.setLineDash([]); g.globalAlpha=1; }
@@ -314,12 +316,12 @@ function drawTruss(g, T, col){
   }
   if(R?.ok && R.umaxNode!=null && R.umax>1e-6){ const [X,Y]=sToS(...P(R.umaxNode)); g.strokeStyle=col.mark; g.lineWidth=2; g.beginPath(); g.arc(X,Y,12,0,Math.PI*2); g.stroke();
     g.font='600 12px '+cssVar('--f-mono'); g.fillStyle=col.ink; g.fillText(`flèche ${fmt(R.umax,2)} mm`, X+16, Y-14); }
-  $('#stLegend').innerHTML = R?.ok ? `<span class="lg"><i style="background:#2f6fd6"></i>Traction</span><span class="lg"><i style="background:#d64035"></i>Compression</span><span class="lg"><i class="dash"></i>Câble détendu</span><span class="lg mono">déformée ×${fmt(amp,amp<10?1:0)}</span>`
+  $('#stLegend').innerHTML = R?.ok ? `<span class="lg"><i style="background:#2f6fd6"></i>Traction</span><span class="lg"><i style="background:#d64035"></i>Compression</span><span class="lg"><i class="dash"></i>Câble détendu</span><span class="lg mono">déformée ×${fmt(ampF,ampF<10?1:0)}</span>`
     : R && !R.ok && !R.empty ? `<span class="lg warn">${R.reason}</span>` : `<span class="lg">Tracez des barres avec l’outil « Barre », posez des appuis et une charge.</span>`;
 }
 function drawMeshRes(g, M, col){
   const R=ST.mres; if(!R?.mesh) return; const mesh=R.mesh, nodes=mesh.nodes;
-  const b=mesh.box, span=Math.max(b.maxx-b.minx,b.maxy-b.miny); const amp=R.ok? ampFactor(span,R.umax) : 1;
+  const b=mesh.box, span=Math.max(b.maxx-b.minx,b.maxy-b.miny); const ampF=R.ok? ampFactor(span,R.umax) : 1, amp=ampF*ST.k;
   const P=i=> R.ok? [nodes[i][0]+R.u[2*i]*amp, nodes[i][1]+R.u[2*i+1]*amp] : nodes[i];
   // outline of the shape at rest
   g.strokeStyle=col.ink2; g.globalAlpha=.4; g.lineWidth=1; g.setLineDash([4,4]); g.beginPath(); for(const [a,c] of mesh.bnd){ const [ax,ay]=sToS(...nodes[a]), [cx,cy]=sToS(...nodes[c]); g.moveTo(ax,ay); g.lineTo(cx,cy); } g.stroke(); g.setLineDash([]); g.globalAlpha=1;
@@ -345,7 +347,7 @@ function drawMeshRes(g, M, col){
   // legend
   if(R.ok){ const stops=view==='tc'? [-1,-.5,0,.5,1].map(k=>`rgb(${divergent(k*lim,lim).join(',')})`) : [0,.2,.4,.6,.8,1].map(k=>`rgb(${ramp(k).join(',')})`);
     const lo= view==='tc'? `−${fmt(lim,lim<10?2:1)} (compression)` : '0', hi= view==='tc'? `+${fmt(lim,lim<10?2:1)} (traction)` : fmt(lim,lim<10?2:1);
-    $('#stLegend').innerHTML=`<span class="lg"><b>${title}</b></span><span class="cbar2" style="background:linear-gradient(90deg,${stops.join(',')})"></span><span class="lg mono">${lo} … ${hi} ${unit}</span>${view==='vm'?`<span class="lg mono">limite du matériau ${fmt(Math.min(R.mat.st,R.mat.sc),1)} MPa</span>`:''}<span class="lg mono">déformée ×${fmt(amp,amp<10?1:0)}</span>`; }
+    $('#stLegend').innerHTML=`<span class="lg"><b>${title}</b></span><span class="cbar2" style="background:linear-gradient(90deg,${stops.join(',')})"></span><span class="lg mono">${lo} … ${hi} ${unit}</span>${view==='vm'?`<span class="lg mono">limite du matériau ${fmt(Math.min(R.mat.st,R.mat.sc),1)} MPa</span>`:''}<span class="lg mono">déformée ×${fmt(ampF,ampF<10?1:0)}</span>`; }
   else $('#stLegend').innerHTML=`<span class="lg warn">${R.reason}</span>`;
 }
 
@@ -364,12 +366,12 @@ function stSetTool(t){ ST.tool=t; ST.chain=null; $$('#stTools [data-st]').forEac
 function stEvt(ev){ const r=stCanvas.getBoundingClientRect(); return [ev.clientX-r.left, ev.clientY-r.top]; }
 stCanvas.addEventListener('contextmenu',e=>e.preventDefault());
 stCanvas.addEventListener('pointerdown',ev=>{
-  ev.preventDefault(); const [sx,sy]=stEvt(ev); stCanvas.setPointerCapture(ev.pointerId);
+  ev.preventDefault(); const [sx,sy]=stEvt(ev); stCanvas.setPointerCapture(ev.pointerId); ST.down={sx,sy};
   const S=SD(); const panStart=()=>{ ST.drag={kind:'pan',sx,sy,cx:ST.view.cx,cy:ST.view.cy}; };
   if(ev.button===1||ev.button===2||S.mod!=='treillis'){ if(ev.button===2 && ST.chain!=null){ ST.chain=null; stDraw(); return; } panStart(); return; }
   const T=S.truss, t=ST.tool;
   if(t==='select'){ const n=hitNode(sx,sy); if(n){ ST.sel={t:'node',id:n.id}; ST.drag={kind:'node',id:n.id,moved:false}; renderInspector(); stDraw(); return; }
-    const b=hitBar(sx,sy); if(b){ ST.sel={t:'bar',id:b.id}; renderInspector(); stDraw(); return; }
+    const b=hitBar(sx,sy); if(b){ ST.sel={t:'bar',id:b.id}; renderInspector(); stDraw(); openStructBubble({t:'bar',id:b.id}, sx, sy); return; }
     ST.sel=null; renderInspector(); panStart(); stDraw(); return; }
   if(t==='bar'){ const s=stSnap(sx,sy); const n=s.node||newNode(s.x,s.y);
     if(ST.chain!=null && ST.chain!==n.id) newBar(ST.chain,n.id);
@@ -388,40 +390,66 @@ stCanvas.addEventListener('pointermove',ev=>{
     if(x!==n.x||y!==n.y){ n.x=+x.toFixed(2); n.y=+y.toFixed(2); dr.moved=true; computeStruct(); stDraw(); } return; }
   if(ST.tool==='bar' && ST.chain!=null) stDraw();
 });
-stCanvas.addEventListener('pointerup',()=>{ const dr=ST.drag; ST.drag=null; if(dr?.kind==='node' && dr.moved) structChanged(); });
+stCanvas.addEventListener('pointerup',ev=>{ const dr=ST.drag; ST.drag=null; const [sx,sy]=stEvt(ev); const click= ST.down && Math.hypot(sx-ST.down.sx, sy-ST.down.sy)<5;
+  if(dr?.kind==='node'){ if(dr.moved) structChanged(); else openStructBubble({t:'node',id:dr.id}, sx, sy); return; }
+  if(dr?.kind==='pan' && click && ev.button===0){ if(SD().mod==='maillage' && meshHitAt(sx,sy)) openStructBubble({t:'mesh'}, sx, sy); else closeBubble(); } });
 stCanvas.addEventListener('wheel',ev=>{ ev.preventDefault(); const [sx,sy]=stEvt(ev); const [wx,wy]=sToW(sx,sy); ST.view.s=clamp(ST.view.s*Math.exp(-ev.deltaY*0.0015),0.01,60); const [nx,ny]=sToW(sx,sy); ST.view.cx+=wx-nx; ST.view.cy+=wy-ny; stDraw(); },{passive:false});
 
 /* ---- 3D preview: bars become cylinders (tubes are hollow), plates become coloured slabs */
 const structGroup=new THREE.Group(); structGroup.visible=false; scene.add(structGroup);
 function buildStruct3D(){
   for(const c of [...structGroup.children]){ structGroup.remove(c); c.traverse(m=>{ m.geometry?.dispose(); m.material?.dispose?.(); }); }
-  const S=SD(); const toV=(x,y,z=0)=>new THREE.Vector3(x,z,y);
-  if(S.mod==='treillis'){ const T=S.truss, R=ST.res, N=new Map(T.nodes.map(n=>[n.id,n])); const b=structBox(); const amp=R?.ok? ampFactor(Math.max(b.maxx-b.minx,b.maxy-b.miny),R.umax,0.035):1;
-    const P=id=>{ const n=N.get(id); const d=R?.ok?R.disp.get(id):null; return d? toV(n.x+d[0]*amp, n.y+d[1]*amp) : toV(n.x,n.y); };
-    const info=new Map((R?.ok?R.bars:[]).map(e=>[e.b.id,e]));
-    for(const bar of T.bars){ if(!N.has(bar.a)||!N.has(bar.b)) continue; const A=P(bar.a), B=P(bar.b), L=A.distanceTo(B); if(L<1e-6) continue; const sp=secProps(bar), e=info.get(bar.id);
+  ST.g3=null; const S=SD(); const toV=(x,y,z=0)=>new THREE.Vector3(x,z,y);
+  if(S.mod==='treillis'){ const T=S.truss, R=ST.res, N=new Map(T.nodes.map(n=>[n.id,n])); const b=structBox(); const ampF=R?.ok? ampFactor(Math.max(b.maxx-b.minx,b.maxy-b.miny),R.umax,0.035):1;
+    const P0=new Map(), D=new Map(); for(const n of T.nodes){ P0.set(n.id,toV(n.x,n.y)); const d=R?.ok? R.disp.get(n.id) : null; D.set(n.id, d? toV(d[0]*ampF,d[1]*ampF) : new THREE.Vector3()); }
+    const info=new Map((R?.ok?R.bars:[]).map(e=>[e.b.id,e])); const G={kind:'truss', P0, D, bars:[], nodes:[], arrows:[]};
+    for(const bar of T.bars){ if(!N.has(bar.a)||!N.has(bar.b)) continue; const sp=secProps(bar), e=info.get(bar.id);
       let color=new THREE.Color(MATERIALS[bar.mat]?.col||'#999'); if(e && e.mode!=='detendu'){ const lim=e.N>=0?e.m.st:Math.min(e.m.sc,e.Pcr/e.A||e.m.sc); color=new THREE.Color(colorTC(e.N/e.A,lim)); }
-      const r=bar.sec==='cable'? Math.max(0.4,sp.D/2) : sp.D/2;
-      const grp=new THREE.Group(); grp.position.copy(A).add(B).multiplyScalar(0.5); grp.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), B.clone().sub(A).normalize());
-      grp.add(new THREE.Mesh(new THREE.CylinderGeometry(r,r,L,20,1,bar.sec==='tube'), new THREE.MeshStandardMaterial({color,roughness:.45,metalness:.1,side:THREE.DoubleSide})));
-      if(bar.sec==='tube') grp.add(new THREE.Mesh(new THREE.CylinderGeometry(sp.d/2,sp.d/2,L,20,1,true), new THREE.MeshStandardMaterial({color:color.clone().multiplyScalar(.55),side:THREE.BackSide})));
-      structGroup.add(grp); }
+      const r=bar.sec==='cable'? Math.max(0.4,sp.D/2) : sp.D/2; const ud={t:'bar',id:bar.id};
+      const grp=new THREE.Group(); grp.userData=ud;
+      const outer=new THREE.Mesh(new THREE.CylinderGeometry(r,r,1,20,1,bar.sec==='tube'), new THREE.MeshStandardMaterial({color,roughness:.45,metalness:.1,side:THREE.DoubleSide})); outer.userData=ud; grp.add(outer);
+      if(bar.sec==='tube'){ const inner=new THREE.Mesh(new THREE.CylinderGeometry(sp.d/2,sp.d/2,1,20,1,true), new THREE.MeshStandardMaterial({color:color.clone().multiplyScalar(.55),side:THREE.BackSide})); inner.userData=ud; grp.add(inner); }
+      structGroup.add(grp); G.bars.push({grp,a:bar.a,b:bar.b}); }
     const nr=Math.max(1.5,Math.max(...T.bars.map(b=>secProps(b).D),4)*0.7);
-    for(const n of T.nodes){ const m=new THREE.Mesh(new THREE.SphereGeometry(nr,16,10), new THREE.MeshStandardMaterial({color:n.sup?0x2c3331:0xdddddd})); m.position.copy(P(n.id)); structGroup.add(m);
-      if(n.sup){ const c=new THREE.Mesh(new THREE.ConeGeometry(nr*2.2,nr*3,4), new THREE.MeshStandardMaterial({color:n.sup==='fixe'?0x6c7a89:0xe6a23a})); c.position.copy(P(n.id)).add(new THREE.Vector3(0,0,-nr*2.2)); c.rotation.x=Math.PI/2; c.rotation.y=Math.PI/4; c.rotateX(Math.PI); structGroup.add(c); }
-      if(+n.fx||+n.fy){ const d=new THREE.Vector3(+n.fx||0,0,+n.fy||0).normalize(); structGroup.add(new THREE.ArrowHelper(d, P(n.id).clone().addScaledVector(d,-nr*12), nr*11, 0x2f6fd6, nr*3, nr*2)); } }
-  } else { const R=ST.mres; if(!R?.mesh) return; const mesh=R.mesh, nodes=mesh.nodes, t=SD().mesh.t; const b=mesh.box; const amp=R.ok? ampFactor(Math.max(b.maxx-b.minx,b.maxy-b.miny),R.umax):1;
+    for(const n of T.nodes){ const m=new THREE.Mesh(new THREE.SphereGeometry(nr,16,10), new THREE.MeshStandardMaterial({color:n.sup?0x2c3331:0xdddddd})); m.userData={t:'node',id:n.id}; structGroup.add(m); G.nodes.push({m,id:n.id});
+      if(n.sup){ const h=nr*3, c=new THREE.Mesh(new THREE.ConeGeometry(nr*2.2,h,4), new THREE.MeshStandardMaterial({color:n.sup==='fixe'?0x6c7a89:0xe6a23a})); c.rotation.x=Math.PI/2; c.position.copy(P0.get(n.id)).add(new THREE.Vector3(0,0,-h/2-nr*0.6)); structGroup.add(c); }
+      if(+n.fx||+n.fy){ const d=new THREE.Vector3(+n.fx||0,0,+n.fy||0).normalize(); const ar=new THREE.ArrowHelper(d, new THREE.Vector3(), nr*11, 0x2f6fd6, nr*3, nr*2); structGroup.add(ar); G.arrows.push({ar,id:n.id,d,off:nr*12}); } }
+    ST.g3=G;
+  } else { const R=ST.mres; if(!R?.mesh) return; const mesh=R.mesh, nodes=mesh.nodes, t=SD().mesh.t; const b=mesh.box; const ampF=R.ok? ampFactor(Math.max(b.maxx-b.minx,b.maxy-b.miny),R.umax):1;
     const view=SD().mesh.view; const lim= !R.ok?1 : view==='u'? (R.umax||1) : view==='tc'? Math.max(Math.abs(R.s1max),Math.abs(R.s3min))||1 : R.vmMax||1;
     const val= !R.ok? null : view==='u'? R.uN : view==='tc'? R.spN : R.vmN;
-    const pos=[], colr=[]; const P=(i,z)=>{ const x=nodes[i][0]+(R.ok?R.u[2*i]*amp:0), y=nodes[i][1]+(R.ok?R.u[2*i+1]*amp:0); return [x,z,y]; };
+    const base=[], disp=[], colr=[];
     const C=i=>{ const c= !val? [150,160,156] : view==='tc'? divergent(val[i],lim) : ramp(val[i]/lim); return c.map(v=>v/255); };
-    const tri=(a,b,c,za,zb,zc)=>{ for(const [i,z] of [[a,za],[b,zb],[c,zc]]){ pos.push(...P(i,z)); colr.push(...C(i)); } };
+    const vtx=(i,z)=>{ base.push(nodes[i][0], z, nodes[i][1]); disp.push(R.ok?R.u[2*i]*ampF:0, 0, R.ok?R.u[2*i+1]*ampF:0); colr.push(...C(i)); };
+    const tri=(a,b,c,za,zb,zc)=>{ vtx(a,za); vtx(b,zb); vtx(c,zc); };
     const h2=t/2;
     for(const [a,b,c] of mesh.tris){ tri(a,b,c,-h2,-h2,-h2); tri(a,c,b,h2,h2,h2); }
     for(const [a,b] of mesh.bnd){ tri(a,b,b,-h2,-h2,h2); tri(a,b,a,-h2,h2,h2); }
-    const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.setAttribute('color',new THREE.Float32BufferAttribute(colr,3)); g.computeVertexNormals();
-    structGroup.add(new THREE.Mesh(g,new THREE.MeshStandardMaterial({vertexColors:true,roughness:.6,side:THREE.DoubleSide})));
+    const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(base.slice(),3)); g.setAttribute('color',new THREE.Float32BufferAttribute(colr,3)); g.computeVertexNormals();
+    const m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({vertexColors:true,roughness:.6,side:THREE.DoubleSide})); m.userData={t:'mesh'}; structGroup.add(m);
+    ST.g3={kind:'mesh', geo:g, base:new Float32Array(base), disp:new Float32Array(disp)};
   }
+  applyStruct3DK(ST.k);
+}
+const UP3=new THREE.Vector3(0,1,0);
+function applyStruct3DK(k){
+  const G=ST.g3; if(!G) return;
+  if(G.kind==='truss'){ const P=id=>G.P0.get(id).clone().addScaledVector(G.D.get(id),k);
+    for(const b of G.bars){ const A=P(b.a), B=P(b.b), L=Math.max(1e-6,A.distanceTo(B)); b.grp.position.copy(A).add(B).multiplyScalar(0.5); b.grp.quaternion.setFromUnitVectors(UP3, B.clone().sub(A).normalize()); b.grp.scale.set(1,L,1); }
+    for(const n of G.nodes) n.m.position.copy(P(n.id));
+    for(const a of G.arrows) a.ar.position.copy(P(a.id)).addScaledVector(a.d,-a.off);
+  } else { const p=G.geo.attributes.position.array; for(let i=0;i<p.length;i++) p[i]=G.base[i]+k*G.disp[i]; G.geo.attributes.position.needsUpdate=true; G.geo.computeBoundingSphere(); }
+}
+/* deformation animation: 0 → full → 0, looping */
+function stAnimPlay(on=true){ ST.anim.on=on; ST.anim.t0=performance.now(); if(!on){ ST.k=1; if(ST.mode3d) applyStruct3DK(1); else stDraw(); } updateBubblePlay(); }
+function stAnimTick(now){ if(!ST.anim.on) return; const ph=((now-ST.anim.t0)/1000/ST.anim.T)%1; ST.k=0.5-0.5*Math.cos(ph*2*Math.PI); if(ST.mode3d) applyStruct3DK(ST.k); else stDraw(); }
+function meshHitAt(sx,sy){
+  const R=ST.mres; if(!R?.mesh) return false; const nodes=R.mesh.nodes, b=R.mesh.box; const amp= R.ok? ampFactor(Math.max(b.maxx-b.minx,b.maxy-b.miny),R.umax)*ST.k : 0;
+  const S=i=>sToS(nodes[i][0]+(R.ok?R.u[2*i]*amp:0), nodes[i][1]+(R.ok?R.u[2*i+1]*amp:0));
+  const sign=(p,a,b)=>(p[0]-b[0])*(a[1]-b[1])-(a[0]-b[0])*(p[1]-b[1]);
+  const S0=i=>sToS(nodes[i][0], nodes[i][1]);   // the shape at rest also counts
+  for(const tr of R.mesh.tris) for(const f of [S,S0]){ const [A,B,C]=tr.map(f); const p=[sx,sy]; const d1=sign(p,A,B), d2=sign(p,B,C), d3=sign(p,C,A); if(!((d1<0||d2<0||d3<0)&&(d1>0||d2>0||d3>0))) return true; }
+  return false;
 }
 function setStructView3D(v){
   ST.mode3d=v; $('#stCanvas').hidden=v; $$('#stTools [data-v3]').forEach(b=>b.classList.toggle('on', (b.dataset.v3==='1')===v));

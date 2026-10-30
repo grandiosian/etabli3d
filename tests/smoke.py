@@ -153,6 +153,33 @@ with sync_playwright() as p:
     check('aperçu 3D du treillis', pg.evaluate(f"()=>{E}.ST.mode3d") and pg.is_hidden('#stCanvas'))
     pg.click('#stTools [data-v3="0"]')
 
+    # Bulle et étiquettes (Mécanique)
+    pg.evaluate(f"()=>{E}.loadExample('gears')"); pg.wait_for_timeout(500)
+    n = pg.locator('#jlabels .jl').count()
+    check('une étiquette par liaison', n == 4, n)
+    pg.locator('#jlabels .jl').nth(0).click(); pg.wait_for_timeout(200)
+    check('bulle Mécanique ouverte depuis une étiquette', pg.evaluate(f"()=>{E}.BUB.kind")=='mech' and pg.is_visible('#bubble'))
+    pg.click('#bubPlay'); pg.wait_for_timeout(600)
+    check('la bulle lance la simulation', pg.evaluate(f"()=>{E}.sim.playing"))
+    pg.click('#bubPlay'); pg.evaluate(f"()=>{E}.simReset()")
+    r = pg.evaluate(f"""()=>{{const E={E}; const p=E.state.parts[1]; const l=p.locs.find(k=>k.id==='axe'); const j=E.state.joints[0];
+        j.loc={{pid:p.id,lid:'axe'}}; const before=j.axis.slice(); E.locEdit(p,l,'flip'); return [before[2], j.axis[2]];}}""")
+    check('inverser un repère inverse l’axe de la liaison', r[0] > 0.99 and r[1] < -0.99, r)
+
+    # Bulle et animation (Structures)
+    pg.evaluate(f"()=>{E}.loadExample('pontWarren')"); pg.wait_for_timeout(400)
+    pg.evaluate(f"""()=>{{const E={E}; const n=E.SD().truss.nodes[2]; E.openStructBubble({{t:'node',id:n.id}}, 400, 400);}}""")
+    pg.locator('#bubble input[type=range]').nth(0).evaluate("(e)=>{e.value=900; e.dispatchEvent(new Event('input')); e.dispatchEvent(new Event('change'));}")
+    r = pg.evaluate(f"()=>[{E}.SD().truss.nodes[2].fy, {E}.ST.res.worst.sf < 1]")
+    check('curseur de force dans la bulle', r == [-900, True], r)
+    pg.click('#bubPlay'); pg.wait_for_timeout(500)
+    k1 = pg.evaluate(f"()=>{E}.ST.k"); pg.wait_for_timeout(400); k2 = pg.evaluate(f"()=>{E}.ST.k")
+    check('animation de la déformation en boucle', pg.evaluate(f"()=>{E}.ST.anim.on") and k1 != k2 and 0 <= k1 <= 1, [k1, k2])
+    pg.click('#stTools [data-v3="1"]'); pg.wait_for_timeout(500)
+    k3 = pg.evaluate(f"()=>{E}.ST.k"); pg.wait_for_timeout(300)
+    check('animation aussi en 3D', pg.evaluate(f"()=>{E}.ST.g3 && {E}.ST.g3.kind==='truss'") and pg.evaluate(f"()=>{E}.ST.k") != k3)
+    pg.click('#stTools [data-v3="0"]'); pg.evaluate(f"()=>{E}.stAnimPlay(false)"); pg.keyboard.press('Escape')
+
     check('aucune erreur JavaScript', not errors, errors[:3])
     b.close()
 

@@ -398,7 +398,7 @@ const CATS=[['model','Modéliser avec des volumes'],['sketch','Esquisser et cote
 function loadExample(k){
   const S=SAMPLES[k]; if(!S) return;
   if(S.level>prefs.level){ setLevel(S.level,true); setTimeout(()=>toast(`Niveau ${LEVELS[S.level-1].name} activé pour cet exemple.`),50); }
-  simReset(true); S.build();
+  closeBubble(); ST.anim.on=false; ST.k=1; simReset(true); S.build();
   state.note={key:k, title:S.title, observe:S.note.observe, try:S.note.try};
   selection=[]; selJoint=null; jf=null;
   S.after?.();

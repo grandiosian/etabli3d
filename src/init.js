@@ -36,7 +36,8 @@ function renderLook(){
   const seg=h('div',{class:'seg'}, ...[['auto','Auto'],['light','Clair'],['dark','Sombre']].map(([v,l])=>h('button',{class:'btn'+(prefs.theme===v?' on':''),'aria-pressed':String(prefs.theme===v),onclick:()=>{ prefs.theme=v; savePrefs(); applyTheme(); renderLook(); afterLook(); }}, l)));
   const acc=h('div',{class:'look-sw'}, ...Object.entries(ACCENTS).map(([k,A])=>h('button',{'aria-pressed':String(prefs.accent===k),onclick:()=>{ prefs.accent=k; savePrefs(); applyTheme(); renderLook(); afterLook(); }}, h('i',{style:`background:${A.light[0]}`}), A.name)));
   const mats=h('div',{class:'look-sw'}, ...Object.entries(MATS).map(([k,M])=>h('button',{'aria-pressed':String(prefs.mat===k),onclick:()=>{ prefs.mat=k; savePrefs(); refreshMat(); renderLook(); }}, h('i',{style:`background:${M.fill}`}), M.name)));
-  m.append(h('div',{}, h('h4',{},'Thème'), seg), h('div',{}, h('h4',{},'Couleur principale'), acc), h('div',{}, h('h4',{},'Plan de travail'), mats),
+  const axs=h('div',{class:'look-sw'}, ...Object.entries(AXCOL_SETS).map(([k,A])=>h('button',{'aria-pressed':String(prefs.axes===k),onclick:()=>{ prefs.axes=k; savePrefs(); renderLook(); rebuildLocators(); buildJointLabels(); }}, h('i',{style:`background:linear-gradient(90deg,${A.x} 0 33%,${A.y} 33% 66%,${A.z} 66%)`}), A.name)));
+  m.append(h('div',{}, h('h4',{},'Thème'), seg), h('div',{}, h('h4',{},'Couleur principale'), acc), h('div',{}, h('h4',{},'Plan de travail'), mats), h('div',{}, h('h4',{},'Couleurs des axes X Y Z'), axs),
     h('p',{class:'jsub',style:'margin:0'},'Ces réglages restent dans ce navigateur.'));
 }
 function afterLook(){ sceneBg(); sync(); skDraw(); }
@@ -91,6 +92,7 @@ document.addEventListener('keydown', e=>{
     return;
   }
   if(!$('#help').hidden){ if(k==='escape') $('#help').hidden=true; return; }
+  if(k==='escape' && !$('#bubble').hidden){ closeBubble(); return; }
   if(!$('#gallery').hidden){ if(k==='escape') $('#gallery').hidden=true; return; }
   if(k==='escape' && !$('#menuLook').hidden){ $('#menuLook').hidden=true; return; }
   if(e.target.closest?.('input,select,textarea')) return;
@@ -141,9 +143,11 @@ let lastT=performance.now(), frame=0;
 function loop(now){
   requestAnimationFrame(loop);
   const dt=Math.min(0.05,(now-lastT)/1000); lastT=now; frame++;
-  if(sim.playing){ simStep(dt*(+$('#sSpeed').value||1)); applyPoses(); if(ws==='mech') updateMarkers(); if(frame%4===0){ refreshJointValues(); $('#sTime').textContent=fmt(sim.t,1)+' s'; } }
+  if(sim.playing){ simStep(dt*(+$('#sSpeed').value||1)); applyPoses(); if(ws==='mech') updateMarkerPoses(); if(frame%4===0){ refreshJointValues(); tickBubble(); $('#sTime').textContent=fmt(sim.t,1)+' s'; } }
+  if(ws==='struct') stAnimTick(now);
+  if(ws==='mech') positionJointLabels();
   if(!$('#sk').hidden || (ws==='struct' && !ST.mode3d)) return;
   stepCam(now); orbit.update(); renderer.render(scene,camera);
 }
 requestAnimationFrame(loop);
-window.__etabli={state, SAMPLES, setWs, ws:()=>ws, validateAll, validatePart, vState, mechReady, setJointLoc, ST, SD, computeStruct, solveTruss, buildMesh, solvePlane, beamTheory, makeProxy, getProxyGeo, locGroup, loadExample, openGallery, addPart, groupSel, openSketch, closeSketch, SK, skSolve, sim, simToggle, simReset, exportStl, stlBinary, zipStore, meshes, selection:()=>selection, setSel:(ids)=>{selection=ids; sync(); renderInspector();}, setTab, openJointForm, saveJoint, jf:()=>jf, skProfiles, getGeometry};
+window.__etabli={state, SAMPLES, openStructBubble, openMechBubble, closeBubble, BUB, stAnimPlay, locEdit, locFrame, LOCV, applyStruct3DK, setWs, ws:()=>ws, validateAll, validatePart, vState, mechReady, setJointLoc, ST, SD, computeStruct, solveTruss, buildMesh, solvePlane, beamTheory, makeProxy, getProxyGeo, locGroup, loadExample, openGallery, addPart, groupSel, openSketch, closeSketch, SK, skSolve, sim, simToggle, simReset, exportStl, stlBinary, zipStore, meshes, selection:()=>selection, setSel:(ids)=>{selection=ids; sync(); renderInspector();}, setTab, openJointForm, saveJoint, jf:()=>jf, skProfiles, getGeometry};

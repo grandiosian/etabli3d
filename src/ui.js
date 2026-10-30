@@ -225,6 +225,10 @@ function renderJoints(body){
   if(jf) body.append(jointForm());
   else body.append(h('button',{class:'btn primary',style:'justify-content:center;padding:9px',disabled:(lock||state.parts.length<1)||null,onclick:()=>{ openJointForm(); renderInspector(); }}, svgIcon('plus'),'Ajouter une liaison'));
   if(lock && !jf) body.append(h('div',{class:'info'},'Réinitialisez la simulation (⟲) pour ajouter ou modifier des liaisons.'));
+  const lab=h('input',{type:'checkbox',checked:prefs.labels||null}); lab.onchange=()=>{ prefs.labels=lab.checked; savePrefs(); buildJointLabels(); };
+  const lm=h('select',{class:'field','aria-label':'Repères affichés'}, [['auto','Utilisés par les liaisons'],['tous','Tous'],['aucun','Aucun']].map(([v,l])=>h('option',{value:v,selected:LOCV.mode===v||null},l))); lm.onchange=()=>{ LOCV.mode=lm.value; rebuildLocators(); };
+  body.append(sec('Affichage', h('label',{class:'chk'}, lab, 'Étiquettes des liaisons'), minLvl(row('Repères', lm),2), minLvl(locLegend(),2),
+    h('div',{class:'jsub'},'Cliquez une pièce dans la vue pour ouvrir sa bulle : moteur, vitesse, relancer.')));
 }
 function jointForm(){
   const f=jf; const form=h('div',{class:'jform'});
@@ -361,21 +365,39 @@ function simReset(silent=false){
 /* ---- joint markers */
 const MK={ ring:new THREE.TorusGeometry(7,0.55,8,40,Math.PI*1.6), shaft:new THREE.CylinderGeometry(0.55,0.55,40,10).rotateX(Math.PI/2), cone:new THREE.ConeGeometry(1.8,4,14), oct:new THREE.OctahedronGeometry(3.2), sleeve:new THREE.BoxGeometry(5,5,6) };
 const mkMat=c=>new THREE.MeshBasicMaterial({color:c,depthTest:false,transparent:true,opacity:.92});
+/* joint markers: the gradient and the arrow head show the positive sense (right-hand rule for a pivot) */
+function gradRing(R, r, color, arc){
+  const c=new THREE.Color(color), pale=c.clone().lerp(new THREE.Color(0xffffff),0.55), g=new THREE.Group();
+  const geo=new THREE.TorusGeometry(R, r, 8, 48, arc); const pos=geo.attributes.position, col=new Float32Array(pos.count*4);
+  for(let i=0;i<pos.count;i++){ let th=Math.atan2(pos.getY(i),pos.getX(i)); if(th<-1e-6) th+=Math.PI*2; const t=clamp(th/arc,0,1); const m=pale.clone().lerp(c,t); col.set([m.r,m.g,m.b,0.1+0.9*t],i*4); }
+  geo.setAttribute('color',new THREE.BufferAttribute(col,4));
+  g.add(new THREE.Mesh(geo,new THREE.MeshBasicMaterial({vertexColors:true,transparent:true,depthTest:false})));
+  const cone=new THREE.Mesh(MK.cone, new THREE.MeshBasicMaterial({color:c,depthTest:false,transparent:true})); cone.position.set(R*Math.cos(arc),R*Math.sin(arc),0); cone.rotation.z=arc; g.add(cone);
+  return g;
+}
 function markerFor(type, o, a, color){
-  const g=new THREE.Group(); const m=mkMat(color); g.position.copy(o); g.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1), a);
-  if(type==='fixe'){ g.add(new THREE.Mesh(MK.oct,m)); }
-  else if(type==='pivot'){ g.add(new THREE.Mesh(MK.shaft,m)); g.add(new THREE.Mesh(MK.ring,m)); const c=new THREE.Mesh(MK.cone,m); const ang=Math.PI*1.6; c.position.set(7*Math.cos(ang),7*Math.sin(ang),0); c.rotation.z=ang; g.add(c); }
-  else { g.add(new THREE.Mesh(MK.shaft,m)); const c1=new THREE.Mesh(MK.cone,m); c1.rotation.x=Math.PI/2; c1.position.z=21; const c2=c1.clone(); c2.rotation.x=-Math.PI/2; c2.position.z=-21; g.add(c1,c2,new THREE.Mesh(MK.sleeve,m)); }
+  const g=new THREE.Group(); g.position.copy(o); g.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1), a);
+  if(type==='fixe'){ g.add(new THREE.Mesh(MK.oct,mkMat(color))); }
+  else if(type==='pivot'){ g.add(gradShaft(22,0.5,color)); const back=gradShaft(16,0.45,color,{head:false,alpha0:0.04}); back.rotation.x=Math.PI; g.add(back); g.add(gradRing(7,0.6,color,Math.PI*1.6)); }
+  else { g.add(gradShaft(22,0.55,color)); const back=gradShaft(22,0.55,color,{head:false,alpha0:0.04}); back.rotation.x=Math.PI; g.add(back); g.add(new THREE.Mesh(MK.sleeve,mkMat(color))); }
   g.traverse(x=>x.renderOrder=20); return g;
 }
 function updateMarkers(){
-  for(const c of [...markers.children]){ markers.remove(c); c.traverse(x=>x.material?.dispose?.()); }
+  const shared=new Set(Object.values(MK));
+  for(const c of [...markers.children]){ markers.remove(c); c.traverse(x=>{ x.material?.dispose?.(); if(x.geometry && !shared.has(x.geometry)) x.geometry.dispose(); }); }
+  buildJointLabels();
   if(ws!=='mech') return;
   const acc=cssVar('--accent')||'#1d7656', mark=cssVar('--mark')||'#df9a00';
   curCache=simActive()? new Map(): null;
-  for(const j of state.joints){ if(jf && jf.edit===j.id) continue; const {o,a}=jointWorld(j, simActive()); markers.add(markerFor(j.type,o,a, selJoint===j.id? mark : acc)); }
+  for(const j of state.joints){ if(jf && jf.edit===j.id) continue; const {o,a}=jointWorld(j, simActive()); const m=markerFor(j.type,o,a, selJoint===j.id? mark : acc); m.userData.j=j.id; markers.add(m); }
   curCache=null;
   if(jf && jf.child!=null) markers.add(markerFor(jf.type, new THREE.Vector3(...jf.origin), new THREE.Vector3(...(jf.axis==='loc'&&jf.locDir? jf.locDir : AX[jf.axis])).normalize(), mark));
+}
+/* during the simulation only the poses change: move the markers instead of rebuilding them */
+function updateMarkerPoses(){
+  curCache=new Map(); const Z=new THREE.Vector3(0,0,1);
+  for(const m of markers.children){ const j=m.userData.j!=null && state.joints.find(k=>k.id===m.userData.j); if(!j) continue; const {o,a}=jointWorld(j,true); m.position.copy(o); m.quaternion.setFromUnitVectors(Z,a); }
+  curCache=null;
 }
 
 /* =========================================================

@@ -12,7 +12,8 @@ const WS=[
 ];
 function setWs(k){
   const W=WS.find(w=>w.k===k)||WS[0]; if(!lv(W.lvl)) k='model';
-  const prev=ws;
+  const prev=ws; closeBubble();
+  if(prev==='struct' && k!=='struct' && ST.anim.on) stAnimPlay(false);
   if(prev==='mech' && k!=='mech'){ if(simActive()) simReset(true); jf=null; cancelPick(); }
   if(locPick!=null){ locPick=null; $('#pickHint').hidden=true; }
   ws=k; document.documentElement.dataset.ws=k;
@@ -21,7 +22,7 @@ function setWs(k){
   structGroup.visible= struct && ST.mode3d;
   $('#stWrap').hidden= struct && ST.mode3d;
   if(struct){ computeStruct(); ST.fitted=false; ST.sel=null; stSetTool(ST.tool); $('#stTools').dataset.mod=SD().mod; requestAnimationFrame(()=>{ stResize(); if(ST.mode3d) setStructView3D(true); }); }
-  sync(); renderInspector(); updateSteps(); applyViewOffset();
+  sync(); renderInspector(); updateSteps(); applyViewOffset(); updateMarkers();
   if(prev!==k && k==='mech' && !mechReady()) toast('Validez d’abord vos pièces : la Mécanique utilise leurs repères.');
 }
 function updateSteps(){
