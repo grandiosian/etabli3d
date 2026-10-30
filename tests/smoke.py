@@ -48,7 +48,7 @@ with sync_playwright() as p:
     check('arborescence à gauche, propriétés à droite sous le cube de vue', r == [True, True], r)
     r = pg.evaluate("()=>{const d=document.querySelector('#demo').getBoundingClientRect(), o=document.querySelector('#outliner').getBoundingClientRect(); return [!document.querySelector('#demo').hidden, d.left>=o.right-1 && d.left<o.right+40, document.querySelector('#demo').parentElement.id]}")
     check('guide à gauche de la vue, à droite de l’arborescence', r == [True, True, 'stage'], r)
-    check('plus de section « Mécanique » dans la barre : roues dentées avec les volumes', pg.locator('#rack .rack-title', has_text='Mécanique').count() == 0 and pg.locator('#rackBasic .shape', has_text='Roue dentée').count() == 1)
+    check('barre de création à onglets : Volumes, Simulation mécanique', pg.locator('#rack .rack-title', has_text='Mécanique').count() == 0 and pg.locator('#rackBasic .shape', has_text='Roue dentée').count() == 0 and pg.locator('#rack [data-rtab]').count() == 2)
     pg.evaluate(f"()=>{E}.setSel([])")
     check('panneau « Propriétés » : invitation à cliquer un objet', pg.inner_text('#inspTitle') == 'Propriétés' and 'Cliquez sur un objet' in pg.inner_text('#inspBody') and 'Pour commencer' not in pg.inner_text('#inspBody'))
     pg.locator('#treeBody .tr').nth(0).locator('.tr-btn').nth(0).click(); pg.wait_for_timeout(200)
@@ -383,10 +383,15 @@ with sync_playwright() as p:
     check('poignée de coin : longueur et largeur changent, hauteur non', r[0] != 40 and r[2] == 20, r)
     x, y = ctr('.tg-corner[data-k="top"]'); pg.mouse.move(x, y); pg.mouse.down(); pg.mouse.move(x, y-50, steps=8); pg.mouse.up(); pg.wait_for_timeout(200)
     check('poignée du haut : hauteur', pg.evaluate(f"()=>{E}.state.parts[0].params.h") > 20)
-    x, y = ctr('.tg-rot[data-k="rz"]'); pg.mouse.move(x, y); pg.mouse.down(); pg.mouse.move(x-220, y-160, steps=12); pg.wait_for_timeout(100)
+    x, y = ctr('.tg-rot[data-k="rz"]'); pg.mouse.move(x, y); pg.wait_for_timeout(150)
+    hv = pg.evaluate(f"()=>[{E}.TG.ring.visible, [...document.querySelectorAll('.tg-mark')].filter(e=>!e.hidden).length]")
+    check('survol d’une flèche de rotation : rapporteur gradué visible', hv[0] and hv[1] >= 4, hv)
+    pg.mouse.down(); pg.mouse.move(x-220, y-160, steps=12); pg.wait_for_timeout(100)
     lab = pg.evaluate("()=>[!document.querySelector('.tg-ang').hidden, document.querySelector('.tg-ang').textContent]"); pg.mouse.up(); pg.wait_for_timeout(200)
     rz = pg.evaluate(f"()=>{E}.state.parts[0].rot[2]")
-    check('flèche de rotation : rapporteur et angle par pas de 15°', lab[0] and rz != 0 and abs(rz) % 15 == 0, [lab, rz])
+    check('flèche de rotation : rapporteur et angle au degré', lab[0] and rz != 0 and float(rz).is_integer(), [lab, rz])
+    r = pg.evaluate(f"()=>{{const S={E}.tgSnapAngle, D=Math.PI/180; return [[44.2,100],[37,100],[37.6,400],[16,100],[44.2,100,true]].map(([a,p,f])=>{{const o=S(a*D,p,!!f); return [Math.round(o.a/D*100)/100, o.lvl];}});}}")
+    check('graduations aimantées : 45° fort, 15° moyen, 5° faible, Maj libre', r == [[45, 3], [35, 1], [38, 0], [15, 2], [44, 0]], r)
     x, y = ctr('.tg-corner[data-k="c1"]'); pg.mouse.move(x, y); pg.wait_for_timeout(150)
     pg.locator('.tg-dimv[data-a="x"]').click(); pg.keyboard.press('Control+a'); pg.keyboard.type('33'); pg.keyboard.press('Enter'); pg.wait_for_timeout(200)
     check('cote tapée au clavier', pg.evaluate(f"()=>{E}.state.parts[0].params.L") == 33, pg.evaluate(f"()=>{E}.state.parts[0].params"))
@@ -449,6 +454,23 @@ with sync_playwright() as p:
     q0 = proj(-6, -6, 10); q1 = [max(st['x']+8, q0[0]-220), min(st['y']+st['height']-8, q0[1]+160)]
     pg.keyboard.down('Shift'); pg.mouse.move(q1[0], q1[1]); pg.mouse.down(); pg.mouse.move(q0[0], q0[1], steps=6); pg.mouse.up(); pg.keyboard.up('Shift'); pg.wait_for_timeout(200)
     check('cadre sur une partie de la pièce : elle est sélectionnée', pg.evaluate(f"()=>{E}.selection()") == [pg.evaluate(f"()=>{E}.state.parts[0].id")], pg.evaluate(f"()=>{E}.selection()"))
+
+    # Mode édition de groupe : seules les pièces du groupe restent visibles
+    pg.evaluate(f"()=>{E}.loadExample('maison')"); pg.wait_for_timeout(500)
+    r = pg.evaluate(f"""()=>{{const E={E}; const g=E.state.parts.find(p=>p.name==='Maison (murs)'); E.enterGroupEdit(g.id);
+      const vis=E.state.parts.map(p=>[p.inGroup===g.id, E.meshes.get(p.id).mesh.visible]); return [vis.every(([inG,v])=>inG===v), document.querySelectorAll('#treeBody .tr').length, E.state.parts.filter(p=>p.inGroup===g.id).length, document.querySelector('#grpEdit').textContent];}}""")
+    check('édition de groupe : seules ses pièces sont affichées (vue et arborescence)', r[0] and r[1] == r[2] and 'Mode édition' in r[3], r)
+    pg.evaluate(f"()=>{E}.finishGroupEdit()"); pg.wait_for_timeout(300)
+    check('fin de l’édition : tout réapparaît', pg.evaluate(f"()=>[...{E}.meshes.values()].every(r=>r.mesh.visible)"))
+    # Barre de création à onglets, barre d'édition
+    pg.click('#rack [data-rtab="meca"]'); pg.wait_for_timeout(100)
+    r = pg.evaluate("()=>[!!document.querySelector('#rackMeca .shape') && document.querySelector('#rackMeca').offsetParent!==null, document.querySelector('#rackBasic').hidden, document.querySelector('#rack [data-rtab=meca]').textContent.trim()]")
+    check('onglet « Simulation mécanique » : roue dentée et crémaillère', r == [True, True, 'Simulation mécanique'] and pg.locator('#rackMeca .shape').count() == 2, r)
+    pg.click('#rack [data-rtab="vol"]')
+    pg.evaluate(f"()=>{{const E={E}; E.setSel([E.state.parts[0].id, E.state.parts[1].id]);}}"); pg.wait_for_timeout(100)
+    r = pg.evaluate("()=>[document.querySelector('#edSel').textContent, document.querySelector('#tGroup').disabled, Math.round(document.querySelector('#tGroup').getBoundingClientRect().height), document.querySelector('#tGroup svg').getBoundingClientRect().width]")
+    check('barre d’édition : sélection résumée, gros boutons actifs selon la sélection', r[0] == '2 pièces choisies' and r[1] is False and r[2] >= 44 and r[3] >= 26, r)
+    pg.evaluate(f"()=>{E}.setSel([])")
 
     # Perçage hachuré, Guide : tuto pas à pas et consignes du TP
     pg.click('#bNew'); pg.wait_for_timeout(200)

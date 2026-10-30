@@ -82,6 +82,6 @@ function renderOutliner(){
   const body=$('#treeBody'); const st=body.scrollTop; body.innerHTML='';
   if(!state.parts.length){ body.append(h('p',{class:'empty tr-empty'},'Le tapis est vide. Ajoutez une forme pour la voir ici.')); return; }
   const out=[];
-  if(tree.mode==='parts') for(const p of state.parts) partRows(p,0,p,out); else kinRows(out);
+  if(tree.mode==='parts') for(const p of state.parts){ if(state.edit && ws==='model' && p.inGroup!==state.edit.gid) continue; partRows(p,0,p,out); } else kinRows(out);   // mode édition de groupe : seulement ses pièces
   body.append(...out); hydrateIcons(body); body.scrollTop=st;
 }

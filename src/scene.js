@@ -201,13 +201,12 @@ function sync(){
     setHatch(mt, !!p.hole);
     if(p.hole){ mt.color.set(holeCol); mt.transparent=true; mt.opacity=.2; mt.depthWrite=false; }
     else { mt.color.set(p.color); mt.transparent=false; mt.opacity=1; mt.depthWrite=true; }
-    if(state.edit && p.inGroup!==state.edit.gid && ws==='model'){ mt.transparent=true; mt.opacity=p.hole? .12 : .18; mt.depthWrite=false; }   // outside the group being edited
     mt.emissive.set(sel? markCol : '#000000'); mt.emissiveIntensity= sel? .16:0;
     r.mesh.renderOrder = p.hole? 2:0;
     const wantLine = sel || p.hole;
     if(wantLine){ if(!r.line){ r.line=new THREE.LineSegments(edgesOf(r.mesh.geometry, p.kind==='group'), selLineMat); r.mesh.add(r.line); } r.line.material= sel? selLineMat : holeLineMat; }
     else if(r.line){ r.mesh.remove(r.line); r.line=null; }
-    r.mesh.visible=!isHidden(p) && ws!=='struct';
+    r.mesh.visible=!isHidden(p) && ws!=='struct' && !(state.edit && ws==='model' && p.inGroup!==state.edit.gid);   // mode édition de groupe : seules ses pièces restent affichées
     if(!simActive()){ partMatrix(p, r.mesh.matrix); r.mesh.matrix.decompose(r.mesh.position, r.mesh.quaternion, r.mesh.scale); }
   }
   for(const [id,r] of meshes) if(!ids.has(id)){ scene.remove(r.mesh); r.mesh.material.dispose(); meshes.delete(id); }
@@ -485,6 +484,8 @@ function updateToolButtons(){
   set('#tSolid',!n||lock); set('#tHole',!n||lock); set('#tGroup',n<2||lock); set('#tUngroup',!ps.some(p=>p.kind==='group')||lock);
   set('#tDup',!n||lock); set('#tDrop',!n||lock); set('#tDel',!n||lock);
   $('#tHole').classList.toggle('on', n>0 && ps.every(p=>p.hole)); $('#tSolid').classList.toggle('on', n>0 && ps.every(p=>!p.hole));
+  $('#toolbar').classList.toggle('has-sel', n>0);
+  $('#edSel').textContent= !n? 'Choisissez une pièce' : n===1? ps[0].name+(ps[0].hole?' · perçage':'') : `${n} pièces choisies`;
 }
 
 /* =========================================================

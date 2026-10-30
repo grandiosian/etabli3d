@@ -78,10 +78,20 @@ button{cursor:pointer}
 
 /* ---------- shape rack */
 #rack{grid-area:rack;background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto;overflow-y:hidden;padding:3px 8px;display:flex;flex-direction:row;align-items:stretch;gap:2px;scrollbar-width:thin}
-#toolbar{grid-area:tools;display:flex;align-items:center;gap:6px;padding:2px 8px;border-bottom:1px solid var(--line);background:var(--panel);overflow-x:auto;scrollbar-width:thin}
-#tools{display:flex;align-items:stretch;gap:2px}
-#tools .tool{flex-direction:row!important;gap:5px!important;min-width:0!important;padding:4px 9px!important;font-size:12px!important}
-#tools .tool svg{width:18px!important;height:18px!important}
+#toolbar{grid-area:tools;display:flex;align-items:stretch;gap:10px;padding:3px 8px;border-bottom:1px solid var(--line);background:var(--panel);overflow-x:auto;scrollbar-width:thin}
+#tools{display:flex;align-items:stretch;gap:8px}
+/* barre d'édition : boutons plus grands, rangés par famille, actifs selon la sélection */
+.ed-head{display:flex;flex-direction:column;justify-content:center;min-width:118px;padding:0 6px 0 2px;border-right:1px solid var(--line)}
+.ed-head b{font-family:var(--f-display);font-weight:600;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}
+.ed-head small{font-size:12.5px;font-weight:600;color:var(--ink);max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#toolbar:not(.has-sel) .ed-head small{color:var(--ink-2);font-weight:400}
+.ed-grp{display:flex;flex-direction:column;align-items:center;gap:0;padding:0 4px;border-right:1px solid var(--line)}
+.ed-grp:last-child{border-right:0}
+.ed-btns{display:flex;gap:2px}
+.ed-grp > small{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);font-family:var(--f-display)}
+#tools .tool{flex-direction:column!important;gap:2px!important;min-width:66px!important;padding:4px 6px 3px!important;font-size:11.5px!important;font-weight:500}
+#tools .tool svg{width:28px!important;height:28px!important}
+#tools .tool:not(:disabled) svg{color:var(--accent)} #tools .tool.danger:not(:disabled) svg{color:var(--danger)}
 #tools .tool{flex-direction:column;gap:2px;padding:4px 6px;min-width:58px;font-size:10.5px;border-color:transparent;background:transparent}
 #tools .tool svg{width:22px;height:22px}
 #tools .tool:hover:not(:disabled){background:var(--panel-2);border-color:var(--line)}
@@ -89,6 +99,13 @@ button{cursor:pointer}
 #tools .tool:disabled{opacity:.38}
 .rack-title{font-family:var(--f-display);font-weight:600;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);writing-mode:vertical-rl;transform:rotate(180deg);text-align:center;padding:2px 3px;margin-left:6px;border-right:1px solid var(--line)}
 .rack-title:first-child{margin-left:0}
+.rack-tabs{display:flex;flex-direction:column;justify-content:center;gap:2px;padding-right:6px;margin-right:4px;border-right:1px solid var(--line);flex:none}
+.rack-tab{display:flex;align-items:center;gap:5px;border:1px solid transparent;background:transparent;border-radius:7px;padding:3px 8px 3px 5px;font-size:11.5px;color:var(--ink-2);white-space:nowrap;text-align:left}
+.rack-tab svg{width:16px;height:16px;flex:none}
+.rack-tab:hover{background:var(--panel-2);color:var(--ink)}
+.rack-tab[aria-selected="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink);font-weight:600}
+.rack-pane{display:flex;gap:2px}
+.rack-pane[hidden]{display:none!important}
 .shape{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:60px;border:1px solid transparent;background:transparent;border-radius:9px;padding:3px 4px;font-size:10.5px;white-space:nowrap;line-height:1.15;text-align:center;touch-action:none;user-select:none}
 .shape:hover{background:var(--panel-2);border-color:var(--line)}
 .shape svg{width:30px;height:30px}
@@ -600,7 +617,8 @@ html:not([data-glass="opaque"]) #bubble .bub-row input[type=range]{background:tr
 .rackmin-btn:hover{background:var(--panel-2)}
 .rackmin-btn svg{width:16px;height:16px;transform:rotate(-90deg)}
 #app.rack-min .shape,#app.rack-min #tools .tool{font-size:0;gap:0;min-width:40px}
-#app.rack-min #tools .tool span{display:none}
+#app.rack-min #tools .tool span,#app.rack-min .ed-grp > small,#app.rack-min .rack-tab span{display:none}
+#app.rack-min #tools .tool svg{width:22px!important;height:22px!important} #app.rack-min #tools .tool{min-width:40px!important}
 #app.rack-min .shape svg{width:26px;height:26px}
 #app.rack-min .rackmin-btn svg{transform:rotate(180deg)}
 .rackmin-btn{margin-top:0!important;margin-left:6px}
@@ -647,6 +665,9 @@ html[data-level="1"] .rackmin-btn{margin-left:auto}
 .tg-dimv{position:absolute;left:0;top:0;pointer-events:auto;font:600 12px var(--f-mono);background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:2px 6px;box-shadow:var(--shadow);cursor:text}
 .tg-dimv:hover{border-color:var(--accent)}
 .tg-dimin{width:62px;font:600 12px var(--f-mono);border:0;background:transparent;color:var(--ink);text-align:center;outline:none}
+.tg-ang.snap{border-color:var(--accent);color:var(--accent)}
+.tg-mark{position:absolute;left:0;top:0;pointer-events:none;font:600 10.5px var(--f-mono);color:#1b2421;background:color-mix(in srgb,#fff 70%,transparent);border-radius:4px;padding:0 3px}
+.tg-mark.on{background:var(--accent);color:var(--accent-ink)}
 .tg-ang{position:absolute;left:0;top:0;font:600 13px var(--f-mono);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 7px;box-shadow:var(--shadow);pointer-events:none}
 #grpEdit{position:absolute;top:62px;left:50%;transform:translateX(-50%);z-index:9;display:flex;align-items:center;gap:10px;padding:6px 6px 6px 12px;border-radius:999px;background:var(--panel);border:2px solid var(--accent);box-shadow:var(--shadow);font-size:13px;white-space:nowrap}
 #grpEdit > svg{width:18px;height:18px;color:var(--accent)}
@@ -674,6 +695,7 @@ html[data-glass="opaque"]{--insp-a:100%}
 
 /* ---------- narrow screens */
 @media (max-width: 860px){
+  .ed-head{display:none} .rack-tab span{display:none}
   #app, html[data-level="3"] #app.with-tree{grid-template-columns:1fr;grid-template-rows:auto 1fr auto auto;grid-template-areas:"top" "stage" "tools" "rack"}
   #toolbar{border-bottom:0;border-top:1px solid var(--line)}
   #insp{width:auto} .insp-tool,.rackmin-btn{display:none!important} #app.insp-min #inspBody{display:flex} #app.insp-min .insp-tt{display:block}

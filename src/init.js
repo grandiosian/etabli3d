@@ -3,13 +3,18 @@
    Wiring
    ========================================================= */
 hydrateIcons();
-for(const [host,list] of [['#rackBasic',[...BASIC,...MECA]]]){   // roues dentées et crémaillère à la suite des volumes (niveau 3)
+for(const [host,list] of [['#rackBasic',BASIC],['#rackMeca',MECA]]){
   for(const k of list){ const b=h('button',{class:'shape',title:`Ajouter : ${KINDS[k].label}`,'data-min':KIND_LVL[k]>1?String(KIND_LVL[k]):null}, svgIcon(k), KINDS[k].label);
     b.addEventListener('pointerdown',e=>{ if(e.button!==0) return; e.preventDefault(); startPaletteDrag(k,e); });
     b.addEventListener('click',e=>{ if(e.detail===0) addPart(k); });
     $(host).append(b); }
 }
 initPlanes();
+/* onglets de la barre de création : Volumes / Simulation mécanique */
+function setRackTab(k){ if(k==='meca' && !lv(3)) k='vol'; $$('#rack [data-rtab]').forEach(b=>b.setAttribute('aria-selected', String(b.dataset.rtab===k)));
+  $$('#rack [data-rpane]').forEach(p=>p.hidden= p.dataset.rpane!==k); LAYOUT.rackTab=k; saveLayout(); }
+$$('#rack [data-rtab]').forEach(b=>b.onclick=()=>setRackTab(b.dataset.rtab));
+setRackTab(LAYOUT.rackTab||'vol');
 
 /* ---- level */
 function setLevel(n, quiet=false){
@@ -18,6 +23,7 @@ function setLevel(n, quiet=false){
   if(!lv(2)){ if(simActive()) simReset(true); if(!$('#sk').hidden) closeSketch(false); jf=null; }
   if((WS.find(w=>w.k===ws)?.lvl||1)>n) setWs('model');
   if(!lv(2)) closePlanePicker();
+  setRackTab(LAYOUT.rackTab||'vol');
   if(lv(3) && prefs.tree && !$('#app').classList.contains('with-tree') && !matchMedia('(max-width: 860px)').matches) setTreeOpen(true);
   sync(); renderInspector(); applyViewOffset(); updateSteps();
   if(!quiet && n!==prev) toast(`Niveau ${LEVELS[n-1].name} : ${LEVELS[n-1].desc}`, 3400);
@@ -158,4 +164,4 @@ function loop(now){
   updateBubbleLink();
 }
 requestAnimationFrame(loop);
-window.__etabli={state, pivot, TG, guides, enterGroupEdit, finishGroupEdit, pickAll, setLmb, openCtxMenu, HOV, groupSel, prefs, orbit_:()=>orbit, SAMPLES, LAYOUT:()=>LAYOUT, resetLayout, togglePanel, CHK, startLocTest, stopLocTest, openStructBubble, openMechBubble, closeBubble, BUB, stAnimPlay, locEdit, locFrame, LOCV, applyStruct3DK, camera, orbit, structGroup, struct3DHit, renderer, ampFactor, structBox, stDraw, arrowHits:()=>stArrowHits, setWs, ws:()=>ws, validateAll, validatePart, vState, mechReady, setJointLoc, ST, SD, computeStruct, solveTruss, buildMesh, solvePlane, beamTheory, makeProxy, getProxyGeo, locGroup, loadExample, openGallery, addPart, groupSel, openSketch, closeSketch, SK, skSolve, GUIDE, startTuto, openPlanePicker, closePlanePicker, choosePlane, PP, planeRot, bzSetType, bzSetInterp, sim, simToggle, simReset, exportStl, stlBinary, zipStore, meshes, selection:()=>selection, setSel:(ids)=>{selection=ids; sync(); renderInspector();}, setTab, openJointForm, saveJoint, jf:()=>jf, skProfiles, getGeometry};
+window.__etabli={state, pivot, TG, guides, enterGroupEdit, finishGroupEdit, pickAll, setLmb, openCtxMenu, HOV, groupSel, prefs, orbit_:()=>orbit, SAMPLES, LAYOUT:()=>LAYOUT, resetLayout, togglePanel, CHK, startLocTest, stopLocTest, openStructBubble, openMechBubble, closeBubble, BUB, stAnimPlay, locEdit, locFrame, LOCV, applyStruct3DK, camera, orbit, structGroup, struct3DHit, renderer, ampFactor, structBox, stDraw, arrowHits:()=>stArrowHits, setWs, ws:()=>ws, validateAll, validatePart, vState, mechReady, setJointLoc, ST, SD, computeStruct, solveTruss, buildMesh, solvePlane, beamTheory, makeProxy, getProxyGeo, locGroup, loadExample, openGallery, addPart, groupSel, openSketch, closeSketch, SK, skSolve, tgSnapAngle, setRackTab, GUIDE, startTuto, openPlanePicker, closePlanePicker, choosePlane, PP, planeRot, bzSetType, bzSetInterp, sim, simToggle, simReset, exportStl, stlBinary, zipStore, meshes, selection:()=>selection, setSel:(ids)=>{selection=ids; sync(); renderInspector();}, setTab, openJointForm, saveJoint, jf:()=>jf, skProfiles, getGeometry};
