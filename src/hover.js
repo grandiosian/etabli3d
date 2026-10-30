@@ -59,12 +59,24 @@ function drawSelRect(R, ev){
   const x0=Math.min(R.x0,ev.clientX)-st.left, y0=Math.min(R.y0,ev.clientY)-st.top, w=Math.abs(ev.clientX-R.x0), hh=Math.abs(ev.clientY-R.y0);
   if(w<4 && hh<4) return; el.hidden=false; el.style.cssText=`left:${x0}px;top:${y0}px;width:${w}px;height:${hh}px`;
 }
+function partInRect(mesh, x0,y0,x1,y1, st){
+  const R=screenRectOf(mesh); if(R.x1<x0 || R.x0>x1 || R.y1<y0 || R.y0>y1) return false;   // its box does not even touch the frame
+  if(R.x0>=x0 && R.x1<=x1 && R.y0>=y0 && R.y1<=y1) return true;                          // wholly inside
+  const pos=mesh.geometry.attributes.position, n=pos.count, step=Math.max(1, Math.floor(n/600));   // one of its points inside?
+  mesh.updateWorldMatrix(true,false);
+  for(let i=0;i<n;i+=step){ _hc.fromBufferAttribute(pos,i).applyMatrix4(mesh.matrixWorld); const q=toStage(_hc); if(q.x>=x0 && q.x<=x1 && q.y>=y0 && q.y<=y1) return true; }
+  // or the frame lies on one of its faces: try rays through a grid of points of the frame
+  for(let i=0;i<=4;i++) for(let j=0;j<=4;j++){ const ev={clientX:st.left+x0+(x1-x0)*i/4, clientY:st.top+y0+(y1-y0)*j/4};
+    if(pickAll(ev).some(hh=>hh.object===mesh)) return true; }
+  return false;
+}
 function finishSelRect(R, ev){
   $('#selRect').hidden=true; orbit.enabled=true;
   const st=stage.getBoundingClientRect(); const x0=Math.min(R.x0,ev.clientX)-st.left, x1=Math.max(R.x0,ev.clientX)-st.left, y0=Math.min(R.y0,ev.clientY)-st.top, y1=Math.max(R.y0,ev.clientY)-st.top;
   if(x1-x0<4 && y1-y0<4){ if(!R.add && selection.length){ selection=[]; sync(); renderInspector(); } return; }
-  const ids=[]; for(const p of state.parts){ const r=meshes.get(p.id); if(!r || !r.mesh.visible || isLocked(p)) continue;
-    const c=toStage(_hb.setFromObject(r.mesh).getCenter(_hc)); if(c.x>=x0 && c.x<=x1 && c.y>=y0 && c.y<=y1) ids.push(p.id); }
+  // a part is taken as soon as any piece of it is inside the frame
+  const ids=[]; for(const p of state.parts){ const r=meshes.get(p.id); if(!r || !r.mesh.visible || isLocked(p) || !editable(p)) continue;
+    if(partInRect(r.mesh, x0,y0,x1,y1, st)) ids.push(p.id); }
   selection= R.add? [...new Set([...selection, ...ids])] : ids; sync(); renderInspector();
   if(ids.length) toast(`${ids.length} pièce${ids.length>1?'s':''} sélectionnée${ids.length>1?'s':''}${ids.length>1?' : vous pouvez les grouper (Ctrl+G).':'.'}`);
 }
@@ -100,6 +112,6 @@ function openCtxMenu(x, y){   // stage coordinates
     if(Math.hypot(ev.clientX-d.x, ev.clientY-d.y)<5 && ev.target===cv){ const [x,y]=evStage(ev); openCtxMenu(x,y); } });
   document.addEventListener('pointerdown', e=>{ if(!$('#ctxMenu').hidden && !e.target.closest('#ctxMenu,#lmbBtn')) closeCtxMenu(); }, true);
   document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeCtxMenu(); });
-  const v=$('#views'); if(v){ const b=h('button',{class:'btn ghost',id:'lmbBtn',onclick:()=>{ if(!$('#ctxMenu').hidden) return closeCtxMenu(); const r=b.getBoundingClientRect(), st=stage.getBoundingClientRect(); openCtxMenu(r.left-st.left-230, r.bottom-st.top+4); }}); v.append(b); }
+  const v=$('#views .vc-wrap'); if(v){ const b=h('button',{class:'vc-b vc-br',id:'lmbBtn',onclick:()=>{ if(!$('#ctxMenu').hidden) return closeCtxMenu(); const r=b.getBoundingClientRect(), st=stage.getBoundingClientRect(); openCtxMenu(r.left-st.left-230, r.bottom-st.top+4); }}); v.append(b); }
   applyLmb();
 })();

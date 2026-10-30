@@ -19,7 +19,7 @@ const _tv=new THREE.Vector3(), _tw=new THREE.Vector3();
 function tgBuild(){
   const root=h('div',{id:'tg',hidden:true});
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('class','tg-lines');
-  svg.innerHTML='<path class="tg-base"/><path class="tg-axes"/><path class="tg-dim"/>'; root.append(svg);
+  svg.innerHTML='<path class="tg-base"/><path class="tg-axes"/><path class="tg-dim"/><path class="tg-snap"/>'; root.append(svg);
   const mk=(cls,data,title,html='')=>{ const e=h('div',{class:'tg-h '+cls,title,...data,html}); root.append(e); return e; };
   TG.corners=TG_BASE.map((s,i)=>mk('tg-corner',{'data-k':'c'+i},'Tirer pour changer la longueur et la largeur (Maj : garder les proportions)'));
   TG.edges=TG_EDGE.map((s,i)=>mk('tg-edge',{'data-k':'e'+i},'Tirer pour changer cette cote'));
@@ -28,12 +28,12 @@ function tgBuild(){
   const arc='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 15.5a8.5 8.5 0 0 1 15 0"/><path d="M3 11.5l1.5 4.2 4.2-1.4M21 11.5l-1.5 4.2-4.2-1.4"/></svg>';
   TG.rot={x:mk('tg-rot',{'data-k':'rx'},'Tourner autour de l’axe X (rouge)',arc), y:mk('tg-rot',{'data-k':'ry'},'Tourner autour de l’axe Y (vert)',arc), z:mk('tg-rot',{'data-k':'rz'},'Tourner autour de l’axe vertical Z (bleu)',arc)};
   TG.dims={x:h('button',{class:'tg-dimv','data-a':'x'}), y:h('button',{class:'tg-dimv','data-a':'y'}), z:h('button',{class:'tg-dimv','data-a':'z'})};
-  for(const b of Object.values(TG.dims)){ root.append(b); b.onclick=()=>tgEditDim(b.dataset.a); }
+  for(const b of Object.values(TG.dims)){ root.append(b); b.onclick=()=>tgEditDim(b.dataset.a); b.addEventListener('pointerenter',()=>{ TG.dimUntil=performance.now()+4000; }); }
   TG.ang=h('div',{class:'tg-ang',hidden:true}); root.append(TG.ang);
   TG.svg=svg; TG.el=root; $('#stage').append(root);
   for(const e of root.querySelectorAll('.tg-h')){
     e.addEventListener('pointerdown', ev=>tgStart(ev, e.dataset.k));
-    if(/^(c|e)\d$|^top$/.test(e.dataset.k)) e.addEventListener('pointerenter', ()=>{ TG.dimUntil=performance.now()+2500; });
+    if(/^(c|e)\d$|^top$/.test(e.dataset.k)) e.addEventListener('pointerenter', ()=>{ TG.dimUntil=performance.now()+4000; });
   }
   // the protractor shown while turning
   const ring=new THREE.Mesh(new THREE.RingGeometry(0.82,1,96), new THREE.MeshBasicMaterial({color:0x3d8bd0, transparent:true, opacity:.28, side:THREE.DoubleSide, depthTest:false}));
@@ -84,6 +84,7 @@ function tgTick(){
     lab(TG.dims.x,ax,bx,sz.x); lab(TG.dims.y,ay,by,sz.y); lab(TG.dims.z,az,bz,sz.z);
   } else for(const e of Object.values(TG.dims)) if(TG.editing!==e.dataset.a) e.hidden=true;
   TG.svg.querySelector('.tg-dim').setAttribute('d', dpath);
+  TG.svg.querySelector('.tg-snap').setAttribute('d', SNAPSEG.map(([a,c])=>{ const p=toStage(a), q=toStage(c); return `M${p.x},${p.y}L${q.x},${q.y}`; }).join(''));   // smart-snap guides
   if(TG.drag?.kind==='rot'){ const d=TG.drag, a=d.as||0; const tip=toStage(d.c.clone().add(d.u.clone().multiplyScalar(Math.cos(a)*d.R*1.15)).add(d.v.clone().multiplyScalar(Math.sin(a)*d.R*1.15)));
     TG.ang.hidden=false; TG.ang.textContent=`${Math.round(a/DEG)}°`; TG.ang.style.transform=`translate(${Math.round(tip.x)}px,${Math.round(tip.y)}px) translate(-50%,-50%)`; }
   else TG.ang.hidden=true;

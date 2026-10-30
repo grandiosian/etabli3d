@@ -184,8 +184,8 @@ with sync_playwright() as p:
     rank = {'full':0, 'compact':1, 'mini':2}
     check('étiquettes réduites quand la vue est petite', rank[small[0]] >= rank[big] and small[0] != 'full' and small[1], [big, small])
     pg.set_viewport_size({'width': 1400, 'height': 860}); pg.wait_for_timeout(400)
-    r = pg.evaluate(f"()=>{{const s=document.querySelector('#stage').getBoundingClientRect().width, c=document.querySelector('#stage canvas.gl').getBoundingClientRect().width, i=document.querySelector('#insp').getBoundingClientRect().width; return [Math.round(c-s), Math.round(i), getComputedStyle(document.querySelector('#insp')).backgroundColor]}}")
-    check('panneau de réglages transparent, la vue 3D passe dessous', abs(r[0]-r[1]) <= 1 and r[0] > 40 and ('/ 0.' in r[2] or 'rgba' in r[2]), r)
+    r = pg.evaluate(f"()=>{{const st=document.querySelector('#stage').getBoundingClientRect(), c=document.querySelector('#stage canvas.gl').getBoundingClientRect(), a=document.querySelector('#app').getBoundingClientRect(); return [Math.round(c.width-st.width), Math.round(st.left-a.left+a.right-st.right), getComputedStyle(document.querySelector('#insp')).backgroundColor, Math.round(st.top-c.top), getComputedStyle(document.querySelector('#rack')).backgroundColor]}}")
+    check('panneaux transparents (réglages, barre de création), la vue 3D passe dessous', abs(r[0]-r[1]) <= 1 and r[0] > 40 and ('/ 0.' in r[2] or 'rgba' in r[2]), r)
 
     # Bulle et animation (Structures)
     pg.evaluate(f"()=>{E}.loadExample('pontWarren')"); pg.wait_for_timeout(400)
@@ -276,7 +276,7 @@ with sync_playwright() as p:
     g = pg.locator('#views .pgrip').bounding_box(); pg.mouse.move(g['x']+4, g['y']+4); pg.mouse.down(); pg.mouse.move(500, 500, steps=5); pg.mouse.up()
     pg.click('#simbar .pmin'); pg.click('#inspSide'); pg.wait_for_timeout(200)
     L = pg.evaluate(f"()=>{E}.LAYOUT()")
-    check('panneau déplacé, réduit, côté changé', L.get('views',{}).get('x') is not None and L.get('simbar',{}).get('c') and L.get('inspLeft'), L)
+    check('panneau déplacé, réduit, côté changé', L.get('views',{}).get('x') is not None and L.get('simbar',{}).get('c') and L.get('inspLeft') is False, L)
     check('panneau réduit masque son contenu', pg.is_hidden('#sPlay'))
     pg.evaluate(f"()=>{E}.resetLayout()"); pg.wait_for_timeout(200)
     check('disposition réinitialisée', pg.evaluate(f"()=>JSON.stringify({E}.LAYOUT())")=='{}' and pg.is_visible('#sPlay'))
@@ -345,6 +345,28 @@ with sync_playwright() as p:
     v = pg.evaluate(f"""()=>{{const E={E}; let g=E.getGeometry(E.state.parts[0]); g=g.index? g.toNonIndexed():g; const p=g.attributes.position.array; let V=0;
       for(let i=0;i<p.length;i+=9){{ V+=p[i]*(p[i+4]*p[i+8]-p[i+5]*p[i+7])-p[i+1]*(p[i+3]*p[i+8]-p[i+5]*p[i+6])+p[i+2]*(p[i+3]*p[i+7]-p[i+4]*p[i+6]); }} return V/6;}}""")
     check('esquisse avec trou : volume correct (trou bien orienté)', abs(v - 2059) < 15, round(v))
+
+    # Nouvelle disposition, cube de vue, magnétisme, cadre partiel
+    pg.evaluate(f"()=>{E}.loadExample('maison')"); pg.wait_for_timeout(500)
+    r = pg.evaluate("()=>{const r=document.querySelector('#rack').getBoundingClientRect(), i=document.querySelector('#insp').getBoundingClientRect(), s=document.querySelector('#stage').getBoundingClientRect(), c=document.querySelector('#stage canvas.gl').getBoundingClientRect(); return [r.width>r.height*4, i.right<=s.left+1, !!document.querySelector('#rack #tSolid'), Math.round(s.top-c.top)>20]}")
+    check('barre de création en haut (avec les outils), réglages à gauche, vue dessous', r == [True, True, True, True], r)
+    pg.evaluate(f"()=>{{const E={E}; E.camera.position.set(170,-240,180); E.orbit_().target.set(0,0,10); E.orbit_().update();}}"); pg.wait_for_timeout(200)
+    c = pg.locator('#vcube').bounding_box(); pg.mouse.move(c['x']+c['width']*0.42, c['y']+c['height']*0.25); pg.wait_for_timeout(100); pg.mouse.down(); pg.mouse.up(); pg.wait_for_timeout(700)
+    d = pg.evaluate(f"()=>{{const E={E}; return E.camera.position.clone().sub(E.orbit_().target).normalize().z}}")
+    check('cube de vue : clic sur « Dessus » → vue de dessus', d > 0.99, d)
+    a0 = pg.evaluate(f"()=>{E}.camera.position.toArray()"); pg.mouse.move(c['x']+c['width']/2, c['y']+c['height']/2); pg.mouse.down(); pg.mouse.move(c['x']+c['width']/2+40, c['y']+c['height']/2+20, steps=6); pg.mouse.up(); pg.wait_for_timeout(100)
+    a1 = pg.evaluate(f"()=>{E}.camera.position.toArray()")
+    check('cube de vue : glisser tourne la vue', sum((x-y)**2 for x,y in zip(a0,a1)) > 1)
+    pg.evaluate(f"()=>{{const E={E}; E.state.parts.length=0; E.setSel([]); const a=E.addPart('box',[0,0]); const b=E.addPart('box',[40,3]); E.setSel([]); E.camera.position.set(20,-120,90); E.orbit_().target.set(20,0,10); E.orbit_().update();}}"); pg.wait_for_timeout(400)
+    pa = proj(40, 3, 20); pb = proj(20.7, 0.6, 20)
+    pg.mouse.move(pa[0], pa[1]); pg.mouse.down(); pg.mouse.move(pb[0], pb[1], steps=10); pg.wait_for_timeout(100)
+    gv = pg.evaluate("()=>document.querySelector('#stage') && true"); pg.mouse.up(); pg.wait_for_timeout(200)
+    r = pg.evaluate(f"()=>{E}.state.parts[1].pos.slice()")
+    check('magnétisme : la pièce vient se coller au bord et s’aligner', abs(r[0]-20) < 1e-6 and abs(r[1]-0) < 1e-6, r)
+    pg.evaluate(f"()=>{E}.setSel([])"); st = pg.locator('#stage').bounding_box()
+    q0 = proj(-6, -6, 10); q1 = [q0[0]-220, q0[1]+160]
+    pg.keyboard.down('Shift'); pg.mouse.move(q1[0], q1[1]); pg.mouse.down(); pg.mouse.move(q0[0], q0[1], steps=6); pg.mouse.up(); pg.keyboard.up('Shift'); pg.wait_for_timeout(200)
+    check('cadre sur une partie de la pièce : elle est sélectionnée', pg.evaluate(f"()=>{E}.selection()") == [pg.evaluate(f"()=>{E}.state.parts[0].id")], pg.evaluate(f"()=>{E}.selection()"))
 
     check('aucune erreur JavaScript', not errors, errors[:3])
     b.close()

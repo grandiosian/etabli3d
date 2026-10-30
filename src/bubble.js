@@ -124,7 +124,7 @@ function structAnchor(t){   // point of the structure plane, deformed like the d
 }
 function bubbleAnchor(){   // stage coordinates {x,y,vis}
   const t=BUB.target; if(!t) return null;
-  if(BUB.kind==='struct'){ const w=structAnchor(t); if(!w) return null; if(ST.mode3d) return toStage(_bv.set(w[0],0,w[1])); const [x,y]=sToS(w[0],w[1]); return {x:x-OVR.l, y, vis:true}; }
+  if(BUB.kind==='struct'){ const w=structAnchor(t); if(!w) return null; if(ST.mode3d) return toStage(_bv.set(w[0],0,w[1])); const [x,y]=sToS(w[0],w[1]); return {x:x-OVR.l, y:y-OVR.t, vis:true}; }
   if(BUB.kind==='mech'){
     if(t.j!=null){ const j=state.joints.find(k=>k.id===t.j); if(j) return toStage(jointWorld(j, simActive()).o); }
     const r=meshes.get(t.pid); if(!r) return null; r.mesh.updateWorldMatrix(true,false);

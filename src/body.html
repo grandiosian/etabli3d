@@ -42,6 +42,16 @@
     <div id="rackBasic" style="display:contents"></div>
     <div class="rack-title" data-min="3">Mécanique</div>
     <div id="rackMeca" style="display:contents"></div>
+    <div class="rack-title">Modifier</div>
+    <div id="tools" data-ws="model" role="toolbar" aria-label="Outils">
+      <button class="btn tool" id="tSolid" title="Solide (S)"><svg data-i="solid"></svg><span>Solide</span></button>
+      <button class="btn tool" id="tHole" title="Perçage (H)"><svg data-i="hole"></svg><span>Perçage</span></button>
+      <button class="btn tool" id="tGroup" title="Grouper (Ctrl+G) : les perçages creusent les solides"><svg data-i="group"></svg><span>Grouper</span></button>
+      <button class="btn tool" id="tUngroup" title="Dégrouper (Ctrl+Maj+G)"><svg data-i="ungroup"></svg><span>Dégrouper</span></button>
+      <button class="btn tool" id="tDup" title="Dupliquer (Ctrl+D)"><svg data-i="dup"></svg><span>Dupliquer</span></button>
+      <button class="btn tool" id="tDrop" title="Poser sur le plan (D)"><svg data-i="drop"></svg><span>Poser</span></button>
+      <button class="btn tool danger" id="tDel" title="Supprimer (Suppr)"><svg data-i="trash"></svg><span>Supprimer</span></button>
+    </div>
     <button class="rackmin-btn" id="rackMin" title="Réduire la barre des formes" aria-label="Réduire la barre des formes"><svg data-i="chevUp"></svg></button>
   </nav>
 
@@ -53,22 +63,13 @@
   </aside>
 
   <main id="stage">
-    <div class="float" id="tools" data-ws="model" role="toolbar" aria-label="Outils">
-      <button class="btn icon" id="tSolid" title="Solide (S)"><svg data-i="solid"></svg></button>
-      <button class="btn icon" id="tHole" title="Perçage (H)"><svg data-i="hole"></svg></button>
-      <div class="vsep"></div>
-      <button class="btn icon" id="tGroup" title="Grouper (Ctrl+G)"><svg data-i="group"></svg></button>
-      <button class="btn icon" id="tUngroup" title="Dégrouper (Ctrl+Maj+G)"><svg data-i="ungroup"></svg></button>
-      <button class="btn icon" id="tDup" title="Dupliquer (Ctrl+D)"><svg data-i="dup"></svg></button>
-      <button class="btn icon" id="tDrop" title="Poser sur le plan (D)"><svg data-i="drop"></svg></button>
-      <button class="btn icon danger" id="tDel" title="Supprimer (Suppr)"><svg data-i="trash"></svg></button>
-    </div>
     <div class="float" id="views" data-ws="model check mech" aria-label="Vues">
-      <button class="btn ghost" data-view="iso" title="Vue en perspective"><svg data-i="cube"></svg><span class="lab">Perspective</span></button>
-      <button class="btn ghost" data-view="top" title="Vue de dessus"><svg data-i="vtop"></svg><span class="lab">Dessus</span></button>
-      <button class="btn ghost" data-view="front" title="Vue de face"><svg data-i="vfront"></svg><span class="lab">Face</span></button>
-      <button class="btn ghost" data-view="right" title="Vue de droite"><svg data-i="vright"></svg><span class="lab">Droite</span></button>
-      <button class="btn ghost" data-view="fit" title="Tout voir (F)"><svg data-i="fit"></svg><span class="lab">Tout voir</span></button>
+      <div class="vc-wrap">
+        <canvas id="vcube" width="232" height="232" aria-label="Cube de vue : cliquez une face, une arête ou un coin ; glissez pour tourner"></canvas>
+        <button class="vc-b vc-tl" data-view="iso" title="Vue de départ (perspective)" aria-label="Vue de départ"><svg data-i="home"></svg></button>
+        <button class="vc-b vc-tr" data-view="fit" title="Tout voir (F)" aria-label="Tout voir"><svg data-i="fit"></svg></button>
+        <button class="vc-b vc-bl" data-view="sel" title="Zoomer sur la sélection" aria-label="Zoomer sur la sélection"><svg data-i="target"></svg></button>
+      </div>
     </div>
     <div class="float" id="snapBox" data-ws="model">
       <label for="snapSel">Grille</label>
@@ -188,7 +189,9 @@
     <div style="display:flex;align-items:center;gap:10px"><h2 style="flex:1">Mode d'emploi</h2><button class="btn" id="helpClose">Fermer</button></div>
     <div class="cols">
       <div><h4>Modéliser</h4><ul>
-        <li>Cliquez sur une forme (ou glissez-la sur le tapis) pour l'ajouter.</li>
+        <li>Cliquez sur une forme de la barre du haut (ou glissez-la sur le tapis) pour l'ajouter. Les outils Solide, Perçage, Grouper… sont au bout de la même barre.</li>
+        <li>En glissant une pièce, elle s'<b>aimante</b> aux bords et aux centres des autres pièces (traits roses). Alt : glisser librement.</li>
+        <li><b>Cube de vue</b> (en haut à droite) : cliquez une face, une arête ou un coin pour voir de ce côté ; glissez dessus pour tourner. Boutons autour : vue de départ, tout voir, zoomer sur la sélection, réglage de la souris.</li>
         <li>Réglez les cotes, la position et la rotation dans le panneau de droite.</li>
         <li><b>Perçage</b> : la forme devient un trou. <b>Grouper</b> une forme et un perçage creuse la forme.</li>
         <li>Cliquez une pièce : <b>poignées</b> aux coins (longueur et largeur, Maj pour garder les proportions), au milieu des côtés (une cote), en haut (hauteur), cône noir (soulever), flèches courbes (tourner par pas de 15°, Maj : 1°). Survolez une poignée pour voir les cotes ; cliquez une cote pour la taper.</li>

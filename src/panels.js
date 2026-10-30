@@ -8,7 +8,7 @@
 const LAYOUT_KEY='etabli3d.layout';
 let LAYOUT=(()=>{ try{ return JSON.parse(localStorage.getItem(LAYOUT_KEY)||'{}')||{}; }catch(e){ return {}; } })();
 function saveLayout(){ try{ localStorage.setItem(LAYOUT_KEY, JSON.stringify(LAYOUT)); }catch(e){} }
-const FLOATS=[['tools','Outils'],['views','Vues'],['snapBox','Grille'],['simbar','Simulation'],['stTools','Outils de structure'],['stLegendBox','Légende']];
+const FLOATS=[['views','Vues'],['snapBox','Grille'],['simbar','Simulation'],['stTools','Outils de structure'],['stLegendBox','Légende']];
 const movedDemo=()=> !!LAYOUT.demo && LAYOUT.demo.x!=null;
 
 function setPos(el,x,y){ el.style.left=x+'px'; el.style.top=y+'px'; el.style.right='auto'; el.style.bottom='auto'; el.style.transform='none'; }
@@ -40,26 +40,30 @@ function gripFor(id, title, withMin=true){
 }
 function initPanels(){
   for(const [id,title] of FLOATS){ const el=$('#'+id); if(!el) continue; el.classList.add('pfloat'); el.prepend(gripFor(id,title)); applyLayout(id); }
-  $('#inspSide').onclick=()=>{ LAYOUT.inspLeft=!LAYOUT.inspLeft; saveLayout(); applyDock(); };
+  $('#inspSide').onclick=()=>{ LAYOUT.inspLeft=!inspLeft(); saveLayout(); applyDock(); };
   $('#inspMin').onclick=()=>{ LAYOUT.inspMin=!LAYOUT.inspMin; saveLayout(); applyDock(); };
   $('#rackMin').onclick=()=>{ LAYOUT.rackMin=!LAYOUT.rackMin; saveLayout(); applyDock(); };
   applyDock();
   new ResizeObserver(()=>updateOverlay()).observe($('#insp')); WIDE.addEventListener('change', updateOverlay);
-  new ResizeObserver(()=>{ for(const [id] of FLOATS) if(LAYOUT[id]?.x!=null) applyLayout(id); if(movedDemo()) applyLayout('demo'); if(ws==='mech') layoutJointGroup(); }).observe($('#stage'));
+  new ResizeObserver(()=>{ for(const [id] of FLOATS) if(LAYOUT[id]?.x!=null) applyLayout(id); if(movedDemo()) applyLayout('demo'); if(ws==='mech') layoutJointGroup(); updateOverlay(); }).observe($('#stage'));
 }
 function applyDock(){
-  const app=$('#app'); app.classList.toggle('insp-left', !!LAYOUT.inspLeft); app.classList.toggle('insp-min', !!LAYOUT.inspMin); app.classList.toggle('rack-min', !!LAYOUT.rackMin);
+  const left=inspLeft(); const app=$('#app'); app.classList.toggle('insp-left', left); app.classList.toggle('insp-right', !left); app.classList.toggle('insp-min', !!LAYOUT.inspMin); app.classList.toggle('rack-min', !!LAYOUT.rackMin);
   updateOverlay();
   $('#inspMin').title= LAYOUT.inspMin? 'Agrandir le panneau' : 'Réduire le panneau';
-  $('#inspSide').title= LAYOUT.inspLeft? 'Placer le panneau à droite' : 'Placer le panneau à gauche';
+  $('#inspSide').title= left? 'Placer le panneau à droite' : 'Placer le panneau à gauche';
   $('#rackMin').title= LAYOUT.rackMin? 'Agrandir la barre des formes' : 'Réduire la barre des formes';
 }
-/* the settings panel overlaps the 3D view on wide screens: tell the canvas how far to extend under it */
+const inspLeft=()=> LAYOUT.inspLeft ?? true;   // settings panel on the left by default
+/* the panels around the view (creation bar on top, settings and tree on the sides) are see-through on wide
+   screens: the canvas extends under them by OVR.t / OVR.l / OVR.r px, measured from the actual layout */
 const WIDE=matchMedia('(min-width: 861px)');
 function updateOverlay(){
-  const w= WIDE.matches? Math.round($('#insp').getBoundingClientRect().width) : 0;
-  const l= LAYOUT.inspLeft? w : 0, r= LAYOUT.inspLeft? 0 : w; if(l===OVR.l && r===OVR.r) return;
-  OVR.l=l; OVR.r=r; const st=$('#stage'); st.style.setProperty('--ovr-l', l+'px'); st.style.setProperty('--ovr-r', r+'px');
+  let l=0, r=0, t=0;
+  if(WIDE.matches){ const a=$('#app').getBoundingClientRect(), st=$('#stage').getBoundingClientRect(), top=$('#top').getBoundingClientRect();
+    l=Math.max(0,Math.round(st.left-a.left)); r=Math.max(0,Math.round(a.right-st.right)); t=Math.max(0,Math.round(st.top-top.bottom)); }
+  if(l===OVR.l && r===OVR.r && t===OVR.t) return;
+  OVR.l=l; OVR.r=r; OVR.t=t; const st=$('#stage'); st.style.setProperty('--ovr-l', l+'px'); st.style.setProperty('--ovr-r', r+'px'); st.style.setProperty('--ovr-t', t+'px');
   resize(); if(ws==='struct'){ ST.fitted=false; stResize(); }
 }
 function resetLayout(){

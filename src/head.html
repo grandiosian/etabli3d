@@ -42,12 +42,11 @@ button{cursor:pointer}
 :focus-visible{outline:2px solid var(--mark);outline-offset:2px}
 .mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 
-#app{height:100%;display:grid;grid-template-rows:auto 1fr;grid-template-columns:auto auto 1fr auto;
-  grid-template-areas:"top top top top" "rack tree stage insp";}
+#app{height:100%;display:grid;grid-template-rows:auto auto 1fr;grid-template-columns:auto auto 1fr;
+  grid-template-areas:"top top top" "rack rack rack" "tree insp stage";}
+#app.insp-right{grid-template-columns:auto 1fr auto;grid-template-areas:"top top top" "rack rack rack" "tree stage insp"}
 #insp{width:312px}
-#app.insp-left{grid-template-columns:auto auto auto 1fr;grid-template-areas:"top top top top" "insp rack tree stage"}
-#app.insp-left #insp{border-left:0;border-right:1px solid var(--line)}
-#rack{width:96px}
+#app:not(.insp-right) #insp{border-left:0;border-right:1px solid var(--line)}
 #outliner{width:260px}
 
 /* ---------- top bar */
@@ -79,20 +78,32 @@ button{cursor:pointer}
 .menu small{color:var(--ink-2)}
 
 /* ---------- shape rack */
-#rack{grid-area:rack;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:8px 6px 16px;display:flex;flex-direction:column;gap:6px}
-.rack-title{font-family:var(--f-display);font-weight:600;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);padding:8px 4px 2px}
-.shape{display:flex;flex-direction:column;align-items:center;gap:3px;border:1px solid transparent;background:transparent;border-radius:9px;padding:6px 2px;font-size:11.5px;line-height:1.15;text-align:center;touch-action:none;user-select:none}
+#rack{grid-area:rack;background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto;overflow-y:hidden;padding:3px 8px;display:flex;flex-direction:row;align-items:stretch;gap:2px;scrollbar-width:thin}
+#tools{display:flex;align-items:stretch;gap:2px}
+#tools .tool{flex-direction:column;gap:2px;padding:4px 6px;min-width:58px;font-size:10.5px;border-color:transparent;background:transparent}
+#tools .tool svg{width:22px;height:22px}
+#tools .tool:hover:not(:disabled){background:var(--panel-2);border-color:var(--line)}
+#tools .tool.on{background:var(--accent-soft);border-color:var(--accent)}
+#tools .tool:disabled{opacity:.38}
+.rack-title{font-family:var(--f-display);font-weight:600;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);writing-mode:vertical-rl;transform:rotate(180deg);text-align:center;padding:2px 3px;margin-left:6px;border-right:1px solid var(--line)}
+.rack-title:first-child{margin-left:0}
+.shape{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:60px;border:1px solid transparent;background:transparent;border-radius:9px;padding:3px 4px;font-size:10.5px;white-space:nowrap;line-height:1.15;text-align:center;touch-action:none;user-select:none}
 .shape:hover{background:var(--panel-2);border-color:var(--line)}
-.shape svg{width:40px;height:40px}
+.shape svg{width:30px;height:30px}
 .shape.sketch{background:var(--accent-soft);border-color:var(--accent)}
 
 /* ---------- stage */
 #stage{grid-area:stage;position:relative;min-width:0;min-height:0;background:var(--scene);overflow:hidden}
 #stage canvas.gl{display:block;width:100%;height:100%;touch-action:none}
 .float{position:absolute;display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px;box-shadow:var(--shadow);z-index:5}
-#tools{top:10px;left:10px;flex-wrap:wrap;max-width:calc(100% - 200px)}
-#views{top:10px;right:10px;flex-direction:column}
-#views .btn{justify-content:flex-start;font-size:12px;padding:5px 8px}
+#views{top:10px;right:10px;flex-direction:column;align-items:center;padding:2px 4px 4px}
+.vc-wrap{position:relative;width:150px;height:150px}
+#vcube{position:absolute;left:17px;top:17px;width:116px;height:116px;cursor:grab;touch-action:none}
+#vcube:active{cursor:grabbing}
+.vc-b{position:absolute;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--ink);display:grid;place-items:center;padding:0;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.vc-b svg{width:17px;height:17px} .vc-b .lab{display:none}
+.vc-b:hover{border-color:var(--accent);color:var(--accent)}
+.vc-tl{left:0;top:0} .vc-tr{right:0;top:0} .vc-bl{left:0;bottom:0} .vc-br{right:0;bottom:0}
 #snapBox{left:10px;bottom:10px;align-items:center;padding:4px 8px;font-size:12px}
 #snapBox select{border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:3px 4px}
 #simbar{left:50%;transform:translateX(-50%);bottom:10px;align-items:center;padding:5px 6px}
@@ -522,11 +533,11 @@ html:not([data-glass="opaque"]) #bubble .bub-row input[type=range]{background:tr
 .rackmin-btn{margin-top:auto;border:0;background:transparent;border-radius:8px;padding:6px;color:var(--ink-2);display:grid;place-items:center}
 .rackmin-btn:hover{background:var(--panel-2)}
 .rackmin-btn svg{width:16px;height:16px;transform:rotate(-90deg)}
-#app.rack-min #rack{width:58px}
-#app.rack-min .shape{font-size:0;gap:0;padding:6px 0}
-#app.rack-min .shape svg{width:32px;height:32px}
-#app.rack-min .rack-title{display:none}
-#app.rack-min .rackmin-btn svg{transform:rotate(90deg)}
+#app.rack-min .shape,#app.rack-min #tools .tool{font-size:0;gap:0;min-width:40px}
+#app.rack-min #tools .tool span{display:none}
+#app.rack-min .shape svg{width:26px;height:26px}
+#app.rack-min .rackmin-btn svg{transform:rotate(180deg)}
+.rackmin-btn{margin-top:0!important;margin-left:auto}
 
 /* ---------- hover: name, manipulation buttons, selection frame, right-click menu */
 #hovName{position:absolute;left:0;top:0;z-index:7;pointer-events:none;font:600 12.5px var(--f-display);color:var(--ink);background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--accent);border-radius:7px;padding:2px 9px;white-space:nowrap;box-shadow:var(--shadow)}
@@ -548,6 +559,7 @@ html:not([data-glass="opaque"]) #bubble .bub-row input[type=range]{background:tr
 .tg-base{fill:color-mix(in srgb,var(--accent) 10%,transparent);stroke:var(--ink);stroke-width:1.2;stroke-dasharray:5 4;opacity:.75}
 .tg-axes{fill:none;stroke:var(--ink);stroke-width:1;stroke-dasharray:4 4;opacity:.5}
 .tg-dim{fill:none;stroke:var(--ink);stroke-width:1.2}
+.tg-snap{fill:none;stroke:#d6457a;stroke-width:2;stroke-dasharray:6 4}
 .tg-h{position:absolute;left:0;top:0;pointer-events:auto;touch-action:none;cursor:pointer}
 .tg-corner{width:13px;height:13px;background:#fff;border:2px solid #333;border-radius:2px;box-shadow:0 1px 3px rgba(0,0,0,.3)}
 .tg-edge{width:9px;height:9px;background:#333;border:1.5px solid #fff;border-radius:1px}
@@ -570,17 +582,17 @@ html:not([data-glass="opaque"]) #bubble .bub-row input[type=range]{background:tr
 html[data-glass="leger"]{--insp-a:93%}
 html[data-glass="opaque"]{--insp-a:100%}
 @media (min-width: 861px){
-  #app.insp-left{grid-template-columns:auto auto auto 1fr;grid-template-areas:"top top top top" "rack tree insp stage"}
-  #stage{overflow:visible;clip-path:inset(0 calc(-1 * var(--ovr-r,0px)) 0 calc(-1 * var(--ovr-l,0px)))}
-  #stage canvas.gl{position:absolute;top:0;left:calc(-1 * var(--ovr-l,0px));width:calc(100% + var(--ovr-l,0px) + var(--ovr-r,0px))}
-  #stWrap{left:calc(-1 * var(--ovr-l,0px));right:calc(-1 * var(--ovr-r,0px))}
-  #insp{position:relative;z-index:30;background:color-mix(in srgb,var(--panel) var(--insp-a),transparent);-webkit-backdrop-filter:blur(8px) saturate(1.15);backdrop-filter:blur(8px) saturate(1.15)}
-  html[data-glass="opaque"] #insp{-webkit-backdrop-filter:none;backdrop-filter:none}
+  #stage{overflow:visible;clip-path:inset(calc(-1 * var(--ovr-t,0px)) calc(-1 * var(--ovr-r,0px)) 0 calc(-1 * var(--ovr-l,0px)))}
+  #stage canvas.gl{position:absolute;top:calc(-1 * var(--ovr-t,0px));left:calc(-1 * var(--ovr-l,0px));width:calc(100% + var(--ovr-l,0px) + var(--ovr-r,0px));height:calc(100% + var(--ovr-t,0px))}
+  #stWrap{top:calc(-1 * var(--ovr-t,0px));left:calc(-1 * var(--ovr-l,0px));right:calc(-1 * var(--ovr-r,0px))}
+  /* the panels around the view (creation bar, settings, tree) are see-through: the 3D view continues under them */
+  #insp,#rack,#outliner{position:relative;z-index:30;background:color-mix(in srgb,var(--panel) var(--insp-a),transparent);-webkit-backdrop-filter:blur(8px) saturate(1.15);backdrop-filter:blur(8px) saturate(1.15)}
+  html[data-glass="opaque"] :is(#insp,#rack,#outliner){-webkit-backdrop-filter:none;backdrop-filter:none}
 }
 
 /* ---------- narrow screens */
 @media (max-width: 860px){
-  #app, #app.insp-left, html[data-level="3"] #app.with-tree{grid-template-columns:1fr;grid-template-rows:auto 1fr auto;grid-template-areas:"top" "stage" "rack"}
+  #app, #app.insp-right, html[data-level="3"] #app.with-tree{grid-template-columns:1fr;grid-template-rows:auto 1fr auto;grid-template-areas:"top" "stage" "rack"}
   #insp{width:auto} .insp-tool,.rackmin-btn{display:none!important} #app.insp-min #inspBody{display:flex} #app.insp-min .insp-tt{display:block}
   .flow-t{display:none}
   #rack{width:auto}
@@ -597,9 +609,9 @@ html[data-glass="opaque"]{--insp-a:100%}
   #insp{position:fixed;left:0;right:0;bottom:0;height:62%;z-index:20;border-left:0;border-top:1px solid var(--line);box-shadow:var(--shadow);border-radius:14px 14px 0 0;transform:translateY(105%);transition:transform .25s}
   #insp.open{transform:none}
   #mobileInsp{display:inline-flex}
-  #tools{max-width:calc(100% - 20px)}
-  #views{top:auto;bottom:60px;flex-direction:row}
-  #views .lab{display:none}
+  #tools .tool{min-width:52px}
+  #views{top:auto;bottom:60px}
+  .vc-wrap{transform:scale(.8);transform-origin:bottom right;margin:-14px 0 0 -14px}
   #projName{width:130px}
   .hide-narrow{display:none!important}
   #snapBox{bottom:62px}

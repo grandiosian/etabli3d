@@ -56,19 +56,19 @@ new MutationObserver(()=>{ sceneBg(); sync(); }).observe(document.documentElemen
 
 /* The settings panel floats over the 3D view (see-through): the WebGL canvas extends under it by OVR.l / OVR.r px.
    STG is the visible stage size; toStage() projects a world point to stage coordinates. */
-const OVR={l:0,r:0}, STG={w:0,h:0}; const _pv=new THREE.Vector3();
-function resize(){ const r=stage.getBoundingClientRect(); if(r.width<2||r.height<2) return; STG.w=r.width; STG.h=r.height; const W=r.width+OVR.l+OVR.r;
-  renderer.setSize(W,r.height,false); camera.aspect=W/r.height; camera.updateProjectionMatrix(); applyViewOffset(); }
-function toStage(v){ _pv.copy(v).project(camera); const W=STG.w+OVR.l+OVR.r;
-  return {x:(_pv.x+1)/2*W-OVR.l, y:(1-_pv.y)/2*STG.h, vis:_pv.z<1 && _pv.z>-1 && Math.abs(_pv.x)<1.2 && Math.abs(_pv.y)<1.2}; }
+const OVR={l:0,r:0,t:0}, STG={w:0,h:0}; const _pv=new THREE.Vector3();
+function resize(){ const r=stage.getBoundingClientRect(); if(r.width<2||r.height<2) return; STG.w=r.width; STG.h=r.height; const W=r.width+OVR.l+OVR.r, H=r.height+OVR.t;
+  renderer.setSize(W,H,false); camera.aspect=W/H; camera.updateProjectionMatrix(); applyViewOffset(); }
+function toStage(v){ _pv.copy(v).project(camera); const W=STG.w+OVR.l+OVR.r, H=STG.h+OVR.t;
+  return {x:(_pv.x+1)/2*W-OVR.l, y:(1-_pv.y)/2*H-OVR.t, vis:_pv.z<1 && _pv.z>-1 && Math.abs(_pv.x)<1.2 && Math.abs(_pv.y)<1.2}; }
 /* stage coordinates of a pointer event */
 function evStage(ev){ const r=stage.getBoundingClientRect(); return [ev.clientX-r.left, ev.clientY-r.top]; }
 /* On wide screens the demo card covers the left of the scene: shift the picture right by half its width. */
 function applyViewOffset(){
   const r=stage.getBoundingClientRect(); if(r.width<2||r.height<2) return; const d=document.getElementById('demo');
   const shift = (d && !d.hidden && r.width>760 && !movedDemo()) ? Math.round((d.offsetWidth+10)/2) : 0;
-  const W=r.width+OVR.l+OVR.r, x=(OVR.r-OVR.l)/2-shift;   // centre the picture in the part of the view left free
-  if(x) camera.setViewOffset(W,r.height,x,0,W,r.height); else camera.clearViewOffset();
+  const W=r.width+OVR.l+OVR.r, H=r.height+OVR.t, x=(OVR.r-OVR.l)/2-shift, y=-OVR.t/2;   // centre the picture in the part of the view left free
+  if(x||y) camera.setViewOffset(W,H,x,y,W,H); else camera.clearViewOffset();
 }
 new ResizeObserver(resize).observe(stage);
 
@@ -260,6 +260,35 @@ function planeHit(ev, z){
   const pt=new THREE.Vector3(); return ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,0,1), -z), pt) ? pt : null;
 }
 let down=null;
+/* ---- smart snapping while a part is dragged on the floor: its edges and centre line up with those of
+   the other parts (or touch them), within a few pixels; dashed guides show what it lines up with. Alt: off. */
+function snapTargets(){ const out=[]; for(const p of state.parts){ if(selection.includes(p.id) || !editable(p)) continue; const r=meshes.get(p.id); if(!r || !r.mesh.visible) continue; out.push(new THREE.Box3().setFromObject(r.mesh)); } return out; }
+const guideMat=new THREE.LineDashedMaterial({color:0xd6457a, dashSize:2, gapSize:1.5, depthTest:false, transparent:true});
+const guides=new THREE.LineSegments(new THREE.BufferGeometry(), guideMat); guides.renderOrder=15; guides.frustumCulled=false; scene.add(guides);
+let SNAPSEG=[];   // drawn as dashed lines over the view by tgTick (gizmo.js)
+function showGuides(segs){
+  SNAPSEG=segs; guides.visible=false; if(!segs.length) return;
+  const pos=[]; for(const [a,b] of segs) pos.push(a.x,a.y,a.z,b.x,b.y,b.z);
+  guides.geometry.dispose(); guides.geometry=new THREE.BufferGeometry(); guides.geometry.setAttribute('position', new THREE.Float32BufferAttribute(pos,3)); guides.computeLineDistances();
+  guideMat.color.set(cssVar('--mark')||'#df9a00');
+}
+function smartSnap(D, dx, dy){
+  const B=D.box0; if(!B || B.isEmpty() || !D.others.length) return {dx,dy};
+  const c=B.getCenter(new THREE.Vector3()).add(new THREE.Vector3(dx,dy,0));
+  const wpp=2*camera.position.distanceTo(c)*Math.tan(camera.fov*DEG/2)/Math.max(1,renderer.domElement.clientHeight);   // mm per pixel there
+  const thr=9*wpp, segs=[], z=Math.max(0.05, B.min.z+0.05);
+  const axis=(k, d)=>{   // k: 'x' | 'y'
+    const lo=B.min[k]+d, hi=B.max[k]+d, refs=[lo,(lo+hi)/2,hi]; let best=null;
+    for(const O of D.others){ const t=[O.min[k],(O.min[k]+O.max[k])/2,O.max[k]];
+      for(let i=0;i<3;i++) for(let j=0;j<3;j++){ if((i===1)!==(j===1)) continue;   // centre with centre, sides with sides
+        const e=t[j]-refs[i]; if(Math.abs(e)<thr && (!best || Math.abs(e)<Math.abs(best.e))) best={e, v:t[j], O}; } }
+    if(!best) return d;
+    const o= k==='x'? 'y' : 'x', a=Math.min(B.min[o]+(o==='x'?dx:dy), best.O.min[o]), b=Math.max(B.max[o]+(o==='x'?dx:dy), best.O.max[o]);
+    const P=(u,w)=> k==='x'? new THREE.Vector3(u,w,z) : new THREE.Vector3(w,u,z);
+    segs.push([P(best.v,a-3), P(best.v,b+3)]); return d+best.e;
+  };
+  dx=axis('x',dx); dy=axis('y',dy); showGuides(segs); return {dx,dy};
+}
 renderer.domElement.addEventListener('pointerdown', ev=>beginPointer(ev), true);
 /* also used when a drag starts on the hover buttons in the middle of a part (see hover.js) */
 function beginPointer(ev){
@@ -274,7 +303,7 @@ function beginPointer(ev){
     if(!selection.includes(id) && !ev.shiftKey){ selection=[id]; GZ.mode=null; sync(); renderInspector(); }
     if(selection.includes(id)){
       orbit.enabled=false;   // drag on the floor plane (horizontal, at the height of the point grabbed)
-      down.drag={z:hit.point.z, start:hit.point.clone(), items:selection.map(i=>({id:i, pos:[...findPart(i).pos]}))};
+      down.drag={z:hit.point.z, start:hit.point.clone(), items:selection.map(i=>({id:i, pos:[...findPart(i).pos]})), box0:selBox(), others:snapTargets()};
       renderer.domElement.setPointerCapture(ev.pointerId);
     }
   } else if(!hit && ws==='model' && !simLocked() && (ev.shiftKey || prefs.lmb==='select')){
@@ -290,6 +319,7 @@ renderer.domElement.addEventListener('pointermove', ev=>{
   const snap=+$('#snapSel').value;
   let dx=pt.x-down.drag.start.x, dy=pt.y-down.drag.start.y;
   if(snap>0){ dx=Math.round(dx/snap)*snap; dy=Math.round(dy/snap)*snap; }
+  if(!ev.altKey){ const sn=smartSnap(down.drag, dx, dy); dx=sn.dx; dy=sn.dy; } else showGuides([]);   // Alt: no smart snapping
   for(const it of down.drag.items){ const p=findPart(it.id); p.pos=[+(it.pos[0]+dx).toFixed(4), +(it.pos[1]+dy).toFixed(4), it.pos[2]]; const r=meshes.get(it.id); r.mesh.position.set(...p.pos); }
   resetPivot(); liveInspector();
 });
@@ -297,6 +327,7 @@ renderer.domElement.addEventListener('pointerup', ev=>{
   orbit.enabled=true;
   if(!down) return; const d=down; down=null;
   if(d.rect){ finishSelRect(d.rect, ev); return; }
+  if(d.drag){ showGuides([]); }
   if(d.drag && d.moved){ sync(); commit(); renderInspector(); return; }
   if(d.gizmo) return;
   if(Math.hypot(ev.clientX-d.x, ev.clientY-d.y)>4) return;
