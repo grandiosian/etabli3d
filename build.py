@@ -13,7 +13,7 @@ import json, os, sys
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, 'src')
 DIST = os.path.join(ROOT, 'dist')
-JS_ORDER = ['core.js', 'prefs.js', 'scene.js', 'ui.js', 'sketch.js', 'validate.js', 'struct.js', 'examples.js', 'outliner.js', 'bubble.js', 'workspace.js', 'panels.js', 'hover.js', 'gizmo.js', 'viewcube.js', 'planes.js', 'init.js']
+JS_ORDER = ['core.js', 'prefs.js', 'scene.js', 'ui.js', 'sketch.js', 'validate.js', 'struct.js', 'examples.js', 'guide.js', 'outliner.js', 'bubble.js', 'workspace.js', 'panels.js', 'hover.js', 'gizmo.js', 'viewcube.js', 'planes.js', 'init.js']
 
 # Pinned library versions (loaded through an import map).
 THREE = '0.180.0'

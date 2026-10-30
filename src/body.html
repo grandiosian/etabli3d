@@ -6,6 +6,7 @@
     <div class="tb-group">
       <button class="btn ghost" id="bNew" title="Nouveau projet"><svg data-i="new"></svg><span class="hide-mid">Nouveau</span></button>
       <button class="btn ghost" id="bExamples" title="Exemples de démonstration"><svg data-i="book"></svg><span class="hide-narrow">Exemples</span></button>
+      <button class="btn ghost" id="bGuide" aria-pressed="false" title="Guide : tutos pas à pas, fiche de l’exemple, consignes du TP"><svg data-i="guide"></svg><span class="hide-narrow">Guide</span></button>
       <button class="btn ghost" id="bOpen" title="Ouvrir un projet (.json)"><svg data-i="open"></svg><span class="hide-mid">Ouvrir</span></button>
       <button class="btn ghost" id="bSave" title="Enregistrer le projet (.json)"><svg data-i="save"></svg><span class="hide-mid">Enregistrer</span></button>
       <button class="btn" id="bStl" title="Exporter en STL pour l'impression 3D"><svg data-i="print"></svg><span>STL</span></button>
@@ -38,10 +39,8 @@
   <nav id="rack" data-ws="model" aria-label="Formes">
     <div class="rack-title">Volumes</div>
     <div id="rackBasic" style="display:contents"></div>
-    <div class="rack-title" data-min="3">Mécanique</div>
-    <div id="rackMeca" style="display:contents"></div>
     <div class="rack-title rack-sk" data-min="2">Esquisse</div>
-    <button class="shape sketch" data-min="2" id="bSketch" data-sktool="rect" title="Nouvelle esquisse : choisir le plan, puis dessiner et coter"><svg data-i="k_sketch"></svg>Esquisse</button>
+    <button class="shape sk-tool" data-min="2" id="bSketch" data-sktool="sketch" title="Nouvelle esquisse : choisir le plan, puis dessiner et coter"><svg data-i="k_sketch"></svg>Esquisse</button>
     <button class="shape sk-tool" data-min="2" data-sktool="line" title="Esquisse en lignes : choisir le plan, puis tracer"><svg data-i="k_line"></svg>Ligne</button>
     <button class="shape sk-tool" data-min="2" data-sktool="rect" title="Esquisse en rectangle : choisir le plan, puis tracer"><svg data-i="k_rect"></svg>Rectangle</button>
     <button class="shape sk-tool" data-min="2" data-sktool="circle" title="Esquisse en cercle : choisir le plan, puis tracer"><svg data-i="k_circle"></svg>Cercle</button>
@@ -50,8 +49,8 @@
   </nav>
   <nav id="toolbar" data-ws="model" aria-label="Outils de modification">
     <div id="tools" data-ws="model" role="toolbar" aria-label="Outils">
-      <button class="btn tool" id="tSolid" title="Solide (S)"><svg data-i="solid"></svg><span>Solide</span></button>
-      <button class="btn tool" id="tHole" title="Perçage (H)"><svg data-i="hole"></svg><span>Perçage</span></button>
+      <button class="btn tool" id="tSolid" title="Solide (S) : la pièce est de la matière pleine"><svg data-i="solid"></svg><span>Solide</span></button>
+      <button class="btn tool" id="tHole" title="Perçage (H) : la pièce devient un trou (hachuré) qui creuse les pièces groupées avec elle"><svg data-i="hole"></svg><span>Perçage</span></button>
       <button class="btn tool" id="tGroup" title="Grouper (Ctrl+G) : les perçages creusent les solides"><svg data-i="group"></svg><span>Grouper</span></button>
       <button class="btn tool" id="tUngroup" title="Dégrouper (Ctrl+Maj+G)"><svg data-i="ungroup"></svg><span>Dégrouper</span></button>
       <button class="btn tool" id="tDup" title="Dupliquer (Ctrl+D)"><svg data-i="dup"></svg><span>Dupliquer</span></button>
@@ -149,6 +148,11 @@
       <button class="tbtn" data-tool="circle" title="Cercle (C)"><svg data-i="k_circle"></svg>Cercle</button>
       <button class="tbtn" data-tool="bezier" data-min="2" title="Courbe de Bézier, point par point (B)"><svg data-i="k_bez"></svg>Bézier</button>
     </div>
+    <div class="tgroup" id="skFilt" role="group" aria-label="Filtre de sélection"><span class="lbl">Filtre</span>
+      <button class="tbtn on" data-f="pt" aria-pressed="true" title="Le cadre et le clic prennent les points"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="6" height="6"/></svg>Points</button>
+      <button class="tbtn on" data-f="edge" aria-pressed="true" title="Le cadre et le clic prennent les arêtes (lignes, courbes, cercles)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 18 20 6"/></svg>Arêtes</button>
+      <button class="tbtn on" data-f="con" aria-pressed="true" title="Le cadre et le clic prennent les cotes et contraintes"><span class="g">H</span>Contraintes</button>
+    </div>
     <div class="tgroup"><span class="lbl">Coter</span>
       <button class="tbtn" data-tool="dim" title="Cote (D)"><svg data-i="k_dim"></svg>Cote</button>
       <button class="tbtn" data-tool="dimh" title="Cote horizontale"><span class="g">↔</span>Horiz.</button>
@@ -221,7 +225,8 @@
         <li>En glissant une pièce, elle s'<b>aimante</b> aux bords et aux centres des autres pièces (traits roses). Alt : glisser librement.</li>
         <li><b>Cube de vue</b> (en haut à droite) : cliquez une face, une arête ou un coin pour voir de ce côté ; glissez dessus pour tourner. Boutons autour : vue de départ, tout voir, zoomer sur la sélection, réglage de la souris.</li>
         <li>Réglez les cotes, la position et la rotation dans le panneau des propriétés.</li>
-        <li><b>Perçage</b> : la forme devient un trou. <b>Grouper</b> une forme et un perçage creuse la forme.</li>
+        <li><b>Perçage</b> : la forme devient un trou, transparent et hachuré. <b>Grouper</b> une forme et un perçage creuse la forme. <b>Solide</b> la remet en matière pleine.</li>
+        <li>Le <b>Guide</b> (à gauche de la vue) propose des tutos pas à pas, la fiche de l’exemple ouvert et les consignes du TP.</li>
         <li>Cliquez une pièce : <b>poignées</b> aux coins (longueur et largeur, Maj pour garder les proportions), au milieu des côtés (une cote), en haut (hauteur), cône noir (soulever), flèches courbes (tourner par pas de 15°, Maj : 1°). Survolez une poignée pour voir les cotes ; cliquez une cote pour la taper.</li>
         <li><b>Groupe</b> : double-clic dessus (ou « Modifier l'intérieur ») pour changer ses pièces, puis « Terminer le groupe » : les perçages sont recalculés.</li>
         <li>Glissez une pièce pour la déplacer sur le sol.</li>
@@ -232,6 +237,7 @@
         <li>Les boutons d’esquisse sont à droite de la barre du haut. Choisissez d’abord le <b>plan</b> : dessus (XY), face (XZ) ou côté (YZ).</li>
         <li>Tracez avec Ligne, Rectangle, Cercle ou <b>Bézier</b>. Un contour doit être fermé.</li>
         <li><b>Bézier</b> : un clic pose un point anguleux ; cliquer-glisser pose un point et tire sa courbe. Les boutons du point changent l’interpolation et cassent ou symétrisent les tangentes (Alt + glisser : casser).</li>
+        <li><b>Sélection</b> : glissez dans le vide pour tracer un cadre ; le <b>filtre</b> choisit ce qu’il prend (points, arêtes, contraintes). <b>Maj</b> + clic ajoute. <b>Espace</b> + glisser décale la vue.</li>
         <li><b>Cote</b> : cliquez une ligne, un cercle ou deux points, puis tapez la valeur.</li>
         <li>Les contraintes (H, V, ∥, ⊥, =, fixe) imposent la forme.</li>
         <li>Validez pour extruder ou faire une révolution autour de l'axe vertical.</li>

@@ -71,7 +71,7 @@ function sceneList(){
 function renderPart(body){
   const ps=selParts();
   if(!ps.length){
-    body.append(sec('Pour commencer', h('div',{class:'empty',html:`Cliquez une forme de la barre du haut pour la poser sur le tapis, ou ouvrez un <b>exemple</b>.<br><br>Cliquez une pièce : des <b>poignées</b> apparaissent. Carrés blancs des coins : longueur et largeur ; petits carrés noirs : une cote ; carré du haut : hauteur ; cône : soulever ; flèches courbes : tourner. Glissez la pièce pour la déplacer sur le sol. Double-clic sur un <b>groupe</b> : modifier ses pièces.<br><br>Cliquez une pièce pour la régler. <span class="kbd">Maj</span> + clic ou <span class="kbd">Maj</span> + glisser dans le vide (cadre) pour en sélectionner plusieurs ; cliquez encore au même endroit pour prendre la pièce de derrière.<br><br>${(LMB.find(x=>x[0]===(prefs.lmb||'orbit'))||LMB[1])[3]} Molette : zoom. Clic droit : menu.`})));
+    body.append(h('p',{class:'empty insp-empty'},'Cliquez sur un objet pour voir et modifier ses propriétés dans ce panneau.'));
     body.append(sceneList()); return;
   }
   let lock=simLocked();
@@ -412,7 +412,7 @@ async function offerFile(filename, data){
   catch(e){ toast('Le téléchargement est bloqué dans cette fenêtre.'); }
 }
 const slug=s=>(s||'projet').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase()||'projet';
-function saveProject(){ if(state.edit) finishGroupEdit(); offerFile(slug(state.name)+'.json', JSON.stringify({app:'etabli3d',version:1,name:state.name,parts:state.parts,joints:state.joints,nextId:state.nextId,note:state.note||null,struct:state.struct||null})); }
+function saveProject(){ if(state.edit) finishGroupEdit(); offerFile(slug(state.name)+'.json', JSON.stringify({app:'etabli3d',version:1,name:state.name,parts:state.parts,joints:state.joints,nextId:state.nextId,note:state.note||null,tp:state.tp||null,struct:state.struct||null})); }
 function stlBinary(list){
   let tris=0; const geos=list.map(r=>{ const g=r.mesh.geometry; const n=g.index?g.index.count/3:g.attributes.position.count/3; tris+=n; return {g, m:r.mesh.matrixWorld}; });
   const buf=new ArrayBuffer(84+tris*50), dv=new DataView(buf);

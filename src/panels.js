@@ -9,7 +9,7 @@ const LAYOUT_KEY='etabli3d.layout';
 let LAYOUT=(()=>{ try{ return JSON.parse(localStorage.getItem(LAYOUT_KEY)||'{}')||{}; }catch(e){ return {}; } })();
 function saveLayout(){ try{ localStorage.setItem(LAYOUT_KEY, JSON.stringify(LAYOUT)); }catch(e){} }
 const FLOATS=[['views','Vues'],['snapBox','Grille'],['simbar','Simulation'],['stTools','Outils de structure'],['stLegendBox','Légende']];
-const movedDemo=()=> !!LAYOUT.demo && LAYOUT.demo.x!=null && !$('#demo')?.classList.contains('in-tree');
+const movedDemo=()=> !!LAYOUT.demo && LAYOUT.demo.x!=null && !$('#demo')?.classList.contains('in-sk');
 
 function setPos(el,x,y){ el.style.left=x+'px'; el.style.top=y+'px'; el.style.right='auto'; el.style.bottom='auto'; el.style.transform='none'; }
 function clearPos(el){ for(const k of ['left','top','right','bottom','transform']) el.style[k]=''; }
@@ -77,10 +77,9 @@ function startInspDrag(e){
 }
 /* width kept free on the right of the view for the properties panel when it sits at its place */
 function rightReserve(){ const el=$('#insp'); if(!WIDE.matches || !el || LAYOUT.insp?.x!=null || LAYOUT.inspMin) return 0; return el.offsetWidth+20; }
-/* the demo card sits at the top of the tree column when the tree is shown, otherwise over the view */
-function placeDemo(){ const d=$('#demo'); if(!d) return; const inTree= WIDE.matches && treeVisible() && ws!=='struct';
-  const host= inTree? $('#outliner') : $('#stage'); if(d.parentElement!==host){ if(inTree) host.insertBefore(d, host.firstChild); else host.append(d); d.style.transform=''; }
-  d.classList.toggle('in-tree', inTree); }
+/* the guide floats at the left of the view (just right of the tree), or over the sketch canvas while sketching */
+function placeDemo(){ const d=$('#demo'); if(!d) return; const host= !$('#sk').hidden? $('#skCanvasWrap') : $('#stage');
+  if(d.parentElement!==host){ host.append(d); d.style.transform=''; } d.classList.toggle('in-sk', host.id==='skCanvasWrap'); }
 /* the panels around the view (creation bar on top, settings and tree on the sides) are see-through on wide
    screens: the canvas extends under them by OVR.t / OVR.l / OVR.r px, measured from the actual layout */
 const WIDE=matchMedia('(min-width: 861px)');

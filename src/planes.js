@@ -64,17 +64,16 @@ function openPlanePicker(tool='rect'){
   if(Math.max(Math.abs(d.x),Math.abs(d.y),Math.abs(d.z))>0.94) setView('iso');   // vue de face, de dessus… : un des plans serait vu par la tranche
   PP.fn=(pt, hit, ev)=>{ const k= ev? ppHit(ev) : null; if(k) choosePlane(k); };
   pickMode=PP.fn; updateGizmo();
-  $$('#rack [data-sktool]').forEach(b=>b.classList.toggle('on', b.dataset.sktool===tool && b.id!=='bSketch'));
-  $('#bSketch').classList.toggle('on', true);
+  $$('#rack [data-sktool]').forEach(b=>{ const on=b.dataset.sktool===tool; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
 }
 function closePlanePicker(){
   if(!PP.open) return; PP.open=false;
   if(PP.group) PP.group.visible=false; for(const l of Object.values(PP.labels)) l.hidden=true;
   $('#planePick').hidden=true; renderer.domElement.style.cursor='';
-  $$('#rack [data-sktool]').forEach(b=>b.classList.remove('on'));
+  $$('#rack [data-sktool]').forEach(b=>{ b.classList.remove('on'); b.setAttribute('aria-pressed','false'); });
   if(pickMode===PP.fn){ pickMode=null; updateGizmo(); }
 }
-function choosePlane(k){ const tool=PP.tool; closePlanePicker(); openSketch(null, {plane:k, tool}); }
+function choosePlane(k){ const tool= PP.tool==='sketch'? 'rect' : PP.tool; closePlanePicker(); openSketch(null, {plane:k, tool}); }
 /* étiquettes des plans, placées chaque image près du coin opposé à l'origine */
 const _ppv=new THREE.Vector3();
 function ppTick(){

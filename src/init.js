@@ -3,7 +3,7 @@
    Wiring
    ========================================================= */
 hydrateIcons();
-for(const [host,list] of [['#rackBasic',BASIC],['#rackMeca',MECA]]){
+for(const [host,list] of [['#rackBasic',[...BASIC,...MECA]]]){   // roues dentées et crémaillère à la suite des volumes (niveau 3)
   for(const k of list){ const b=h('button',{class:'shape',title:`Ajouter : ${KINDS[k].label}`,'data-min':KIND_LVL[k]>1?String(KIND_LVL[k]):null}, svgIcon(k), KINDS[k].label);
     b.addEventListener('pointerdown',e=>{ if(e.button!==0) return; e.preventDefault(); startPaletteDrag(k,e); });
     b.addEventListener('click',e=>{ if(e.detail===0) addPart(k); });
@@ -59,6 +59,7 @@ $('#fileIn').onchange=e=>{ const f=e.target.files[0]; if(!f) return; const r=new
 $('#bNew').onclick=()=>{ simReset(true); resetFor('Nouveau projet'); selection=[]; jf=null; selJoint=null; $('#projName').value=state.name; sync(); commit(); renderDemo(); setTab('part'); toast('Nouveau projet. Ctrl+Z pour revenir en arrière.'); };
 $('#projName').onchange=()=>{ state.name=$('#projName').value.trim()||'Mon projet'; commit(); };
 $('#bExamples').onclick=openGallery;
+$('#bGuide').onclick=toggleGuide;
 $('#galleryClose').onclick=()=>{ $('#gallery').hidden=true; };
 $('#gallery').addEventListener('pointerdown',e=>{ if(e.target.id==='gallery') $('#gallery').hidden=true; });
 $('#mobileInsp').onclick=()=>$('#insp').classList.toggle('open');
@@ -79,14 +80,17 @@ function arrowDir(key){
   const fwd=snapA(f), right=new THREE.Vector3(fwd.y,-fwd.x,0);
   return {arrowup:fwd, arrowdown:fwd.clone().negate(), arrowright:right, arrowleft:right.clone().negate()}[key];
 }
+document.addEventListener('keyup', e=>{ if(e.key===' ' && SK.space){ e.preventDefault(); skSpace(false); } });
+window.addEventListener('blur', ()=>{ if(SK.space) skSpace(false); });
 document.addEventListener('keydown', e=>{
   const k=e.key.toLowerCase(); const mod=e.ctrlKey||e.metaKey;
   if(!$('#sk').hidden){
     if(e.target===$('#dimEdit') || e.target.closest?.('input:not([type=checkbox]),select')) return;
+    if(e.key===' '){ e.preventDefault(); skSpace(true); return; }
     if(mod&&k==='z'){ e.preventDefault(); e.shiftKey?skRedo():skUndo(); return; }
     if(mod&&k==='y'){ e.preventDefault(); skRedo(); return; }
     if(mod) return;
-    if(k==='escape'){ if(SK.chain) finishChain(); else if(SK.pend){ SK.pend=null; SK.sel=null; skCleanup(); skPush(); skDraw(); } else if(SK.tool!=='select') setSkTool('select'); return; }
+    if(k==='escape'){ if(SK.chain) finishChain(); else if(SK.pend){ SK.pend=null; SK.sel=null; skCleanup(); skPush(); skDraw(); } else if(SK.tool!=='select') setSkTool('select'); else if(SK.sel||SK.msel.length){ SK.sel=null; SK.msel=[]; skDraw(); } return; }
     if(k==='delete'||k==='backspace'){ e.preventDefault(); skDelete(); return; }
     const map={v:'select',l:'line',r:'rect',c:'circle',d:'dim',b:'bezier'}; if(map[k]) setSkTool(map[k]);
     return;
@@ -154,4 +158,4 @@ function loop(now){
   updateBubbleLink();
 }
 requestAnimationFrame(loop);
-window.__etabli={state, pivot, TG, guides, enterGroupEdit, finishGroupEdit, pickAll, setLmb, openCtxMenu, HOV, groupSel, prefs, orbit_:()=>orbit, SAMPLES, LAYOUT:()=>LAYOUT, resetLayout, togglePanel, CHK, startLocTest, stopLocTest, openStructBubble, openMechBubble, closeBubble, BUB, stAnimPlay, locEdit, locFrame, LOCV, applyStruct3DK, camera, orbit, structGroup, struct3DHit, renderer, ampFactor, structBox, stDraw, arrowHits:()=>stArrowHits, setWs, ws:()=>ws, validateAll, validatePart, vState, mechReady, setJointLoc, ST, SD, computeStruct, solveTruss, buildMesh, solvePlane, beamTheory, makeProxy, getProxyGeo, locGroup, loadExample, openGallery, addPart, groupSel, openSketch, closeSketch, SK, skSolve, openPlanePicker, closePlanePicker, choosePlane, PP, planeRot, bzSetType, bzSetInterp, sim, simToggle, simReset, exportStl, stlBinary, zipStore, meshes, selection:()=>selection, setSel:(ids)=>{selection=ids; sync(); renderInspector();}, setTab, openJointForm, saveJoint, jf:()=>jf, skProfiles, getGeometry};
+window.__etabli={state, pivot, TG, guides, enterGroupEdit, finishGroupEdit, pickAll, setLmb, openCtxMenu, HOV, groupSel, prefs, orbit_:()=>orbit, SAMPLES, LAYOUT:()=>LAYOUT, resetLayout, togglePanel, CHK, startLocTest, stopLocTest, openStructBubble, openMechBubble, closeBubble, BUB, stAnimPlay, locEdit, locFrame, LOCV, applyStruct3DK, camera, orbit, structGroup, struct3DHit, renderer, ampFactor, structBox, stDraw, arrowHits:()=>stArrowHits, setWs, ws:()=>ws, validateAll, validatePart, vState, mechReady, setJointLoc, ST, SD, computeStruct, solveTruss, buildMesh, solvePlane, beamTheory, makeProxy, getProxyGeo, locGroup, loadExample, openGallery, addPart, groupSel, openSketch, closeSketch, SK, skSolve, GUIDE, startTuto, openPlanePicker, closePlanePicker, choosePlane, PP, planeRot, bzSetType, bzSetInterp, sim, simToggle, simReset, exportStl, stlBinary, zipStore, meshes, selection:()=>selection, setSel:(ids)=>{selection=ids; sync(); renderInspector();}, setTab, openJointForm, saveJoint, jf:()=>jf, skProfiles, getGeometry};

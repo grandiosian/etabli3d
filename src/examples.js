@@ -15,7 +15,7 @@ function J_(o){ // origin/axis given in world coordinates at rest
   const j={id:state.nextId++, name:o.name, type:o.type, child:o.child, parent:o.parent??null, origin:[og.x,og.y,og.z], axis:[a.x,a.y,a.z], min:o.min??null, max:o.max??null, motor:o.motor||null, driver:o.driver||null};
   state.joints.push(j); return j;
 }
-function resetFor(name){ state.name=name; state.parts=[]; state.joints=[]; state.nextId=1; state.note=null; state.struct=defaultStruct(); }
+function resetFor(name){ state.name=name; state.parts=[]; state.joints=[]; state.nextId=1; state.note=null; state.tp=null; state.struct=defaultStruct(); }
 
 /* Sketch builder: points, closed polylines (automatic H / V), circles, dimensions. */
 function SKB(){
@@ -63,7 +63,7 @@ const SAMPLES={
       state.parts.push(ground,path,body,roof);
     },
     note:{observe:['La maison est un <b>groupe</b> : un cube plein et cinq <b>perçages</b> (intérieur, porte, fenêtres).','Le toit est un autre groupe : deux <b>coins</b> dos à dos et une cheminée.'],
-      try:['Sélectionnez les murs puis <b>Dégrouper</b> : les perçages apparaissent en gris transparent.','Agrandissez une fenêtre dans le panneau des propriétés, puis regroupez avec <span class="kbd">Ctrl</span>+<span class="kbd">G</span>.']}},
+      try:['Sélectionnez les murs puis <b>Dégrouper</b> : les perçages apparaissent transparents et hachurés.','Agrandissez une fenêtre dans le panneau des propriétés, puis regroupez avec <span class="kbd">Ctrl</span>+<span class="kbd">G</span>.']}},
 
   crayons:{level:1, cat:'model', title:'Pot à crayons gravé', icon:'ex_cup', tags:['Texte','Perçage','Gravure'],
     desc:'Un bloc percé de cinq trous, avec un nom gravé en creux.',
@@ -403,7 +403,7 @@ function loadExample(k){
   state.note={key:k, title:S.title, observe:S.note.observe, try:S.note.try};
   selection=[]; selJoint=null; jf=null;
   S.after?.();
-  $('#projName').value=state.name; demoClosed=false; demoOpen=!matchMedia('(max-width: 860px)').matches;
+  $('#projName').value=state.name; demoClosed=false; demoOpen=!matchMedia('(max-width: 860px)').matches; GUIDE.src='note'; GUIDE.noteDone=[]; GUIDE.step=0;
   ST.sel=null; ST.fitted=false;
   const target= S.cat==='struct'? 'struct' : S.cat==='move'? 'mech' : 'model';
   if(target==='mech') for(const p of state.parts) validatePart(p);
@@ -427,22 +427,3 @@ function renderGallery(){
 }
 function openGallery(){ renderGallery(); $('#gallery').hidden=false; $('#galleryBody').scrollTop=0; }
 
-/* ---- demo note card, shown in the scene */
-let demoClosed=false, demoOpen=true;
-function renderDemo(){
-  const el=$('#demo'); const n=state.note;
-  if(!n || demoClosed){ el.hidden=true; applyViewOffset(); return; }
-  placeDemo(); el.hidden=false; el.classList.toggle('closed',!demoOpen); el.innerHTML='';
-  const grip=h('span',{class:'pgrip demo-grip',title:'Glisser pour déplacer la fiche'}, svgIcon('dots')); grip.addEventListener('pointerdown',e=>{ if(!el.classList.contains('in-tree')) startPanelDrag(e, el, 'demo'); });
-  const head=h('div',{class:'demo-head'}, grip,
-    h('button',{class:'demo-toggle','aria-expanded':String(demoOpen),onclick:()=>{ demoOpen=!demoOpen; renderDemo(); }},
-      h('span',{class:'demo-kicker'},'Fiche démo'), h('b',{},n.title), svgIcon(demoOpen?'chevUp':'chevDown')),
-    h('button',{class:'btn icon ghost',title:'Fermer la fiche','aria-label':'Fermer la fiche',onclick:()=>{ demoClosed=true; renderDemo(); }}, svgIcon('close')));
-  el.append(head);
-  if(demoOpen){
-    const list=(title,items)=>h('div',{class:'demo-sec'}, h('h4',{},title), h('ul',{}, items.map(t=>h('li',{html:t}))));
-    el.append(list('À observer',n.observe), list('À essayer',n.try),
-      h('button',{class:'btn demo-more',onclick:openGallery}, svgIcon('book'),'Autres exemples'));
-  }
-  applyLayout('demo'); applyViewOffset();
-}

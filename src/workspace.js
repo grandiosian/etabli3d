@@ -52,7 +52,11 @@ function updateSteps(){
       if(ws==='struct') host.append(go('mech','Mouvement','pivot','ghost',{off:!ready, title: ready? 'Passer à l’atelier Mécanique' : 'Validez d’abord les pièces'}));
     }
   }
-  const W=WS.find(w=>w.k===ws); $('#inspStep').textContent=W.n; $('#inspTitle').textContent=W.name; $('#inspSub').textContent=W.sub;
+  const W=WS.find(w=>w.k===ws), st=$('#inspStep');
+  if(ws==='model'){   // in Modéliser the panel shows the properties of what is selected
+    const ps=selParts(); st.innerHTML=''; st.append(svgIcon('sliders')); st.classList.add('ic');
+    $('#inspTitle').textContent='Propriétés'; $('#inspSub').textContent= !ps.length? 'Aucun objet choisi' : ps.length===1? ps[0].name : `${ps.length} objets choisis`; }
+  else { st.classList.remove('ic'); st.textContent=W.n; $('#inspTitle').textContent=W.name; $('#inspSub').textContent=W.sub; }
 }
 function renderMech(body){
   if(!mechReady()){

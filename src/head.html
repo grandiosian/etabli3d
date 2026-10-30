@@ -92,7 +92,7 @@ button{cursor:pointer}
 .shape{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:60px;border:1px solid transparent;background:transparent;border-radius:9px;padding:3px 4px;font-size:10.5px;white-space:nowrap;line-height:1.15;text-align:center;touch-action:none;user-select:none}
 .shape:hover{background:var(--panel-2);border-color:var(--line)}
 .shape svg{width:30px;height:30px}
-.shape.sketch{background:var(--accent-soft);border-color:var(--accent)}
+.shape.on,.shape.on:hover{background:var(--accent-soft);border-color:var(--accent)}
 
 /* ---------- stage */
 #stage{grid-area:stage;position:relative;min-width:0;min-height:0;background:var(--scene);overflow:hidden}
@@ -216,7 +216,6 @@ html[data-level="2"] [data-max="1"], html[data-level="3"] [data-max="1"], html[d
 
 /* outliner */
 #outliner{grid-area:tree;display:none;flex-direction:column;min-height:0;background:var(--panel);border-right:1px solid var(--line)}
-#outliner > #demo{position:static;width:auto;max-height:46%;margin:8px;flex:none;transform:none!important}
 html[data-level="3"] #app.with-tree #outliner{display:flex}
 .tree-head{display:flex;align-items:center;gap:8px;padding:10px 8px 6px 12px}
 .tree-head>svg{width:18px;height:18px;color:var(--accent)}
@@ -320,6 +319,36 @@ html[data-level="3"] #app.with-tree #outliner{display:flex}
 .demo-sec li+li{margin-top:3px}
 .demo-sec b{color:var(--ink)}
 .demo-more{align-self:flex-start;font-size:12.5px;padding:5px 9px}
+/* guide: tabs, step by step, tutorials, TP */
+#demo{width:min(330px,calc(100% - 20px))}
+#demo.in-sk{left:10px;top:10px;max-height:calc(100% - 80px);z-index:7}
+.gd-tabs{align-self:stretch;margin-right:6px} .gd-tabs .btn{flex:1;justify-content:center;padding:4px 6px;font-size:12.5px}
+.gd-tabs .btn.on{background:var(--accent-soft);color:var(--ink)}
+.gd-body{display:flex;flex-direction:column;gap:8px;padding-right:6px}
+.gd-stepper{display:flex;flex-direction:column;gap:6px}
+.gd-step{border:1.5px solid var(--accent);border-radius:9px;padding:8px 10px;display:flex;flex-direction:column;gap:6px;background:color-mix(in srgb,var(--accent-soft) 55%,transparent)}
+.gd-step.ok{border-color:#2f9a4a}
+.gd-step.flash{animation:gdFlash .9s ease-out}
+@keyframes gdFlash{0%{box-shadow:0 0 0 0 color-mix(in srgb,#2f9a4a 70%,transparent)}100%{box-shadow:0 0 0 12px transparent}}
+.gd-n{display:flex;align-items:center;gap:8px;font:600 11px var(--f-display);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.gd-prog{flex:1;height:5px;border-radius:3px;background:var(--panel-2);overflow:hidden} .gd-prog i{display:block;height:100%;background:#2f9a4a}
+.gd-t{font-size:13.5px;line-height:1.45}
+.gd-nav{display:flex;align-items:center;gap:6px;justify-content:space-between}
+.gd-nav .btn{padding:4px 9px;font-size:12.5px}
+.gd-done{display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;cursor:pointer}
+.gd-done input{width:16px;height:16px;accent-color:#2f9a4a}
+.gd-auto{font-size:11.5px;color:var(--ink-2)} .gd-step.ok .gd-auto{color:#2f9a4a;font-weight:600}
+.gd-list{margin:0;padding-left:20px;font-size:12px;line-height:1.4;color:var(--ink-2);display:flex;flex-direction:column;gap:2px}
+.gd-list li{cursor:pointer;border-radius:5px;padding:1px 4px} .gd-list li:hover{background:var(--panel-2)}
+.gd-list li.cur{color:var(--ink);font-weight:600} .gd-list li.ok{text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--ink-2) 60%,transparent)}
+.gd-list li.ok::marker{content:"✓  ";color:#2f9a4a}
+.gd-tutos{display:flex;flex-direction:column;gap:6px}
+.gd-tuto{display:grid;grid-template-columns:1fr auto;gap:2px 8px;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:9px;padding:8px 10px}
+.gd-tuto:hover{border-color:var(--accent);background:var(--accent-soft)}
+.gd-tuto b{font-family:var(--f-display);font-weight:600;font-size:15px} .gd-tuto small{grid-column:1 / -1;color:var(--ink-2);font-size:12px}
+.gd-tips summary{cursor:pointer;font-size:12.5px;font-weight:600;color:var(--ink-2)} .gd-tips .empty{font-size:12.5px;margin-top:6px}
+.gd-ta{resize:vertical;font:13px/1.45 var(--f-body);min-height:110px}
+.gd-bravo{background:color-mix(in srgb,#2f9a4a 16%,var(--panel))}
 
 /* gallery */
 .overlay{position:fixed;inset:0;z-index:70;background:color-mix(in srgb,var(--ink) 35%,transparent);display:grid;place-items:center;padding:16px}
@@ -360,6 +389,8 @@ html[data-ws="mech"] [data-ws]:not([data-ws~="mech"]), html[data-ws="struct"] [d
 .step-sep{color:var(--ink-2);font-size:18px;padding:0 2px;flex:none}
 .insp-head{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line)}
 .insp-head .step-n{background:var(--accent);color:var(--accent-ink)}
+.insp-head .step-n.ic svg{width:14px;height:14px}
+.insp-empty{margin:0}
 .insp-head b{display:block;font-family:var(--f-display);font-weight:600;font-size:17px;line-height:1.1}
 .insp-head small{font-size:12px;color:var(--ink-2)}
 

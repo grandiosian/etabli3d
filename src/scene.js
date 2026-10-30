@@ -93,14 +93,14 @@ let ws='model';   // atelier: model | check | mech | struct
 let selJoint=null;
 const meshes=new Map();
 const hist={stack:[],idx:-1};
-function snapshot(){ return JSON.stringify({name:state.name,parts:state.parts,joints:state.joints,nextId:state.nextId,note:state.note||null,struct:state.struct||null,edit:state.edit||null}); }
+function snapshot(){ return JSON.stringify({name:state.name,parts:state.parts,joints:state.joints,nextId:state.nextId,note:state.note||null,tp:state.tp||null,struct:state.struct||null,edit:state.edit||null}); }
 function commit(){
   const s=snapshot(); if(hist.stack[hist.idx]===s) return;
   hist.stack=hist.stack.slice(0,hist.idx+1); hist.stack.push(s); if(hist.stack.length>80) hist.stack.shift(); hist.idx=hist.stack.length-1;
   autosave(); updateUndo();
 }
 function restore(s, keepSel=true){
-  const o=JSON.parse(s); state.name=o.name||'Mon projet'; state.parts=o.parts||[]; state.joints=o.joints||[]; state.nextId=o.nextId||1; state.note=o.note||null; state.struct=o.struct||null; state.edit=o.edit||null;
+  const o=JSON.parse(s); state.name=o.name||'Mon projet'; state.parts=o.parts||[]; state.joints=o.joints||[]; state.nextId=o.nextId||1; state.note=o.note||null; state.tp=o.tp||null; state.struct=o.struct||null; state.edit=o.edit||null;
   $('#projName').value=state.name; updateGroupEditUI();
   selection = keepSel? selection.filter(id=>findPart(id)) : []; renderDemo();
   if(selJoint && !state.joints.find(j=>j.id===selJoint)) selJoint=null;
@@ -114,7 +114,7 @@ let saveTimer=0;
 function autosave(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>{ try{ localStorage.setItem('etabli3d.autosave', snapshot()); }catch(e){} }, 400); }
 function loadProject(obj, push=true){
   if(!obj || !Array.isArray(obj.parts)) throw new Error('format');
-  state.name=obj.name||'Projet'; state.parts=obj.parts; state.joints=obj.joints||[]; state.nextId=obj.nextId|| (maxId(obj.parts)+1); state.note=obj.note||null; state.struct=obj.struct||null; state.edit=obj.edit||null; demoClosed=false;
+  state.name=obj.name||'Projet'; state.parts=obj.parts; state.joints=obj.joints||[]; state.nextId=obj.nextId|| (maxId(obj.parts)+1); state.note=obj.note||null; state.tp=obj.tp||null; state.struct=obj.struct||null; state.edit=obj.edit||null; demoClosed=false; GUIDE.src=null;
   $('#projName').value=state.name; selection=[]; selJoint=null; simReset(true); sync(); renderInspector(); renderDemo();
   if(push){ hist.stack=[]; hist.idx=-1; commit(); }
   fitView();
@@ -166,19 +166,40 @@ function edgesOf(g, boxOnly=false){ let e=edgeCache.get(g); if(!e){
   else e=new THREE.EdgesGeometry(g, 28);
   edgeCache.set(g,e);} return e; }
 const selLineMat=new THREE.LineBasicMaterial({color:0xdf9a00, depthTest:true});
+/* Perçages : pièce transparente barrée de hachures obliques fixées à l'écran (toujours face à la caméra).
+   Même matériau que les solides ; la définition HATCH ajoute les hachures à la fin du rendu. */
+const HATCH={s:{value:9}, w:{value:1.7}, c:{value:new THREE.Color(0x37413e)}};
+function partMaterial(){
+  const m=new THREE.MeshStandardMaterial({roughness:.5,metalness:.04});
+  m.onBeforeCompile=sh=>{
+    sh.uniforms.hatchS=HATCH.s; sh.uniforms.hatchW=HATCH.w; sh.uniforms.hatchC=HATCH.c;
+    sh.fragmentShader=sh.fragmentShader.replace('void main() {','#ifdef HATCH\nuniform float hatchS; uniform float hatchW; uniform vec3 hatchC;\n#endif\nvoid main() {')
+      .replace('#include <dithering_fragment>', `#include <dithering_fragment>
+#ifdef HATCH
+  { float k=mod(gl_FragCoord.x+gl_FragCoord.y, hatchS); float d=min(k, hatchS-k)*0.7071;
+    float st=1.0-smoothstep(hatchW*0.5-0.6, hatchW*0.5+0.6, d);
+    gl_FragColor.rgb=mix(gl_FragColor.rgb, hatchC, st*0.8);
+    gl_FragColor.a=mix(gl_FragColor.a, min(1.0, gl_FragColor.a*3.0+0.2), st); }
+#endif`);
+  };
+  return m;
+}
+function setHatch(mt, on){ if(!!(mt.defines && 'HATCH' in mt.defines)===on) return; mt.defines= on? {HATCH:''} : {}; mt.needsUpdate=true; }
 const holeLineMat=new THREE.LineBasicMaterial({color:0x37413e, transparent:true, opacity:.55});
 function sync(){
   const ids=new Set();
   const markCol=cssVar('--mark')||'#df9a00'; selLineMat.color.set(markCol);
   const holeCol=cssVar('--hole')||'#7b8985';
+  const pr=renderer.getPixelRatio(); HATCH.s.value=9*pr; HATCH.w.value=1.7*pr; HATCH.c.value.set(cssVar('--ink')||'#18231f').convertLinearToSRGB();
   for(const p of state.parts){
     ids.add(p.id);
     let r=meshes.get(p.id);
-    if(!r){ const m=new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial({roughness:.5,metalness:.04})); m.userData.id=p.id; m.matrixAutoUpdate=true; scene.add(m); r={mesh:m,key:null,line:null}; meshes.set(p.id,r); }
+    if(!r){ const m=new THREE.Mesh(new THREE.BufferGeometry(), partMaterial()); m.userData.id=p.id; m.matrixAutoUpdate=true; scene.add(m); r={mesh:m,key:null,line:null}; meshes.set(p.id,r); }
     const px=usesProxy(p); const key=geomKey(p)+(px?'#proxy':'');
     if(r.key!==key){ r.mesh.geometry= px? getProxyGeo(p) : getGeometry(p); r.key=key; if(r.line){ r.mesh.remove(r.line); r.line=null; } r.mesh.material.flatShading=px; r.mesh.material.needsUpdate=true; }
     const mt=r.mesh.material; const sel=selection.includes(p.id);
-    if(p.hole){ mt.color.set(holeCol); mt.transparent=true; mt.opacity=.36; mt.depthWrite=false; }
+    setHatch(mt, !!p.hole);
+    if(p.hole){ mt.color.set(holeCol); mt.transparent=true; mt.opacity=.2; mt.depthWrite=false; }
     else { mt.color.set(p.color); mt.transparent=false; mt.opacity=1; mt.depthWrite=true; }
     if(state.edit && p.inGroup!==state.edit.gid && ws==='model'){ mt.transparent=true; mt.opacity=p.hole? .12 : .18; mt.depthWrite=false; }   // outside the group being edited
     mt.emissive.set(sel? markCol : '#000000'); mt.emissiveIntensity= sel? .16:0;

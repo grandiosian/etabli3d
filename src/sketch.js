@@ -2,7 +2,7 @@
 /* =========================================================
    Sketch editor: lines, rectangles, circles, dimensions, constraints
    ========================================================= */
-const SK={part:null,plane:'xy',d:null,tool:'rect',view:{cx:0,cy:0,s:5},hist:[],hidx:-1,sel:null,chain:null,pend:null,mouse:null,drag:null,mode:'extrude',h:10,labels:[],badges:[],err:0,editing:null,snapPt:null};
+const SK={part:null,plane:'xy',msel:[],filt:{pt:true,edge:true,con:true},space:false,d:null,tool:'rect',view:{cx:0,cy:0,s:5},hist:[],hidx:-1,sel:null,chain:null,pend:null,mouse:null,drag:null,mode:'extrude',h:10,labels:[],badges:[],err:0,editing:null,snapPt:null};
 const skCanvas=$('#skCanvas'), skCtx=skCanvas.getContext('2d');
 let skW=0, skH=0;
 const toS=(x,y)=>[skW/2+(x-SK.view.cx)*SK.view.s, skH/2-(y-SK.view.cy)*SK.view.s];
@@ -20,10 +20,10 @@ function openSketch(part=null, opts={}){
   else { SK.d={nid:2,pts:[{id:1,x:0,y:0,fixed:true,origin:true}],lines:[],circles:[],beziers:[],cons:[]}; SK.mode='extrude'; SK.h=10; SK.plane=SKPLANES[opts.plane]? opts.plane : 'xy'; }
   SK.d.beziers ||= [];
   if(!lv(3) && SK.mode==='revolve') toast('Cette esquisse utilise la révolution, réservée au niveau Avancé.');
-  SK.hist=[]; SK.hidx=-1; SK.sel=null; SK.chain=null; SK.pend=null; SK.editing=null;
+  SK.hist=[]; SK.hidx=-1; SK.sel=null; SK.msel=[]; SK.chain=null; SK.pend=null; SK.editing=null;
   const pl=SKPLANES[SK.plane||'xy']; $('#skPlane').textContent= SK.plane? pl.label : 'Plan XY · dessus';
   $('#sk').hidden=false; $('#skH').value=fmtIn(SK.h); setSkMode(SK.mode,false);
-  skResize(); skFit(); skPush(); setSkTool(part?'select':(opts.tool||'rect'));
+  skResize(); skFit(); skPush(); setSkTool(part?'select':(opts.tool||'rect')); renderDemo();
 }
 function closeSketch(apply){
   hideDimEdit(false);
@@ -40,11 +40,11 @@ function closeSketch(apply){
     else { const p=newPart('sketch',{params, rot:planeRot(SK.plane, SK.mode)}); if(state.edit) p.inGroup=state.edit.gid; state.parts.push(p); selection=[p.id]; }
     sync(); commit(); setTab('part');
   }
-  $('#sk').hidden=true;
+  $('#sk').hidden=true; renderDemo();
 }
 function skPush(){ const s=JSON.stringify(SK.d); if(SK.hist[SK.hidx]===s) return; SK.hist=SK.hist.slice(0,SK.hidx+1); SK.hist.push(s); SK.hidx=SK.hist.length-1; }
-function skUndo(){ if(SK.hidx>0){ SK.hidx--; SK.d=JSON.parse(SK.hist[SK.hidx]); SK.sel=null; SK.chain=null; SK.pend=null; skSolve(); skDraw(); } }
-function skRedo(){ if(SK.hidx<SK.hist.length-1){ SK.hidx++; SK.d=JSON.parse(SK.hist[SK.hidx]); SK.sel=null; skSolve(); skDraw(); } }
+function skUndo(){ if(SK.hidx>0){ SK.hidx--; SK.d=JSON.parse(SK.hist[SK.hidx]); SK.sel=null; SK.msel=[]; SK.chain=null; SK.pend=null; skSolve(); skDraw(); } }
+function skRedo(){ if(SK.hidx<SK.hist.length-1){ SK.hidx++; SK.d=JSON.parse(SK.hist[SK.hidx]); SK.sel=null; SK.msel=[]; skSolve(); skDraw(); } }
 function setSkMode(m, draw=true){
   SK.mode=m; $('#skModeExt').classList.toggle('on',m==='extrude'); $('#skModeRev').classList.toggle('on',m==='revolve'); $('#skHRow').hidden= m!=='extrude';
   const pl=SKPLANES[SK.plane||'xy'];
@@ -54,7 +54,7 @@ function setSkMode(m, draw=true){
   if(draw) skDraw();
 }
 const HINTS={
-  select:'Cliquez un élément pour le sélectionner. Glissez un point ou une ligne pour déformer. <b>Suppr</b> efface. <b>Double-clic</b> sur une cote pour changer sa valeur. Glissez dans le vide pour décaler la vue, molette pour zoomer.',
+  select:'Cliquez un élément pour le choisir (<b>Maj</b> : en ajouter). <b>Glissez dans le vide</b> : cadre de sélection, selon le filtre en haut (points, arêtes, contraintes). Glissez un point ou une ligne pour déformer. <b>Suppr</b> efface. <b>Espace + glisser</b> : décaler la vue ; molette : zoom.',
   line:'Cliquez pour poser les points. Revenez sur le <b>premier point</b> pour fermer le contour. <b>Échap</b> ou double-clic pour arrêter. Les lignes presque horizontales ou verticales sont redressées.',
   rect:'Cliquez un premier coin, puis le coin opposé. Le rectangle reçoit des contraintes horizontales et verticales.',
   circle:'Cliquez le centre, puis un point du cercle.',
@@ -146,16 +146,19 @@ function skCleanup(){
   const LS=new Set(d.lines.map(l=>l.id)), CS=new Set(d.circles.map(c=>c.id)), PS=new Set(d.pts.map(p=>p.id));
   d.cons=d.cons.filter(c=>{ const r=consRefs(c); return r.lines.every(i=>LS.has(i)) && r.circles.every(i=>CS.has(i)) && r.pts.every(i=>PS.has(i)) && !(r.pts.length===2&&r.pts[0]===r.pts[1]) && !(r.lines.length===2&&r.lines[0]===r.lines[1]); });
   const used=new Set(); d.lines.forEach(l=>{used.add(l.a);used.add(l.b);}); d.circles.forEach(c=>used.add(c.c)); d.beziers.forEach(z=>{used.add(z.a);used.add(z.b);});
+  for(const id of [SK.pend?.pen && SK.pend.first, SK.pend?.pen && SK.pend.last, SK.chain?.first, SK.chain?.last]) if(id!=null) used.add(id);   // the chain being drawn keeps its points
   d.pts=d.pts.filter(p=>p.origin||used.has(p.id));
 }
 function skDelete(){
-  const s=SK.sel; if(!s) return; const d=SK.d;
-  if(s.type==='pt'){ const p=skP(s.id); if(p?.origin){ toast('L’origine ne peut pas être supprimée.'); return; } d.lines=d.lines.filter(l=>l.a!==s.id&&l.b!==s.id); d.circles=d.circles.filter(c=>c.c!==s.id); d.beziers=d.beziers.filter(z=>z.a!==s.id&&z.b!==s.id); d.pts=d.pts.filter(p=>p.id!==s.id); }
+  const list=skSelList(); if(!list.length) return; const d=SK.d;
+  for(const s of list){
+  if(s.type==='pt'){ const p=skP(s.id); if(!p || p.origin){ if(list.length===1) toast('L’origine ne peut pas être supprimée.'); continue; } d.lines=d.lines.filter(l=>l.a!==s.id&&l.b!==s.id); d.circles=d.circles.filter(c=>c.c!==s.id); d.beziers=d.beziers.filter(z=>z.a!==s.id&&z.b!==s.id); d.pts=d.pts.filter(p=>p.id!==s.id); }
   if(s.type==='line') d.lines=d.lines.filter(l=>l.id!==s.id);
   if(s.type==='circle') d.circles=d.circles.filter(c=>c.id!==s.id);
   if(s.type==='bez') d.beziers=d.beziers.filter(z=>z.id!==s.id);
   if(s.type==='con') d.cons=d.cons.filter(c=>c.id!==s.id);
-  SK.sel=null; skCleanup(); skSolve(); skPush(); skDraw();
+  }
+  SK.sel=null; SK.msel=[]; skCleanup(); skSolve(); skPush(); skDraw();
 }
 function skMerge(keepId, dropId){
   const d=SK.d; const k=skP(keepId), q=skP(dropId); if(!k||!q||k===q) return;
@@ -238,17 +241,22 @@ skCanvas.addEventListener('pointerdown', ev=>{
   ev.preventDefault();
   if(!$('#dimEdit').hidden) hideDimEdit(true);
   const [sx,sy]=skEvt(ev); skCanvas.setPointerCapture(ev.pointerId);
-  if(ev.button===1||ev.button===2){ if(ev.button===2 && SK.chain){ finishChain(); return; } if(ev.button===2 && SK.pend?.pen){ bzEndChain(); return; } SK.drag={kind:'pan',sx,sy,cx:SK.view.cx,cy:SK.view.cy}; return; }
+  if(ev.button===1||ev.button===2||(ev.button===0 && SK.space)){ if(ev.button===2 && SK.chain){ finishChain(); return; } if(ev.button===2 && SK.pend?.pen){ bzEndChain(); return; } SK.drag={kind:'pan',sx,sy,cx:SK.view.cx,cy:SK.view.cy}; return; }
   const t=SK.tool, d=SK.d;
   if(t==='select'){
-    const lb=hitLabel(sx,sy); if(lb){ SK.sel={type:'con',id:lb.id}; SK.drag={kind:'label',id:lb.id,moved:false}; skDraw(); return; }
-    const bg=hitBadge(sx,sy); if(bg){ SK.sel={type:'con',id:bg.id}; skDraw(); return; }
-    const hd=hitHandle(sx,sy); if(hd){ const z=skB(hd.id); SK.sel={type:'pt',id:hd.which===1?z.a:z.b}; SK.drag={kind:'handle',...hd,moved:false}; skDraw(); return; }
-    const p=hitPoint(sx,sy); if(p){ SK.sel={type:'pt',id:p.id}; if(!p.fixed&&!p.origin) SK.drag={kind:'pt',id:p.id,moved:false}; skDraw(); return; }
-    const l=hitLine(sx,sy); if(l){ SK.sel={type:'line',id:l.id}; const [wx,wy]=toW(sx,sy); SK.drag={kind:'line',id:l.id,wx,wy,a:{...skP(l.a)},b:{...skP(l.b)},moved:false}; skDraw(); return; }
-    const z=hitBez(sx,sy); if(z){ SK.sel={type:'bez',id:z.id}; const [wx,wy]=toW(sx,sy); SK.drag={kind:'line',bez:true,id:z.id,wx,wy,a:{...skP(z.a)},b:{...skP(z.b)},moved:false}; skDraw(); return; }
-    const c=hitCircle(sx,sy); if(c){ SK.sel={type:'circle',id:c.id}; SK.drag={kind:'circle',id:c.id,moved:false}; skDraw(); return; }
-    SK.sel=null; SK.drag={kind:'pan',sx,sy,cx:SK.view.cx,cy:SK.view.cy}; skDraw(); return;
+    const F=SK.filt, [wx,wy]=toW(sx,sy);
+    const pick=(item)=>{   // Maj : ajouter / retirer ; un élément déjà dans la sélection multiple la déplace en bloc
+      if(ev.shiftKey){ const L=skSelList(), k=L.findIndex(e=>e.type===item.type&&e.id===item.id); if(k>=0) L.splice(k,1); else L.push(item); SK.msel=L; SK.sel= L.length===1? L[0] : null; skDraw(); return true; }
+      if(SK.msel.length>1 && skIsSel(item.type,item.id) && item.type!=='con'){ SK.drag={kind:'multi',wx,wy,orig:skSelPoints().map(p=>({id:p.id,x:p.x,y:p.y})),moved:false}; skDraw(); return true; }
+      SK.msel=[]; SK.sel=item; return false; };
+    const lb=F.con && hitLabel(sx,sy); if(lb){ if(pick({type:'con',id:lb.id})) return; SK.drag={kind:'label',id:lb.id,moved:false}; skDraw(); return; }
+    const bg=F.con && hitBadge(sx,sy); if(bg){ pick({type:'con',id:bg.id}); skDraw(); return; }
+    const hd=F.pt && hitHandle(sx,sy); if(hd){ const z=skB(hd.id); SK.msel=[]; SK.sel={type:'pt',id:hd.which===1?z.a:z.b}; SK.drag={kind:'handle',...hd,moved:false}; skDraw(); return; }
+    const p=F.pt && hitPoint(sx,sy); if(p){ if(pick({type:'pt',id:p.id})) return; if(!p.fixed&&!p.origin) SK.drag={kind:'pt',id:p.id,moved:false}; skDraw(); return; }
+    const l=F.edge && hitLine(sx,sy); if(l){ if(pick({type:'line',id:l.id})) return; SK.drag={kind:'line',id:l.id,wx,wy,a:{...skP(l.a)},b:{...skP(l.b)},moved:false}; skDraw(); return; }
+    const z=F.edge && hitBez(sx,sy); if(z){ if(pick({type:'bez',id:z.id})) return; SK.drag={kind:'line',bez:true,id:z.id,wx,wy,a:{...skP(z.a)},b:{...skP(z.b)},moved:false}; skDraw(); return; }
+    const c=F.edge && hitCircle(sx,sy); if(c){ if(pick({type:'circle',id:c.id})) return; SK.drag={kind:'circle',id:c.id,moved:false}; skDraw(); return; }
+    SK.drag={kind:'box',sx,sy,x1:sx,y1:sy,add:ev.shiftKey,moved:false}; skDraw(); return;
   }
   if(t==='line'){
     if(!SK.chain){ const s=snapW(sx,sy); const p=s.pt||skNewPoint(s.x,s.y); SK.chain={first:p.id,last:p.id}; skDraw(); return; }
@@ -343,6 +351,9 @@ skCanvas.addEventListener('pointermove', ev=>{
   const dr=SK.drag;
   if(dr){
     if(dr.kind==='pan'){ SK.view.cx=dr.cx-(sx-dr.sx)/SK.view.s; SK.view.cy=dr.cy+(sy-dr.sy)/SK.view.s; skDraw(); return; }
+    if(dr.kind==='box'){ dr.x1=sx; dr.y1=sy; if(Math.hypot(sx-dr.sx,sy-dr.sy)>3) dr.moved=true; skDraw(); return; }
+    if(dr.kind==='multi'){ const [wx,wy]=toW(sx,sy); let dx=wx-dr.wx, dy=wy-dr.wy; if($('#skSnap').checked){ const g=snapStep(); dx=Math.round(dx/g)*g; dy=Math.round(dy/g)*g; }
+      dr.moved=true; for(const o of dr.orig){ const p=skP(o.id); if(p && !p.fixed && !p.origin){ p.x=o.x+dx; p.y=o.y+dy; } } skSolve(null,200); skDraw(); return; }
     dr.moved=true;
     if(dr.kind==='pt'){ const s=snapW(sx,sy,dr.id); const p=skP(dr.id); p.x=s.x; p.y=s.y; skSolve(dr.id,200); skDraw(); return; }
     if(dr.kind==='line'){ const [wx,wy]=toW(sx,sy); let dx=wx-dr.wx, dy=wy-dr.wy; if($('#skSnap').checked){ const g=snapStep(); dx=Math.round(dx/g)*g; dy=Math.round(dy/g)*g; }
@@ -369,6 +380,7 @@ skCanvas.addEventListener('pointermove', ev=>{
 });
 skCanvas.addEventListener('pointerup', ()=>{
   const dr=SK.drag; SK.drag=null;
+  if(dr && dr.kind==='box'){ if(dr.moved) skBoxSelect(dr); else if(!dr.add){ SK.sel=null; SK.msel=[]; } skDraw(); return; }
   if(dr && dr.kind==='pen'){ if(dr.close) bzEndChain(); else { skCleanup(); skPush(); } skDraw(); return; }
   if(dr && dr.moved && dr.kind!=='pan'){ skSolve(); skPush(); }
   skDraw();
@@ -412,7 +424,7 @@ function skDraw(){
   const pr=skProfiles(d);
   if(pr.loops.length){ g.beginPath(); for(const L of pr.loops){ L.pts.forEach((q,i)=>{ const [X,Y]=toS(q[0],q[1]); i?g.lineTo(X,Y):g.moveTo(X,Y); }); g.closePath(); } g.fillStyle=col.acc; g.globalAlpha=.17; g.fill('evenodd'); g.globalAlpha=1; }
   // lines & circles
-  const isSel=(type,id)=> SK.sel && SK.sel.type===type && SK.sel.id===id;
+  const isSel=skIsSel;
   for(const l of d.lines){ const a=skP(l.a), b=skP(l.b); const [ax,ay]=toS(a.x,a.y), [bx,by]=toS(b.x,b.y);
     g.strokeStyle=isSel('line',l.id)? col.mark : col.ink; g.lineWidth=isSel('line',l.id)?3.5:2; g.beginPath(); g.moveTo(ax,ay); g.lineTo(bx,by); g.stroke(); }
   const showHandles = SK.tool==='select' || SK.tool==='bezier';
@@ -455,10 +467,10 @@ function skDraw(){
   for(const [lid,list] of perLine){ const l=skL(lid); if(!l) continue; const a=skP(l.a), b=skP(l.b); const [ax,ay]=toS(a.x,a.y), [bx,by]=toS(b.x,b.y);
     const L=Math.hypot(bx-ax,by-ay)||1; const ux=(bx-ax)/L, uy=(by-ay)/L; let nx=-uy, ny=ux; if(nx*(gcx-(ax+bx)/2)+ny*(gcy-(ay+by)/2)<0){ nx=-nx; ny=-ny; }
     list.forEach((bd,i)=>{ const off=(i-(list.length-1)/2)*20; const X=(ax+bx)/2+ux*off+nx*14, Y=(ay+by)/2+uy*off+ny*14;
-      const sel=SK.sel?.type==='con'&&SK.sel.id===bd.id; g.fillStyle=sel?col.mark:col.panel; g.strokeStyle=sel?col.mark:col.acc; g.lineWidth=1.2;
+      const sel=skIsSel('con',bd.id); g.fillStyle=sel?col.mark:col.panel; g.strokeStyle=sel?col.mark:col.acc; g.lineWidth=1.2;
       roundRect(g,X-9,Y-8,18+(bd.txt.length>1?6:0),16,4); g.fill(); g.stroke(); g.fillStyle=sel?'#000':col.acc; g.fillText(bd.txt, X+(bd.txt.length>1?3:0), Y+.5);
       SK.badges.push({id:bd.id,x:X,y:Y}); }); }
-  for(const c of d.cons) if(c.type==='eqr'){ for(const cid of [c.c1,c.c2]){ const ci=skC(cid), p=skP(ci.c); const [X,Y]=toS(p.x+ci.r*0.71,p.y+ci.r*0.71); const t='='+pairNo.get(c.id); const sel=SK.sel?.type==='con'&&SK.sel.id===c.id; g.fillStyle=sel?col.mark:col.panel; g.strokeStyle=col.acc; roundRect(g,X-6,Y-8,24,16,4); g.fill(); g.stroke(); g.fillStyle=sel?'#000':col.acc; g.fillText(t,X+6,Y+.5); SK.badges.push({id:c.id,x:X+6,y:Y}); } }
+  for(const c of d.cons) if(c.type==='eqr'){ for(const cid of [c.c1,c.c2]){ const ci=skC(cid), p=skP(ci.c); const [X,Y]=toS(p.x+ci.r*0.71,p.y+ci.r*0.71); const t='='+pairNo.get(c.id); const sel=skIsSel('con',c.id); g.fillStyle=sel?col.mark:col.panel; g.strokeStyle=col.acc; roundRect(g,X-6,Y-8,24,16,4); g.fill(); g.stroke(); g.fillStyle=sel?'#000':col.acc; g.fillText(t,X+6,Y+.5); SK.badges.push({id:c.id,x:X+6,y:Y}); } }
   g.textAlign='left'; g.textBaseline='alphabetic';
   // points
   for(const p of d.pts){ const [X,Y]=toS(p.x,p.y); const sel=isSel('pt',p.id)||SK.pend?.pt===p.id||SK.pend?.a===p.id||(SK.pend?.pen&&SK.pend.last===p.id)||SK.chain?.last===p.id;
@@ -469,13 +481,15 @@ function skDraw(){
   if(SK.snapPt!=null){ const p=skP(SK.snapPt); if(p){ const [X,Y]=toS(p.x,p.y); g.strokeStyle=col.mark; g.lineWidth=2; g.beginPath(); g.arc(X,Y,9,0,Math.PI*2); g.stroke(); } }
   // selection of the first element for 2-step tools
   if(SK.pend?.sel){ const e=SK.pend.sel; if(e.k==='line'){ const l=skL(e.id); const a=skP(l.a), b=skP(l.b); const [ax,ay]=toS(a.x,a.y),[bx,by]=toS(b.x,b.y); g.strokeStyle=col.mark; g.lineWidth=4; g.beginPath(); g.moveTo(ax,ay); g.lineTo(bx,by); g.stroke(); } }
+  if(SK.drag?.kind==='box' && SK.drag.moved){ const b=SK.drag; g.save(); g.setLineDash([5,4]); g.strokeStyle=col.acc; g.lineWidth=1.3; g.fillStyle=col.acc; g.globalAlpha=.1;
+    g.fillRect(Math.min(b.sx,b.x1),Math.min(b.sy,b.y1),Math.abs(b.x1-b.sx),Math.abs(b.y1-b.sy)); g.globalAlpha=1; g.strokeRect(Math.min(b.sx,b.x1),Math.min(b.sy,b.y1),Math.abs(b.x1-b.sx),Math.abs(b.y1-b.sy)); g.restore(); }
   skStatus(pr); bzUpdateOpts();
   function tag(txt,x,y){ g.save(); g.setLineDash([]); g.font='500 12px '+cssVar('--f-mono'); const w=g.measureText(txt).width+10; g.fillStyle=col.panel; g.strokeStyle=col.line; roundRect(g,x,y-10,w,20,5); g.fill(); g.stroke(); g.fillStyle=col.ink; g.fillText(txt,x+5,y+4); g.restore(); }
 }
 function roundRect(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
 function arrow(g,x,y,ux,uy){ g.beginPath(); g.moveTo(x,y); g.lineTo(x-ux*9-uy*3.5, y-uy*9+ux*3.5); g.lineTo(x-ux*9+uy*3.5, y-uy*9-ux*3.5); g.closePath(); g.fill(); }
 function drawDim(c,col){
-  const g=skCtx; const sel=(SK.sel?.type==='con'&&SK.sel.id===c.id); const color= sel? col.mark : col.acc;
+  const g=skCtx; const sel=skIsSel('con',c.id); const color= sel? col.mark : col.acc;
   g.strokeStyle=color; g.fillStyle=color; g.lineWidth=1.2;
   let A,B,lx,ly,txt=fmt(c.value);
   if(c.type==='diam'){
@@ -600,3 +614,33 @@ function bzUpdateOpts(){
 }
 $$('#bzOpts [data-it]').forEach(b=>b.addEventListener('click',()=>{ const id=bzTarget(); if(id!=null) bzSetInterp(id, b.dataset.it); }));
 $$('#bzOpts [data-tm]').forEach(b=>b.addEventListener('click',()=>{ const id=bzTarget(); if(id!=null) bzSetType(id, b.dataset.tm); }));
+
+/* ---------- selection: one element (SK.sel) or several (SK.msel, box or Maj + clic), filtered by SK.filt */
+function skSelList(){ return SK.msel.length? SK.msel.slice() : SK.sel? [SK.sel] : []; }
+function skIsSel(type,id){ if(SK.sel && SK.sel.type===type && SK.sel.id===id) return true; return SK.msel.some(e=>e.type===type&&e.id===id); }
+function skSelPoints(){ const ids=new Set(); for(const e of skSelList()){
+    if(e.type==='pt') ids.add(e.id);
+    if(e.type==='line'){ const l=skL(e.id); if(l){ ids.add(l.a); ids.add(l.b); } }
+    if(e.type==='bez'){ const z=skB(e.id); if(z){ ids.add(z.a); ids.add(z.b); } }
+    if(e.type==='circle'){ const c=skC(e.id); if(c) ids.add(c.c); } }
+  return [...ids].map(skP).filter(Boolean); }
+function skBoxSelect(b){
+  const x0=Math.min(b.sx,b.x1), x1=Math.max(b.sx,b.x1), y0=Math.min(b.sy,b.y1), y1=Math.max(b.sy,b.y1);
+  const inR=(x,y)=> x>=x0&&x<=x1&&y>=y0&&y<=y1, inW=p=>{ const [x,y]=toS(p.x,p.y); return inR(x,y); };
+  const d=SK.d, F=SK.filt, out=[];
+  if(F.pt) for(const p of d.pts) if(!p.origin && inW(p)) out.push({type:'pt',id:p.id});
+  if(F.edge){
+    for(const l of d.lines) if(inW(skP(l.a)) && inW(skP(l.b))) out.push({type:'line',id:l.id});
+    for(const z of d.beziers) if(bezScreen(z).every(q=>inR(q[0],q[1])) || (inW(skP(z.a)) && inW(skP(z.b)))) out.push({type:'bez',id:z.id});
+    for(const c of d.circles){ const p=skP(c.c), [x,y]=toS(p.x,p.y), r=c.r*SK.view.s; if(inR(x-r,y-r) && inR(x+r,y+r)) out.push({type:'circle',id:c.id}); } }
+  if(F.con){ const ids=new Set(); for(const L of [...SK.labels, ...SK.badges]) if(inR(L.x,L.y)) ids.add(L.id); for(const id of ids) out.push({type:'con',id}); }
+  let L= b.add? skSelList() : []; for(const e of out) if(!L.some(k=>k.type===e.type&&k.id===e.id)) L.push(e);
+  SK.msel=L; SK.sel= L.length===1? L[0] : null;
+  if(L.length>1) $('#skHint').innerHTML=`<b>${L.length} éléments</b> sélectionnés : <b>Suppr</b> pour les effacer, glissez l’un d’eux pour tout déplacer.`;
+}
+function skSetFilter(k){ SK.filt[k]=!SK.filt[k]; if(!SK.filt.pt && !SK.filt.edge && !SK.filt.con) SK.filt[k]=true;
+  $$('#skFilt [data-f]').forEach(b=>{ const on=!!SK.filt[b.dataset.f]; b.classList.toggle('on',on); b.setAttribute('aria-pressed',String(on)); });
+  SK.msel=SK.msel.filter(e=> e.type==='pt'? SK.filt.pt : e.type==='con'? SK.filt.con : SK.filt.edge); if(SK.sel && !SK.msel.length && !(SK.sel.type==='pt'? SK.filt.pt : SK.sel.type==='con'? SK.filt.con : SK.filt.edge)) SK.sel=null; skDraw(); }
+$$('#skFilt [data-f]').forEach(b=>b.addEventListener('click',()=>skSetFilter(b.dataset.f)));
+/* Espace maintenu : le clic gauche décale la vue */
+function skSpace(on){ if(SK.space===on) return; SK.space=on; skCanvas.style.cursor= on? 'grab' : (SK.tool==='select'?'default':'crosshair'); }
