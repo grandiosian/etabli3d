@@ -1,0 +1,177 @@
+
+<div id="app">
+  <header id="top">
+    <div class="brand"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M16 3 28 9.5v13L16 29 4 22.5v-13z"/><path d="M4 9.5 16 16l12-6.5M16 16v13"/></svg><span>Établi 3D</span></div>
+    <input id="projName" aria-label="Nom du projet" value="Mon projet">
+    <div class="tb-group">
+      <button class="btn ghost" id="bNew" title="Nouveau projet"><svg data-i="new"></svg><span class="hide-narrow">Nouveau</span></button>
+      <div class="menu-wrap">
+        <button class="btn ghost" id="bExamples" aria-haspopup="true"><svg data-i="book"></svg><span class="hide-narrow">Exemples</span></button>
+        <div class="menu" id="menuExamples" hidden>
+          <button data-ex="gears"><b>Engrenages et crémaillère</b><small>Transmission : 1 moteur, rapport −2, translation</small></button>
+          <button data-ex="arm"><b>Bras articulé</b><small>Pivots en chaîne : base, épaule, coude</small></button>
+          <button data-ex="crank"><b>Poulies et courroie + perçages</b><small>Groupes, perçages et poulies de diamètres différents</small></button>
+          <button data-ex="keyring"><b>Porte-clés</b><small>Texte, perçage, esquisse cotée</small></button>
+        </div>
+      </div>
+      <button class="btn ghost" id="bOpen" title="Ouvrir un projet (.json)"><svg data-i="open"></svg><span class="hide-narrow">Ouvrir</span></button>
+      <button class="btn ghost" id="bSave" title="Enregistrer le projet (.json)"><svg data-i="save"></svg><span class="hide-narrow">Enregistrer</span></button>
+      <button class="btn" id="bStl" title="Exporter en STL pour l'impression 3D"><svg data-i="print"></svg><span>STL</span></button>
+      <input type="file" id="fileIn" accept=".json,application/json" hidden>
+    </div>
+    <div class="tb-sep hide-narrow"></div>
+    <div class="tb-group">
+      <button class="btn icon ghost" id="bUndo" title="Annuler (Ctrl+Z)"><svg data-i="undo"></svg></button>
+      <button class="btn icon ghost" id="bRedo" title="Rétablir (Ctrl+Y)"><svg data-i="redo"></svg></button>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn" id="mobileInsp"><svg data-i="sliders"></svg>Réglages</button>
+    <button class="btn ghost" id="bHelp" title="Aide et raccourcis"><svg data-i="help"></svg><span class="hide-narrow">Aide</span></button>
+  </header>
+
+  <nav id="rack" aria-label="Formes">
+    <div class="rack-title">Créer</div>
+    <button class="shape sketch" id="bSketch" title="Dessiner une esquisse cotée puis l'extruder"><svg data-i="k_sketch"></svg>Esquisse</button>
+    <div class="rack-title">Volumes</div>
+    <div id="rackBasic" style="display:contents"></div>
+    <div class="rack-title">Mécanique</div>
+    <div id="rackMeca" style="display:contents"></div>
+  </nav>
+
+  <main id="stage">
+    <div class="float" id="tools" role="toolbar" aria-label="Outils">
+      <div class="seg">
+        <button class="btn icon" id="tMove" title="Déplacer (M)"><svg data-i="move"></svg></button>
+        <button class="btn icon" id="tRot" title="Tourner (R)"><svg data-i="rotate"></svg></button>
+      </div>
+      <div class="vsep"></div>
+      <button class="btn icon" id="tSolid" title="Solide (S)"><svg data-i="solid"></svg></button>
+      <button class="btn icon" id="tHole" title="Perçage (H)"><svg data-i="hole"></svg></button>
+      <div class="vsep"></div>
+      <button class="btn icon" id="tGroup" title="Grouper (Ctrl+G)"><svg data-i="group"></svg></button>
+      <button class="btn icon" id="tUngroup" title="Dégrouper (Ctrl+Maj+G)"><svg data-i="ungroup"></svg></button>
+      <button class="btn icon" id="tDup" title="Dupliquer (Ctrl+D)"><svg data-i="dup"></svg></button>
+      <button class="btn icon" id="tDrop" title="Poser sur le plan (D)"><svg data-i="drop"></svg></button>
+      <button class="btn icon danger" id="tDel" title="Supprimer (Suppr)"><svg data-i="trash"></svg></button>
+    </div>
+    <div class="float" id="views" aria-label="Vues">
+      <button class="btn ghost" data-view="iso" title="Vue en perspective"><svg data-i="cube"></svg><span class="lab">Perspective</span></button>
+      <button class="btn ghost" data-view="top" title="Vue de dessus"><svg data-i="vtop"></svg><span class="lab">Dessus</span></button>
+      <button class="btn ghost" data-view="front" title="Vue de face"><svg data-i="vfront"></svg><span class="lab">Face</span></button>
+      <button class="btn ghost" data-view="right" title="Vue de droite"><svg data-i="vright"></svg><span class="lab">Droite</span></button>
+      <button class="btn ghost" data-view="fit" title="Tout voir (F)"><svg data-i="fit"></svg><span class="lab">Tout voir</span></button>
+    </div>
+    <div class="float" id="snapBox">
+      <label for="snapSel">Grille</label>
+      <select id="snapSel">
+        <option value="0">libre</option><option value="0.1">0,1 mm</option><option value="0.5">0,5 mm</option>
+        <option value="1" selected>1 mm</option><option value="2">2 mm</option><option value="5">5 mm</option><option value="10">10 mm</option>
+      </select>
+    </div>
+    <div class="float" id="simbar" aria-label="Simulation">
+      <button class="btn primary" id="sPlay"><svg data-i="play"></svg><span>Simuler</span></button>
+      <button class="btn icon" id="sReset" title="Revenir à la position de départ"><svg data-i="reset"></svg></button>
+      <select id="sSpeed" aria-label="Vitesse de simulation"><option value="0.25">×0,25</option><option value="0.5">×0,5</option><option value="1" selected>×1</option><option value="2">×2</option></select>
+      <span class="t" id="sTime">0,0 s</span>
+    </div>
+    <div id="banner" hidden></div>
+    <div id="pickHint" hidden></div>
+    <div id="toast" style="opacity:0"></div>
+  </main>
+
+  <aside id="insp">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tabPart" class="on">Pièce</button>
+      <button role="tab" id="tabMove">Mouvements<span class="count" id="jCount">0</span></button>
+    </div>
+    <div id="inspBody"></div>
+  </aside>
+</div>
+<svg id="dropGhost" hidden></svg>
+
+<!-- sketch editor -->
+<section id="sk" hidden aria-label="Éditeur d'esquisse">
+  <div id="skbar">
+    <span class="ttl">Esquisse</span>
+    <div class="tgroup"><span class="lbl">Tracer</span>
+      <button class="tbtn" data-tool="select" title="Sélectionner / déplacer (V)"><svg data-i="cursor"></svg>Sélection</button>
+      <button class="tbtn" data-tool="line" title="Ligne (L)"><svg data-i="k_line"></svg>Ligne</button>
+      <button class="tbtn" data-tool="rect" title="Rectangle (R)"><svg data-i="k_rect"></svg>Rectangle</button>
+      <button class="tbtn" data-tool="circle" title="Cercle (C)"><svg data-i="k_circle"></svg>Cercle</button>
+    </div>
+    <div class="tgroup"><span class="lbl">Coter</span>
+      <button class="tbtn" data-tool="dim" title="Cote (D)"><svg data-i="k_dim"></svg>Cote</button>
+      <button class="tbtn" data-tool="dimh" title="Cote horizontale"><span class="g">↔</span>Horiz.</button>
+      <button class="tbtn" data-tool="dimv" title="Cote verticale"><span class="g">↕</span>Vert.</button>
+    </div>
+    <div class="tgroup"><span class="lbl">Contraindre</span>
+      <button class="tbtn" data-tool="h" title="Horizontale"><span class="g">H</span></button>
+      <button class="tbtn" data-tool="v" title="Verticale"><span class="g">V</span></button>
+      <button class="tbtn" data-tool="par" title="Parallèles"><span class="g">∥</span></button>
+      <button class="tbtn" data-tool="perp" title="Perpendiculaires"><span class="g">⊥</span></button>
+      <button class="tbtn" data-tool="eq" title="Égales"><span class="g">=</span></button>
+      <button class="tbtn" data-tool="coinc" title="Coïncidence (relier deux points)"><span class="g">⦿</span></button>
+      <button class="tbtn" data-tool="fix" title="Fixer un point"><svg data-i="pin"></svg></button>
+    </div>
+    <div class="tgroup">
+      <button class="tbtn" id="skDel" title="Supprimer la sélection (Suppr)"><svg data-i="trash"></svg></button>
+      <button class="tbtn" id="skUndo" title="Annuler (Ctrl+Z)"><svg data-i="undo"></svg></button>
+      <button class="tbtn" id="skRedo" title="Rétablir (Ctrl+Y)"><svg data-i="redo"></svg></button>
+      <button class="tbtn" id="skFit" title="Tout voir"><svg data-i="fit"></svg></button>
+      <label class="tbtn" title="Accrocher à la grille"><input type="checkbox" id="skSnap" checked> Grille</label>
+    </div>
+  </div>
+  <div id="skCanvasWrap"><canvas id="skCanvas"></canvas><input id="dimEdit" hidden inputmode="decimal" aria-label="Valeur de la cote"></div>
+  <div id="skHint"></div>
+  <div id="skSide">
+    <div class="sec"><h3>État de l'esquisse</h3><div id="skStatus" class="status ok"></div></div>
+    <div class="sec">
+      <h3>Transformer en volume</h3>
+      <div class="mode2">
+        <button class="btn on" id="skModeExt"><svg data-i="extrude"></svg>Extrusion</button>
+        <button class="btn" id="skModeRev"><svg data-i="revolve"></svg>Révolution</button>
+      </div>
+      <div class="row" id="skHRow"><label for="skH">Hauteur d'extrusion</label><div class="num"><input id="skH" type="number" step="0.5" min="0.1" value="10"><span>mm</span></div></div>
+      <div class="info" id="skModeInfo"></div>
+    </div>
+    <div class="sec" style="margin-top:auto">
+      <button class="btn primary" id="skOk" style="justify-content:center;padding:10px"><svg data-i="check"></svg>Valider l'esquisse</button>
+      <button class="btn" id="skCancel" style="justify-content:center">Annuler</button>
+    </div>
+  </div>
+</section>
+
+<section id="help" hidden>
+  <div class="card" role="dialog" aria-label="Aide">
+    <div style="display:flex;align-items:center;gap:10px"><h2 style="flex:1">Mode d'emploi</h2><button class="btn" id="helpClose">Fermer</button></div>
+    <div class="cols">
+      <div><h4>Modéliser</h4><ul>
+        <li>Cliquez sur une forme (ou glissez-la sur le tapis) pour l'ajouter.</li>
+        <li>Réglez les cotes, la position et la rotation dans l'onglet <b>Pièce</b>.</li>
+        <li><b>Perçage</b> : la forme devient un trou. <b>Grouper</b> une forme et un perçage creuse la forme.</li>
+        <li>Maj + clic pour sélectionner plusieurs pièces, puis <b>Aligner</b>.</li>
+        <li>Clic droit + glisser : tourner la vue. Molette : zoomer. Clic milieu : décaler.</li>
+      </ul></div>
+      <div><h4>Esquisser</h4><ul>
+        <li>Tracez avec Ligne, Rectangle ou Cercle. Un contour doit être fermé.</li>
+        <li><b>Cote</b> : cliquez une ligne, un cercle ou deux points, puis tapez la valeur.</li>
+        <li>Les contraintes (H, V, ∥, ⊥, =, fixe) imposent la forme.</li>
+        <li>Validez pour extruder ou faire une révolution autour de l'axe vertical.</li>
+        <li>Double-cliquez une esquisse dans la scène pour la modifier.</li>
+      </ul></div>
+      <div><h4>Mettre en mouvement</h4><ul>
+        <li>Onglet <b>Mouvements</b> : choisissez la pièce mobile et son support.</li>
+        <li><b>Encastrement</b> : la pièce suit son support. <b>Pivot</b> : rotation autour d'un axe. <b>Glissière</b> : translation.</li>
+        <li>Ajoutez un moteur, ou faites entraîner une liaison par une autre (engrenages, poulies, pignon-crémaillère).</li>
+        <li>Lancez <b>Simuler</b>. Réinitialisez pour modifier les pièces.</li>
+      </ul></div>
+      <div><h4>Raccourcis</h4><ul>
+        <li><span class="kbd">M</span> déplacer · <span class="kbd">R</span> tourner · <span class="kbd">D</span> poser</li>
+        <li><span class="kbd">H</span> perçage · <span class="kbd">S</span> solide · <span class="kbd">F</span> tout voir</li>
+        <li><span class="kbd">Ctrl</span>+<span class="kbd">G</span> grouper · <span class="kbd">Ctrl</span>+<span class="kbd">D</span> dupliquer</li>
+        <li>Flèches : déplacer d'un pas de grille (Maj : ×10) · <span class="kbd">PgPréc</span>/<span class="kbd">PgSuiv</span> : monter/descendre</li>
+        <li><span class="kbd">Suppr</span> supprimer · <span class="kbd">Ctrl</span>+<span class="kbd">Z</span> annuler</li>
+      </ul></div>
+    </div>
+  </div>
+</section>

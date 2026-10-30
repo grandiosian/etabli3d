@@ -1,0 +1,14 @@
+{
+  "name": "etabli3d",
+  "private": true,
+  "description": "Modeleur 3D pour la technologie au collège",
+  "scripts": {
+    "build": "python3 build.py",
+    "test": "python3 build.py --local && python3 tests/smoke.py"
+  },
+  "devDependencies": {
+    "three": "0.180.0",
+    "three-bvh-csg": "0.0.17",
+    "three-mesh-bvh": "0.9.1"
+  }
+}
