@@ -1,13 +1,12 @@
 
 /* =========================================================
    Survol et manipulation des pièces dans la vue 3D
-   - survol : liseré autour de la pièce, son nom, pièce grisée ;
-   - en Modéliser : trois boutons au centre (Déplacer, Tourner, Taille). Passer sur un bouton
-     choisit la manipulation et fait apparaître sa poignée ; on clique-glisse la poignée ;
+   - survol : liseré autour de la pièce, son nom, pièce grisée (rien d'autre : les poignées
+     apparaissent au clic, voir gizmo.js) ;
    - clic droit sans glisser : menu (préférence du clic gauche dans le vide, Tout voir…) ;
    - sélection par cadre : Maj + glisser dans le vide (ou toujours, en mode « Sélection »).
    ========================================================= */
-const HOV={id:null, ev:null, dirty:false, overTools:false, leftAt:0, shownAt:0, toolsFor:null};
+const HOV={id:null, ev:null, dirty:false, overTools:false, leftAt:0};
 const HOV_GREY=new THREE.Color('#9aa3a0');
 /* outline: the part drawn again from behind, pushed out by a few pixels along smoothed normals */
 const hullMat=new THREE.ShaderMaterial({
@@ -32,10 +31,10 @@ function hoverSet(id){
   if(HOV.id===id) return;
   const r=HOV.id!=null && meshes.get(HOV.id), p=HOV.id!=null && findPart(HOV.id);
   if(r && p && !p.hole) r.mesh.material.color.set(p.color);   // no longer greyed
-  hull.visible=false; $('#hovName').hidden=true; $('#hovTools').hidden=true;
+  hull.visible=false; $('#hovName').hidden=true;
   HOV.id=id; if(id!=null) hullMat.uniforms.color.value.set(cssVar('--accent')||'#1d7656');
 }
-function hoverActive(){ return ['model','check','mech'].includes(ws) && $('#sk').hidden && !(down && (down.drag||down.rect)) && !tc.dragging && !RMB.down && $('#ctxMenu').hidden; }
+function hoverActive(){ return ['model','check','mech'].includes(ws) && $('#sk').hidden && !(down && (down.drag||down.rect)) && !tc.dragging && !TG.drag && !RMB.down && $('#ctxMenu').hidden; }
 function hoverTick(){
   if(!hoverActive()){ if(HOV.id!=null && !HOV.overTools) hoverSet(null); return; }
   if(HOV.dirty && HOV.ev && !HOV.overTools){ HOV.dirty=false; const hit=pickAt(HOV.ev); hoverSet(hit? hit.object.userData.id : null); }
@@ -48,40 +47,10 @@ function hoverTick(){
   const R=screenRectOf(r.mesh), cx=(R.x0+R.x1)/2, cy=(R.y0+R.y1)/2;
   const nm=$('#hovName'); nm.textContent= p.name + (p.hole? ' · perçage' : '') + (isLocked(p)? ' · verrouillée' : '');
   nm.hidden=false; nm.style.transform=`translate(${Math.round(clamp(cx,60,STG.w-60))}px,${Math.round(Math.max(26,R.y0-8))}px) translate(-50%,-100%)`;
-  const tools=$('#hovTools'); const can= ws==='model' && !simLocked() && !isLocked(p);
-  if(can && (tools.hidden || HOV.toolsFor!==id)){ HOV.shownAt=performance.now(); HOV.toolsFor=id; }
-  tools.hidden=!can; if(!can) return;
-  const onIt= GZ.mode && selection.includes(id);   // its gizmo is showing: keep the middle free (but do not move under the pointer)
-  for(const b of tools.children){ b.classList.toggle('on', onIt && GZ.mode===b.dataset.m); b.disabled= b.dataset.m==='scale' && !SCALE_MAP[p.kind]; }
-  if(HOV.overTools) return;
-  const ty= onIt? Math.max(60,R.y0-40) : cy;
-  tools.style.transform=`translate(${Math.round(clamp(cx,70,STG.w-70))}px,${Math.round(clamp(ty,30,STG.h-30))}px) translate(-50%,-50%)`;
-}
-function chooseManip(m){
-  const id=HOV.id; if(id==null || ws!=='model') return; const p=findPart(id); if(!p || isLocked(p) || simLocked()) return;
-  if(m==='scale' && !SCALE_MAP[p.kind]) return;
-  if(!selection.includes(id)){ selection=[id]; sync(); renderInspector(); }
-  if(GZ.mode!==m) setGizmoMode(m);
 }
 (()=>{ const cv=renderer.domElement;
   cv.addEventListener('pointermove', ev=>{ HOV.ev={clientX:ev.clientX, clientY:ev.clientY}; HOV.dirty=true; }, {passive:true});
   cv.addEventListener('pointerleave', ()=>{ HOV.ev=null; HOV.leftAt=performance.now(); });
-  const tools=$('#hovTools');
-  tools.addEventListener('pointerenter', ()=>{ HOV.overTools=true; });
-  tools.addEventListener('pointerleave', ()=>{ HOV.overTools=false; HOV.leftAt=performance.now(); });
-  // resting on a button (a short moment, so just passing over does nothing) or clicking it chooses the manipulation;
-  // pressing a button and dragging moves the part on the floor as if the part itself had been grabbed
-  for(const b of tools.children){
-    b.addEventListener('pointerenter', ()=>{ clearTimeout(HOV.t); if(performance.now()-HOV.shownAt<450) return;   // the buttons just appeared under the pointer: wait for a real move onto one
-      HOV.t=setTimeout(()=>chooseManip(b.dataset.m), 140); });
-    b.addEventListener('pointerleave', ()=>clearTimeout(HOV.t));
-    b.addEventListener('pointerdown', ev=>{ if(ev.button!==0) return; const sx=ev.clientX, sy=ev.clientY, id0=ev.pointerId;
-      const mv=e=>{ if(Math.hypot(e.clientX-sx,e.clientY-sy)<5) return; off(); clearTimeout(HOV.t); tools.hidden=true; HOV.overTools=false;
-        beginPointer({button:0, clientX:sx, clientY:sy, shiftKey:ev.shiftKey, pointerId:id0}); };
-      const off=()=>{ window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',off); };
-      window.addEventListener('pointermove',mv); window.addEventListener('pointerup',off); });
-    b.addEventListener('click', ()=>{ clearTimeout(HOV.t); chooseManip(b.dataset.m); });
-  }
 })();
 
 /* ---- rectangle selection */
@@ -93,10 +62,10 @@ function drawSelRect(R, ev){
 function finishSelRect(R, ev){
   $('#selRect').hidden=true; orbit.enabled=true;
   const st=stage.getBoundingClientRect(); const x0=Math.min(R.x0,ev.clientX)-st.left, x1=Math.max(R.x0,ev.clientX)-st.left, y0=Math.min(R.y0,ev.clientY)-st.top, y1=Math.max(R.y0,ev.clientY)-st.top;
-  if(x1-x0<4 && y1-y0<4){ if(!R.add && selection.length){ selection=[]; GZ.mode=null; sync(); renderInspector(); } return; }
+  if(x1-x0<4 && y1-y0<4){ if(!R.add && selection.length){ selection=[]; sync(); renderInspector(); } return; }
   const ids=[]; for(const p of state.parts){ const r=meshes.get(p.id); if(!r || !r.mesh.visible || isLocked(p)) continue;
     const c=toStage(_hb.setFromObject(r.mesh).getCenter(_hc)); if(c.x>=x0 && c.x<=x1 && c.y>=y0 && c.y<=y1) ids.push(p.id); }
-  selection= R.add? [...new Set([...selection, ...ids])] : ids; GZ.mode=null; sync(); renderInspector();
+  selection= R.add? [...new Set([...selection, ...ids])] : ids; sync(); renderInspector();
   if(ids.length) toast(`${ids.length} pièce${ids.length>1?'s':''} sélectionnée${ids.length>1?'s':''}${ids.length>1?' : vous pouvez les grouper (Ctrl+G).':'.'}`);
 }
 
@@ -118,12 +87,8 @@ function openCtxMenu(x, y){   // stage coordinates
   for(const [k,l,ic] of LMB) m.append(h('button',{role:'menuitemradio','aria-checked':String(L===k),onclick:()=>setLmb(k)}, svgIcon(ic), h('span',{},l)));
   m.append(h('hr'));
   const id=HOV.id ?? (selection.length===1? selection[0] : null), p=id!=null && findPart(id);
-  if(ws==='model' && p && !isLocked(p) && !simLocked()){
-    m.append(h('h5',{},p.name));
-    for(const [k,l,ic] of [['translate','Déplacer','move'],['rotate','Tourner','rotate'],['scale','Changer la taille','scale']]) if(k!=='scale' || SCALE_MAP[p.kind])
-      m.append(h('button',{role:'menuitem',onclick:()=>{ closeCtxMenu(); if(!selection.includes(id)){ selection=[id]; sync(); renderInspector(); } setGizmoMode(k); }}, svgIcon(ic), h('span',{},l)));
-    m.append(h('hr'));
-  }
+  if(ws==='model' && state.edit) m.append(h('button',{role:'menuitem',onclick:()=>{ closeCtxMenu(); finishGroupEdit(); }}, svgIcon('check'), h('span',{},'Sortir du groupe')), h('hr'));
+  else if(ws==='model' && p && p.kind==='group' && !isLocked(p) && !simLocked()) m.append(h('button',{role:'menuitem',onclick:()=>{ closeCtxMenu(); enterGroupEdit(p.id); }}, svgIcon('group'), h('span',{},`Modifier l’intérieur de « ${p.name} »`)), h('hr'));
   m.append(h('button',{role:'menuitem',onclick:()=>{ closeCtxMenu(); setView('fit'); }}, svgIcon('fit'), h('span',{},'Tout voir')));
   hydrateIcons(m); m.hidden=false;
   const w=m.offsetWidth, hh=m.offsetHeight; m.style.left=clamp(x,4,STG.w-w-4)+'px'; m.style.top=clamp(y,4,STG.h-hh-4)+'px';

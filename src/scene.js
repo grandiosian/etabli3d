@@ -93,15 +93,15 @@ let ws='model';   // atelier: model | check | mech | struct
 let selJoint=null;
 const meshes=new Map();
 const hist={stack:[],idx:-1};
-function snapshot(){ return JSON.stringify({name:state.name,parts:state.parts,joints:state.joints,nextId:state.nextId,note:state.note||null,struct:state.struct||null}); }
+function snapshot(){ return JSON.stringify({name:state.name,parts:state.parts,joints:state.joints,nextId:state.nextId,note:state.note||null,struct:state.struct||null,edit:state.edit||null}); }
 function commit(){
   const s=snapshot(); if(hist.stack[hist.idx]===s) return;
   hist.stack=hist.stack.slice(0,hist.idx+1); hist.stack.push(s); if(hist.stack.length>80) hist.stack.shift(); hist.idx=hist.stack.length-1;
   autosave(); updateUndo();
 }
 function restore(s, keepSel=true){
-  const o=JSON.parse(s); state.name=o.name||'Mon projet'; state.parts=o.parts||[]; state.joints=o.joints||[]; state.nextId=o.nextId||1; state.note=o.note||null; state.struct=o.struct||null;
-  $('#projName').value=state.name;
+  const o=JSON.parse(s); state.name=o.name||'Mon projet'; state.parts=o.parts||[]; state.joints=o.joints||[]; state.nextId=o.nextId||1; state.note=o.note||null; state.struct=o.struct||null; state.edit=o.edit||null;
+  $('#projName').value=state.name; updateGroupEditUI();
   selection = keepSel? selection.filter(id=>findPart(id)) : []; renderDemo();
   if(selJoint && !state.joints.find(j=>j.id===selJoint)) selJoint=null;
   simReset(true); sync(); renderInspector(); autosave(); updateUndo(); updateSteps();
@@ -114,7 +114,7 @@ let saveTimer=0;
 function autosave(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>{ try{ localStorage.setItem('etabli3d.autosave', snapshot()); }catch(e){} }, 400); }
 function loadProject(obj, push=true){
   if(!obj || !Array.isArray(obj.parts)) throw new Error('format');
-  state.name=obj.name||'Projet'; state.parts=obj.parts; state.joints=obj.joints||[]; state.nextId=obj.nextId|| (maxId(obj.parts)+1); state.note=obj.note||null; state.struct=obj.struct||null; demoClosed=false;
+  state.name=obj.name||'Projet'; state.parts=obj.parts; state.joints=obj.joints||[]; state.nextId=obj.nextId|| (maxId(obj.parts)+1); state.note=obj.note||null; state.struct=obj.struct||null; state.edit=obj.edit||null; demoClosed=false;
   $('#projName').value=state.name; selection=[]; selJoint=null; simReset(true); sync(); renderInspector(); renderDemo();
   if(push){ hist.stack=[]; hist.idx=-1; commit(); }
   fitView();
@@ -151,6 +151,7 @@ function addPart(kind, at=null, extra={}){
   const g=getGeometry(p); const s=new THREE.Vector3(); g.boundingBox.getSize(s);
   const [x,y]= at || freeSpot(s);
   p.pos=[Math.round(x*10)/10, Math.round(y*10)/10, 0];
+  if(state.edit) p.inGroup=state.edit.gid;
   state.parts.push(p); selection=[p.id]; sync(); commit(); setTab('part'); renderInspector();
   return p;
 }
@@ -179,6 +180,7 @@ function sync(){
     const mt=r.mesh.material; const sel=selection.includes(p.id);
     if(p.hole){ mt.color.set(holeCol); mt.transparent=true; mt.opacity=.36; mt.depthWrite=false; }
     else { mt.color.set(p.color); mt.transparent=false; mt.opacity=1; mt.depthWrite=true; }
+    if(state.edit && p.inGroup!==state.edit.gid && ws==='model'){ mt.transparent=true; mt.opacity=p.hole? .12 : .18; mt.depthWrite=false; }   // outside the group being edited
     mt.emissive.set(sel? markCol : '#000000'); mt.emissiveIntensity= sel? .16:0;
     r.mesh.renderOrder = p.hole? 2:0;
     const wantLine = sel || p.hole;
@@ -220,14 +222,14 @@ tc.addEventListener('mouseUp', ()=>{
   pivot.scale.set(1,1,1); dragStart=null; sync(); commit(); renderInspector();
 });
 /* the manipulation gizmo only appears once a manipulation is chosen (hover icons, toolbar, M / R / T keys) */
-const GZ={mode:null};
-function setGizmoMode(m, toggle=false){
-  GZ.mode= (toggle && GZ.mode===m)? null : m; if(GZ.mode) tc.setMode(GZ.mode);
-  $('#tMove').classList.toggle('on',GZ.mode==='translate'); $('#tRot').classList.toggle('on',GZ.mode==='rotate'); updateGizmo(); }
+const GZ={mode:null};   // the three.js TransformControls are no longer shown: see gizmo.js (Tinkercad-like handles)
+function setGizmoMode(m){ GZ.mode=null; updateGizmo(); }
 /* resizing with the gizmo changes the part's own dimensions (rounded to 0.1 mm) */
 const SCALE_MAP={box:{L:'x',l:'y',h:'z'}, pyramid:{L:'x',l:'y',h:'z'}, wedge:{L:'x',l:'y',h:'z'}, cylinder:{d:'xy',h:'z'}, cone:{d:'xy',d2:'xy',h:'z'},
   tube:{d:'xy',di:'xy',h:'z'}, sphere:{d:'xyz'}, torus:{d:'xy',e:'z'}, text:{size:'xy',h:'z'}, gear:{m:'xy',dh:'xy',e:'z'}, rack:{m:'x',hb:'y',e:'z'}, sketch:{h:'z'}};
-function scaleParams(p, f){ const M=SCALE_MAP[p.kind]; if(!M) return; const F={x:f[0],y:f[1],z:f[2],xy:(f[0]+f[1])/2,xyz:(f[0]+f[1]+f[2])/3};
+function scaleParams(p, f){ const M=SCALE_MAP[p.kind]; if(!M) return;
+  const one=v=>Math.abs(v-1)<1e-9, xy= one(f[0])? f[1] : one(f[1])? f[0] : (f[0]+f[1])/2;   // a round part dragged on one side follows that side
+  const F={x:f[0],y:f[1],z:f[2],xy,xyz: one(f[0])&&one(f[1])? f[2] : one(f[2])? xy : (f[0]+f[1]+f[2])/3};
   for(const [k,a] of Object.entries(M)) if(typeof p.params[k]==='number' && p.params[k]>0) p.params[k]=Math.max(0.1, Math.round(p.params[k]*F[a]*10)/10); }
 function applySnap(){ const v=+$('#snapSel').value; tc.setTranslationSnap(v>0?v:null); tc.setRotationSnap(v>0? 15*DEG : null); }
 
@@ -235,18 +237,20 @@ function applySnap(){ const v=+$('#snapSel').value; tc.setTranslationSnap(v>0?v:
    Picking and dragging parts on the mat
    ========================================================= */
 const ray=new THREE.Raycaster(); const ndc=new THREE.Vector2();
+/* while a group is open for editing, only its pieces can be picked (in Modéliser) */
+const editable=p=> !state.edit || ws!=='model' || p?.inGroup===state.edit.gid;
 function pickAt(ev){
   const r=renderer.domElement.getBoundingClientRect();
   ndc.set(((ev.clientX-r.left)/r.width)*2-1, -((ev.clientY-r.top)/r.height)*2+1);
   ray.setFromCamera(ndc,camera);
-  const hits=ray.intersectObjects([...meshes.entries()].filter(([id,r])=>{ const p=findPart(id); return r.mesh.visible && !isLocked(p); }).map(([,r])=>r.mesh), false);
+  const hits=ray.intersectObjects([...meshes.entries()].filter(([id,r])=>{ const p=findPart(id); return r.mesh.visible && !isLocked(p) && editable(p); }).map(([,r])=>r.mesh), false);
   return hits[0]||null;
 }
 /* every part under the cursor, front to back (one entry per part) */
 function pickAll(ev){
   const r=renderer.domElement.getBoundingClientRect();
   ndc.set(((ev.clientX-r.left)/r.width)*2-1, -((ev.clientY-r.top)/r.height)*2+1); ray.setFromCamera(ndc,camera);
-  const hits=ray.intersectObjects([...meshes.entries()].filter(([id,r])=>r.mesh.visible && !isLocked(findPart(id))).map(([,r])=>r.mesh), false);
+  const hits=ray.intersectObjects([...meshes.entries()].filter(([id,r])=>r.mesh.visible && !isLocked(findPart(id)) && editable(findPart(id))).map(([,r])=>r.mesh), false);
   const seen=new Set(); return hits.filter(h=>{ const id=h.object.userData.id; if(seen.has(id)) return false; seen.add(id); return true; });
 }
 function planeHit(ev, z){
@@ -315,8 +319,9 @@ renderer.domElement.addEventListener('pointerup', ev=>{
    In Modéliser, a sketch part opens its sketch instead. */
 renderer.domElement.addEventListener('dblclick', ev=>{
   if(ws==='struct'){ if(!ST.mode3d) return; const hit=struct3DHit(ev); if(hit) frameObject(struct3DTarget(hit.object), 60); else frameObject(structGroup); return; }
-  const hit=pickAt(ev); if(!hit){ setView('fit'); return; } const p=findPart(hit.object.userData.id);
+  const hit=pickAt(ev); if(!hit){ if(ws==='model' && state.edit) finishGroupEdit(); else setView('fit'); return; } const p=findPart(hit.object.userData.id);
   if(ws==='model' && p && p.kind==='sketch' && !simLocked() && lv(2)){ openSketch(p); return; }
+  if(ws==='model' && p && p.kind==='group' && !simLocked() && !isLocked(p)){ enterGroupEdit(p.id); return; }
   frameObject(hit.object);
 });
 
@@ -383,7 +388,8 @@ function groupSel(){
   const G={id:state.nextId++, kind:'group', name:`Groupe ${state.parts.filter(p=>p.kind==='group').length+1}`, params:{}, color:(solids[0]||parts[0]).color,
     hole: solids.length===0, pos:[+c.x.toFixed(3),+c.y.toFixed(3),+b.min.z.toFixed(3)], rot:[0,0,0], children:[]};
   const inv=partMatrix(G).invert();
-  for(const p of parts){ const ch=clone(p); setPartFromMatrix(ch, inv.clone().multiply(partMatrix(p))); G.children.push(ch); }
+  for(const p of parts){ const ch=clone(p); delete ch.inGroup; setPartFromMatrix(ch, inv.clone().multiply(partMatrix(p))); G.children.push(ch); }
+  if(state.edit) G.inGroup=state.edit.gid;
   state.parts=state.parts.filter(p=>!selection.includes(p.id)); state.parts.push(G); selection=[G.id];
   sync(); commit(); renderInspector();
   const holes=parts.length-solids.length;
@@ -395,7 +401,7 @@ function ungroupSel(){
   if(!guard()) return;
   removeJointsOf(gs.map(g=>g.id));
   const out=[];
-  for(const G of gs){ const M=partMatrix(G); for(const ch of G.children){ const c=clone(ch); setPartFromMatrix(c, M.clone().multiply(partMatrix(ch))); out.push(c); } }
+  for(const G of gs){ const M=partMatrix(G); for(const ch of G.children){ const c=clone(ch); setPartFromMatrix(c, M.clone().multiply(partMatrix(ch))); if(G.inGroup!=null) c.inGroup=G.inGroup; out.push(c); } }
   state.parts=state.parts.filter(p=>!gs.includes(p)); state.parts.push(...out); selection=out.map(c=>c.id);
   sync(); commit(); renderInspector();
 }
@@ -410,7 +416,7 @@ function updateToolButtons(){
   const n=selection.length, lock=simLocked(); const ps=selParts();
   const set=(id,dis)=>{ $(id).disabled=dis; };
   set('#tSolid',!n||lock); set('#tHole',!n||lock); set('#tGroup',n<2||lock); set('#tUngroup',!ps.some(p=>p.kind==='group')||lock);
-  set('#tDup',!n||lock); set('#tDrop',!n||lock); set('#tDel',!n||lock); set('#tMove',lock); set('#tRot',lock);
+  set('#tDup',!n||lock); set('#tDrop',!n||lock); set('#tDel',!n||lock);
   $('#tHole').classList.toggle('on', n>0 && ps.every(p=>p.hole)); $('#tSolid').classList.toggle('on', n>0 && ps.every(p=>!p.hole));
 }
 

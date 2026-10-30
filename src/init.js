@@ -44,7 +44,6 @@ function renderLook(){
 function afterLook(){ sceneBg(); sync(); skDraw(); }
 $('#bLook').onclick=e=>{ e.stopPropagation(); const m=$('#menuLook'); if(m.hidden) renderLook(); m.hidden=!m.hidden; };
 document.addEventListener('pointerdown',e=>{ if(!e.target.closest('.menu-wrap')) $('#menuLook').hidden=true; });
-$('#tMove').onclick=()=>setGizmoMode('translate',true); $('#tRot').onclick=()=>setGizmoMode('rotate',true);
 $('#tSolid').onclick=()=>setHole(false); $('#tHole').onclick=()=>setHole(true);
 $('#tGroup').onclick=groupSel; $('#tUngroup').onclick=ungroupSel; $('#tDup').onclick=duplicateSel; $('#tDrop').onclick=dropSel; $('#tDel').onclick=deleteSel;
 $$('#views [data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
@@ -112,10 +111,7 @@ document.addEventListener('keydown', e=>{
   else if(mod&&k==='a'){ e.preventDefault(); selection=state.parts.map(p=>p.id); sync(); renderInspector(); }
   else if(mod) return;
   else if(k==='delete'||k==='backspace'){ e.preventDefault(); deleteSel(); }
-  else if(k==='escape'){ if(pickMode) cancelPick(); else if(GZ.mode) setGizmoMode(null); else { selection=[]; sync(); renderInspector(); } }
-  else if(k==='m') setGizmoMode('translate',true);
-  else if(k==='r') setGizmoMode('rotate',true);
-  else if(k==='t') setGizmoMode('scale',true);
+  else if(k==='escape'){ if(pickMode) cancelPick(); else if(state.edit) finishGroupEdit(); else { selection=[]; sync(); renderInspector(); } }
   else if(k==='h') setHole(true);
   else if(k==='s') setHole(false);
   else if(k==='d') dropSel();
@@ -153,8 +149,9 @@ function loop(now){
   if(!(ws==='struct' && !ST.mode3d)){ stepCam(now); orbit.update(); hoverTick(); renderer.render(scene,camera); }
   // overlays projected with this frame's camera
   if(ws==='mech') positionJointLabels();
+  tgTick();
   if(ws==='struct' && ST.mode3d) positionStruct3DLabels();
   updateBubbleLink();
 }
 requestAnimationFrame(loop);
-window.__etabli={state, pivot, tc, GZ, setGizmoMode, pickAll, setLmb, openCtxMenu, HOV, groupSel, prefs, orbit_:()=>orbit, SAMPLES, LAYOUT:()=>LAYOUT, resetLayout, togglePanel, CHK, startLocTest, stopLocTest, openStructBubble, openMechBubble, closeBubble, BUB, stAnimPlay, locEdit, locFrame, LOCV, applyStruct3DK, camera, orbit, structGroup, struct3DHit, renderer, ampFactor, structBox, stDraw, arrowHits:()=>stArrowHits, setWs, ws:()=>ws, validateAll, validatePart, vState, mechReady, setJointLoc, ST, SD, computeStruct, solveTruss, buildMesh, solvePlane, beamTheory, makeProxy, getProxyGeo, locGroup, loadExample, openGallery, addPart, groupSel, openSketch, closeSketch, SK, skSolve, sim, simToggle, simReset, exportStl, stlBinary, zipStore, meshes, selection:()=>selection, setSel:(ids)=>{selection=ids; sync(); renderInspector();}, setTab, openJointForm, saveJoint, jf:()=>jf, skProfiles, getGeometry};
+window.__etabli={state, pivot, TG, enterGroupEdit, finishGroupEdit, pickAll, setLmb, openCtxMenu, HOV, groupSel, prefs, orbit_:()=>orbit, SAMPLES, LAYOUT:()=>LAYOUT, resetLayout, togglePanel, CHK, startLocTest, stopLocTest, openStructBubble, openMechBubble, closeBubble, BUB, stAnimPlay, locEdit, locFrame, LOCV, applyStruct3DK, camera, orbit, structGroup, struct3DHit, renderer, ampFactor, structBox, stDraw, arrowHits:()=>stArrowHits, setWs, ws:()=>ws, validateAll, validatePart, vState, mechReady, setJointLoc, ST, SD, computeStruct, solveTruss, buildMesh, solvePlane, beamTheory, makeProxy, getProxyGeo, locGroup, loadExample, openGallery, addPart, groupSel, openSketch, closeSketch, SK, skSolve, sim, simToggle, simReset, exportStl, stlBinary, zipStore, meshes, selection:()=>selection, setSel:(ids)=>{selection=ids; sync(); renderInspector();}, setTab, openJointForm, saveJoint, jf:()=>jf, skProfiles, getGeometry};

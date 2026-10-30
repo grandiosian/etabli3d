@@ -542,6 +542,29 @@ html:not([data-glass="opaque"]) #bubble .bub-row input[type=range]{background:tr
 .ctx button:hover{background:var(--panel-2)} .ctx button[aria-checked="true"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
 .ctx hr{border:0;border-top:1px solid var(--line);margin:4px 2px} .ctx svg{width:18px;height:18px;flex:none}
 
+/* ---------- selection handles (Tinkercad-like) */
+#tg{position:absolute;inset:0;z-index:6;pointer-events:none}
+.tg-lines{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.tg-base{fill:color-mix(in srgb,var(--accent) 10%,transparent);stroke:var(--ink);stroke-width:1.2;stroke-dasharray:5 4;opacity:.75}
+.tg-axes{fill:none;stroke:var(--ink);stroke-width:1;stroke-dasharray:4 4;opacity:.5}
+.tg-dim{fill:none;stroke:var(--ink);stroke-width:1.2}
+.tg-h{position:absolute;left:0;top:0;pointer-events:auto;touch-action:none;cursor:pointer}
+.tg-corner{width:13px;height:13px;background:#fff;border:2px solid #333;border-radius:2px;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.tg-edge{width:9px;height:9px;background:#333;border:1.5px solid #fff;border-radius:1px}
+.tg-corner:hover,.tg-edge:hover{background:var(--danger,#d64035);border-color:#fff}
+.tg-lift{color:#222;width:18px;height:18px;display:grid;place-items:center;cursor:ns-resize}
+.tg-lift svg{width:16px;height:16px;filter:drop-shadow(0 0 1.5px #fff)}
+.tg-lift:hover{color:var(--accent)}
+.tg-rot{width:36px;height:36px;display:grid;place-items:center;color:#2b2f2e;border-radius:50%;cursor:grab}
+.tg-rot svg{width:30px;height:30px;filter:drop-shadow(0 0 2px #fff) drop-shadow(0 0 1px #fff)}
+.tg-rot:hover{color:var(--accent);background:color-mix(in srgb,var(--panel) 70%,transparent)}
+.tg-dimv{position:absolute;left:0;top:0;pointer-events:auto;font:600 12px var(--f-mono);background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:2px 6px;box-shadow:var(--shadow);cursor:text}
+.tg-dimv:hover{border-color:var(--accent)}
+.tg-dimin{width:62px;font:600 12px var(--f-mono);border:0;background:transparent;color:var(--ink);text-align:center;outline:none}
+.tg-ang{position:absolute;left:0;top:0;font:600 13px var(--f-mono);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 7px;box-shadow:var(--shadow);pointer-events:none}
+#grpEdit{position:absolute;top:62px;left:50%;transform:translateX(-50%);z-index:9;display:flex;align-items:center;gap:10px;padding:6px 6px 6px 12px;border-radius:999px;background:var(--panel);border:2px solid var(--accent);box-shadow:var(--shadow);font-size:13px;white-space:nowrap}
+#grpEdit > svg{width:18px;height:18px;color:var(--accent)}
+
 /* ---------- see-through settings panel: on wide screens the 3D view continues under it */
 :root{--insp-a:84%}
 html[data-glass="leger"]{--insp-a:93%}

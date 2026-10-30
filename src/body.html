@@ -54,11 +54,6 @@
 
   <main id="stage">
     <div class="float" id="tools" data-ws="model" role="toolbar" aria-label="Outils">
-      <div class="seg">
-        <button class="btn icon" id="tMove" title="Déplacer (M)"><svg data-i="move"></svg></button>
-        <button class="btn icon" id="tRot" title="Tourner (R)"><svg data-i="rotate"></svg></button>
-      </div>
-      <div class="vsep"></div>
       <button class="btn icon" id="tSolid" title="Solide (S)"><svg data-i="solid"></svg></button>
       <button class="btn icon" id="tHole" title="Perçage (H)"><svg data-i="hole"></svg></button>
       <div class="vsep"></div>
@@ -108,11 +103,6 @@
     <div id="jlabels" data-ws="mech" hidden></div>
     <div id="st3d" data-ws="struct" hidden></div>
     <div id="hovName" hidden></div>
-    <div id="hovTools" hidden role="toolbar" aria-label="Manipuler la pièce">
-      <button data-m="translate" title="Déplacer (M) : passez ici puis tirez les flèches" aria-label="Déplacer"><svg data-i="move"></svg></button>
-      <button data-m="rotate" title="Tourner (R) : passez ici puis tirez les anneaux" aria-label="Tourner"><svg data-i="rotate"></svg></button>
-      <button data-m="scale" title="Changer la taille (T) : passez ici puis tirez les poignées" aria-label="Changer la taille"><svg data-i="scale"></svg></button>
-    </div>
     <div id="selRect" hidden></div>
     <div id="ctxMenu" class="ctx" role="menu" aria-label="Menu de la vue" hidden></div>
     <svg id="bubLink" aria-hidden="true"><line></line><circle r="5"></circle></svg>
@@ -201,7 +191,8 @@
         <li>Cliquez sur une forme (ou glissez-la sur le tapis) pour l'ajouter.</li>
         <li>Réglez les cotes, la position et la rotation dans le panneau de droite.</li>
         <li><b>Perçage</b> : la forme devient un trou. <b>Grouper</b> une forme et un perçage creuse la forme.</li>
-        <li><b>Survolez</b> une pièce : son nom et trois boutons apparaissent. Restez sur <b>Déplacer</b>, <b>Tourner</b> ou <b>Taille</b> pour faire apparaître la poignée, puis tirez-la. Échap la retire.</li>
+        <li>Cliquez une pièce : <b>poignées</b> aux coins (longueur et largeur, Maj pour garder les proportions), au milieu des côtés (une cote), en haut (hauteur), cône noir (soulever), flèches courbes (tourner par pas de 15°, Maj : 1°). Survolez une poignée pour voir les cotes ; cliquez une cote pour la taper.</li>
+        <li><b>Groupe</b> : double-clic dessus (ou « Modifier l'intérieur ») pour changer ses pièces, puis « Terminer le groupe » : les perçages sont recalculés.</li>
         <li>Glissez une pièce pour la déplacer sur le sol.</li>
         <li>Maj + clic, ou Maj + glisser dans le vide (cadre), pour sélectionner plusieurs pièces. Un perçage caché dans une pièce : cliquez encore au même endroit.</li>
         <li><b>Clic droit</b> dans la vue : choisir ce que fait le clic gauche dans le vide (cadre de sélection, tourner ou décaler la vue). Molette : zoomer. <b>Double-clic</b> sur un objet : zoomer dessus (dans le vide : tout voir).</li>

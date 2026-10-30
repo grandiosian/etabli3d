@@ -71,7 +71,7 @@ function sceneList(){
 function renderPart(body){
   const ps=selParts();
   if(!ps.length){
-    body.append(sec('Pour commencer', h('div',{class:'empty',html:`Cliquez une forme à gauche pour la poser sur le tapis, ou ouvrez un <b>exemple</b>.<br><br>Survolez une pièce : son nom et trois boutons apparaissent (<b>déplacer</b>, <b>tourner</b>, <b>taille</b>). Glissez la pièce pour la déplacer sur le sol.<br><br>Cliquez une pièce pour la régler. <span class="kbd">Maj</span> + clic ou <span class="kbd">Maj</span> + glisser dans le vide (cadre) pour en sélectionner plusieurs ; cliquez encore au même endroit pour prendre la pièce de derrière.<br><br>${(LMB.find(x=>x[0]===(prefs.lmb||'orbit'))||LMB[1])[3]} Molette : zoom. Clic droit : menu.`})));
+    body.append(sec('Pour commencer', h('div',{class:'empty',html:`Cliquez une forme à gauche pour la poser sur le tapis, ou ouvrez un <b>exemple</b>.<br><br>Cliquez une pièce : des <b>poignées</b> apparaissent. Carrés blancs des coins : longueur et largeur ; petits carrés noirs : une cote ; carré du haut : hauteur ; cône : soulever ; flèches courbes : tourner. Glissez la pièce pour la déplacer sur le sol. Double-clic sur un <b>groupe</b> : modifier ses pièces.<br><br>Cliquez une pièce pour la régler. <span class="kbd">Maj</span> + clic ou <span class="kbd">Maj</span> + glisser dans le vide (cadre) pour en sélectionner plusieurs ; cliquez encore au même endroit pour prendre la pièce de derrière.<br><br>${(LMB.find(x=>x[0]===(prefs.lmb||'orbit'))||LMB[1])[3]} Molette : zoom. Clic droit : menu.`})));
     body.append(sceneList()); return;
   }
   let lock=simLocked();
@@ -108,7 +108,7 @@ function renderPart(body){
     if(p.params.mode!=='revolve') dims.append(row("Hauteur d'extrusion", numInput('Hauteur',p.params.h,'mm',v=>{ if(!guard())return; p.params.h=v; partChanged(p); },{min:0.1,step:1,disabled:lock})));
     dims.append(minLvl(h('button',{class:'btn',style:'justify-content:center',disabled:lock||null,onclick:()=>openSketch(p)}, svgIcon('edit'),"Modifier l'esquisse"),2));
   }
-  if(p.kind==='group'){ const nh=p.children.filter(c=>c.hole).length; dims.append(h('div',{class:'info',html:`Assemblage de <b>${p.children.length} pièces</b>${nh?` dont ${nh} perçage${nh>1?'s':''}`:''}.`}), h('button',{class:'btn',style:'justify-content:center',disabled:lock||null,onclick:ungroupSel}, svgIcon('ungroup'),'Dégrouper')); }
+  if(p.kind==='group'){ const nh=p.children.filter(c=>c.hole).length; dims.append(h('div',{class:'info',html:`Assemblage de <b>${p.children.length} pièces</b>${nh?` dont ${nh} perçage${nh>1?'s':''}`:''}.`}), h('button',{class:'btn primary',style:'justify-content:center',disabled:lock||null,onclick:()=>enterGroupEdit(p.id),title:'Double-clic sur le groupe fait la même chose'}, svgIcon('group'),'Modifier l’intérieur'), h('button',{class:'btn',style:'justify-content:center',disabled:lock||null,onclick:ungroupSel}, svgIcon('ungroup'),'Dégrouper')); }
   if(K.fields.length||p.kind==='group'||p.kind==='sketch') body.append(dims);
   // position + rotation
   const xyz=(arr,unit,key,step)=>h('div',{class:'xyz'}, ...[0,1,2].map(i=>h('div',{}, h('b',{class:'xyz-l '+'xyz'[i]},'XYZ'[i]),
@@ -412,7 +412,7 @@ async function offerFile(filename, data){
   catch(e){ toast('Le téléchargement est bloqué dans cette fenêtre.'); }
 }
 const slug=s=>(s||'projet').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase()||'projet';
-function saveProject(){ offerFile(slug(state.name)+'.json', JSON.stringify({app:'etabli3d',version:1,name:state.name,parts:state.parts,joints:state.joints,nextId:state.nextId,note:state.note||null,struct:state.struct||null})); }
+function saveProject(){ if(state.edit) finishGroupEdit(); offerFile(slug(state.name)+'.json', JSON.stringify({app:'etabli3d',version:1,name:state.name,parts:state.parts,joints:state.joints,nextId:state.nextId,note:state.note||null,struct:state.struct||null})); }
 function stlBinary(list){
   let tris=0; const geos=list.map(r=>{ const g=r.mesh.geometry; const n=g.index?g.index.count/3:g.attributes.position.count/3; tris+=n; return {g, m:r.mesh.matrixWorld}; });
   const buf=new ArrayBuffer(84+tris*50), dv=new DataView(buf);
@@ -441,6 +441,7 @@ function zipStore(files){ // [{name, data:Uint8Array}]
   return new Blob([...parts,...central,new Uint8Array(end.buffer)],{type:'application/zip'});
 }
 async function exportStl(){
+  if(state.edit) finishGroupEdit();
   const ids = selection.length? selection : state.parts.map(p=>p.id);
   const list=ids.map(id=>({p:findPart(id), r:meshes.get(id)})).filter(x=>x.p&&x.r&&!x.p.hole&&!isHidden(x.p));
   const skipped=ids.length-list.length;
