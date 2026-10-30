@@ -7,4 +7,5 @@
 - Avant de pousser : `npm test` (nécessite `npm install` et Playwright) doit afficher « TOUT EST OK ».
 - `dist/artifact.html` est la même page sans `<html>`/`<head>`, pour la version publiée sur claude.ai.
 - Les exemples de démonstration sont dans `src/examples.js` (objet `SAMPLES`) : chaque exemple a une fiche « À observer / À essayer » ; les positions sont en coordonnées monde.
+- Niveaux : `<html data-level="1|2|3">`. Marquez un élément `data-min="2"` ou `data-min="3"` pour le réserver à un niveau, `data-max="2"` pour le masquer au-dessus ; en JS, testez `lv(n)`. Les formes ont leur niveau dans `KIND_LVL`, chaque exemple dans `level`.
 - Le push sur `main` déploie automatiquement sur GitHub Pages.

@@ -24,22 +24,24 @@ const MAT=200;
 function matTexture(){
   const N=2048, c=document.createElement('canvas'); c.width=c.height=N; const g=c.getContext('2d');
   const s=N/MAT;
-  g.fillStyle='#2c7457'; g.fillRect(0,0,N,N);
+  const M=MATS[prefs.mat]||MATS.vert; const ink=a=>`rgba(${M.ink},${a})`;
+  g.fillStyle=M.fill; g.fillRect(0,0,N,N);
   for(let i=0;i<=MAT;i++){
     const major=i%10===0, mid=i%5===0;
-    g.strokeStyle= major? 'rgba(255,255,255,.55)' : mid? 'rgba(255,255,255,.26)':'rgba(255,255,255,.12)';
+    g.strokeStyle= major? ink(.55) : mid? ink(.26):ink(.12);
     g.lineWidth= major? 2.4 : mid? 1.6 : 1;
     g.beginPath(); g.moveTo(i*s,0); g.lineTo(i*s,N); g.moveTo(0,i*s); g.lineTo(N,i*s); g.stroke();
   }
-  g.fillStyle='rgba(255,255,255,.75)'; g.font='600 22px "IBM Plex Mono",monospace';
+  g.fillStyle=ink(.75); g.font='600 22px "IBM Plex Mono",monospace';
   for(let i=10;i<MAT;i+=10){ const v=i-MAT/2; g.textAlign='center'; g.fillText(String(v), i*s, N-12); g.textAlign='left'; g.fillText(String(-v), 8, i*s+8); }
-  g.strokeStyle='rgba(255,255,255,.9)'; g.lineWidth=5; g.strokeRect(2,2,N-4,N-4);
-  g.font='700 30px "Saira Semi Condensed",sans-serif'; g.fillStyle='rgba(255,255,255,.55)'; g.textAlign='right'; g.fillText('mm', N-14, 36);
+  g.strokeStyle=ink(.9); g.lineWidth=5; g.strokeRect(2,2,N-4,N-4);
+  g.font='700 30px "Saira Semi Condensed",sans-serif'; g.fillStyle=ink(.55); g.textAlign='right'; g.fillText('mm', N-14, 36);
   const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=8; return t;
 }
 const mat=new THREE.Mesh(new THREE.PlaneGeometry(MAT,MAT), new THREE.MeshStandardMaterial({map:matTexture(), roughness:.95, metalness:0}));
 mat.position.z=-0.05; mat.name='mat'; scene.add(mat);
-const matEdge=new THREE.Mesh(new THREE.BoxGeometry(MAT+2,MAT+2,1.5), new THREE.MeshStandardMaterial({color:0x22604a, roughness:.9}));
+const matEdge=new THREE.Mesh(new THREE.BoxGeometry(MAT+2,MAT+2,1.5), new THREE.MeshStandardMaterial({color:(MATS[prefs.mat]||MATS.vert).edge, roughness:.9}));
+function refreshMat(){ const old=mat.material.map; mat.material.map=matTexture(); mat.material.needsUpdate=true; old?.dispose(); matEdge.material.color.setHex((MATS[prefs.mat]||MATS.vert).edge); }
 matEdge.position.z=-1.2; scene.add(matEdge);
 // axis tripod in the corner
 const axes=new THREE.Group(); scene.add(axes); axes.position.set(-MAT/2+8,-MAT/2+8,0.1);
@@ -111,6 +113,9 @@ function maxId(parts){ let m=0; for(const p of parts){ m=Math.max(m,p.id); if(p.
    Parts
    ========================================================= */
 const findPart=id=>state.parts.find(p=>p.id===id);
+/* Hiding and locking are advanced features: below level 3 every part is visible and free. */
+const isHidden=p=> lv(3) && !!p?.hidden;
+const isLocked=p=> lv(3) && !!p?.locked;
 function newPart(kind, o={}){
   const K=KINDS[kind]; const n=state.parts.filter(p=>p.kind===kind).length+1;
   return {id:state.nextId++, kind, name:`${K.label} ${n}`, params:clone(K.params), color:K.color, hole:false, pos:[0,0,0], rot:[0,0,0], ...o};
@@ -167,14 +172,16 @@ function sync(){
     const wantLine = sel || p.hole;
     if(wantLine){ if(!r.line){ r.line=new THREE.LineSegments(edgesOf(r.mesh.geometry, p.kind==='group'), selLineMat); r.mesh.add(r.line); } r.line.material= sel? selLineMat : holeLineMat; }
     else if(r.line){ r.mesh.remove(r.line); r.line=null; }
+    r.mesh.visible=!isHidden(p);
     if(!simActive()){ partMatrix(p, r.mesh.matrix); r.mesh.matrix.decompose(r.mesh.position, r.mesh.quaternion, r.mesh.scale); }
   }
   for(const [id,r] of meshes) if(!ids.has(id)){ scene.remove(r.mesh); r.mesh.material.dispose(); meshes.delete(id); }
   if(simActive()) applyPoses();
   updateGizmo(); updateMarkers(); updateToolButtons(); $('#jCount').textContent=state.joints.length;
+  renderOutliner();
 }
 function updateGizmo(){
-  if(!selection.length || simLocked() || pickMode){ tc.detach(); return; }
+  if(!selection.length || simLocked() || pickMode || selParts().some(isLocked)){ tc.detach(); return; }
   resetPivot(); tc.attach(pivot);
 }
 function selBox(ids=selection){ const b=new THREE.Box3(); for(const id of ids){ const r=meshes.get(id); if(r) b.union(new THREE.Box3().setFromObject(r.mesh, true)); } return b; }
@@ -204,7 +211,7 @@ function pickAt(ev){
   const r=renderer.domElement.getBoundingClientRect();
   ndc.set(((ev.clientX-r.left)/r.width)*2-1, -((ev.clientY-r.top)/r.height)*2+1);
   ray.setFromCamera(ndc,camera);
-  const hits=ray.intersectObjects([...meshes.values()].map(r=>r.mesh), false);
+  const hits=ray.intersectObjects([...meshes.entries()].filter(([id,r])=>{ const p=findPart(id); return r.mesh.visible && !isLocked(p); }).map(([,r])=>r.mesh), false);
   // prefer solids over holes when a solid is in front
   return hits[0]||null;
 }
@@ -258,7 +265,7 @@ renderer.domElement.addEventListener('pointerup', ev=>{
 });
 renderer.domElement.addEventListener('dblclick', ev=>{
   const hit=pickAt(ev); if(!hit) return; const p=findPart(hit.object.userData.id);
-  if(p && p.kind==='sketch' && !simLocked()) openSketch(p);
+  if(p && p.kind==='sketch' && !simLocked() && lv(2)) openSketch(p);
 });
 
 /* palette drag & drop onto the mat */
@@ -278,7 +285,8 @@ function startPaletteDrag(kind, ev){
 /* =========================================================
    Editing operations
    ========================================================= */
-function guard(){ if(simLocked()){ toast('Réinitialisez la simulation (bouton ⟲) pour modifier les pièces.'); return false; } return true; }
+function guard(){ if(simLocked()){ toast('Réinitialisez la simulation (bouton ⟲) pour modifier les pièces.'); return false; }
+  if(selParts().some(isLocked)){ toast('Pièce verrouillée : déverrouillez-la dans l’arborescence (cadenas).'); return false; } return true; }
 function selParts(){ return selection.map(findPart).filter(Boolean); }
 function removeJointsOf(ids){
   const before=state.joints.length;

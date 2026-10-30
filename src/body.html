@@ -4,10 +4,10 @@
     <div class="brand"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M16 3 28 9.5v13L16 29 4 22.5v-13z"/><path d="M4 9.5 16 16l12-6.5M16 16v13"/></svg><span>Établi 3D</span></div>
     <input id="projName" aria-label="Nom du projet" value="Mon projet">
     <div class="tb-group">
-      <button class="btn ghost" id="bNew" title="Nouveau projet"><svg data-i="new"></svg><span class="hide-narrow">Nouveau</span></button>
+      <button class="btn ghost" id="bNew" title="Nouveau projet"><svg data-i="new"></svg><span class="hide-mid">Nouveau</span></button>
       <button class="btn ghost" id="bExamples" title="Exemples de démonstration"><svg data-i="book"></svg><span class="hide-narrow">Exemples</span></button>
-      <button class="btn ghost" id="bOpen" title="Ouvrir un projet (.json)"><svg data-i="open"></svg><span class="hide-narrow">Ouvrir</span></button>
-      <button class="btn ghost" id="bSave" title="Enregistrer le projet (.json)"><svg data-i="save"></svg><span class="hide-narrow">Enregistrer</span></button>
+      <button class="btn ghost" id="bOpen" title="Ouvrir un projet (.json)"><svg data-i="open"></svg><span class="hide-mid">Ouvrir</span></button>
+      <button class="btn ghost" id="bSave" title="Enregistrer le projet (.json)"><svg data-i="save"></svg><span class="hide-mid">Enregistrer</span></button>
       <button class="btn" id="bStl" title="Exporter en STL pour l'impression 3D"><svg data-i="print"></svg><span>STL</span></button>
       <input type="file" id="fileIn" accept=".json,application/json" hidden>
     </div>
@@ -17,18 +17,36 @@
       <button class="btn icon ghost" id="bRedo" title="Rétablir (Ctrl+Y)"><svg data-i="redo"></svg></button>
     </div>
     <div class="spacer"></div>
+    <div class="lvl" id="lvl" role="radiogroup" aria-label="Niveau">
+      <span class="lvl-lbl">Niveau</span>
+      <button role="radio" data-lvl="1" title="Débutant : volumes, perçages, groupes"><span class="l">Débutant</span><span class="s">1</span></button>
+      <button role="radio" data-lvl="2" title="Intermédiaire : + esquisses cotées et mouvements"><span class="l">Intermédiaire</span><span class="s">2</span></button>
+      <button role="radio" data-lvl="3" title="Avancé : toutes les fonctions"><span class="l">Avancé</span><span class="s">3</span></button>
+    </div>
+    <button class="btn ghost" id="bTree" data-min="3" aria-pressed="false" title="Afficher l’arborescence des objets"><svg data-i="tree"></svg><span class="hide-mid">Arborescence</span></button>
+    <div class="menu-wrap">
+      <button class="btn ghost" id="bLook" aria-haspopup="true" title="Thème et couleurs"><svg data-i="palette"></svg><span class="hide-mid">Apparence</span></button>
+      <div class="menu look" id="menuLook" hidden></div>
+    </div>
     <button class="btn" id="mobileInsp"><svg data-i="sliders"></svg>Réglages</button>
-    <button class="btn ghost" id="bHelp" title="Aide et raccourcis"><svg data-i="help"></svg><span class="hide-narrow">Aide</span></button>
+    <button class="btn ghost" id="bHelp" title="Aide et raccourcis"><svg data-i="help"></svg><span class="hide-mid">Aide</span></button>
   </header>
 
   <nav id="rack" aria-label="Formes">
-    <div class="rack-title">Créer</div>
-    <button class="shape sketch" id="bSketch" title="Dessiner une esquisse cotée puis l'extruder"><svg data-i="k_sketch"></svg>Esquisse</button>
+    <div class="rack-title" data-min="2">Créer</div>
+    <button class="shape sketch" data-min="2" id="bSketch" title="Dessiner une esquisse cotée puis l'extruder"><svg data-i="k_sketch"></svg>Esquisse</button>
     <div class="rack-title">Volumes</div>
     <div id="rackBasic" style="display:contents"></div>
-    <div class="rack-title">Mécanique</div>
+    <div class="rack-title" data-min="3">Mécanique</div>
     <div id="rackMeca" style="display:contents"></div>
   </nav>
+
+  <aside id="outliner" aria-label="Arborescence">
+    <div class="tree-head"><svg data-i="tree"></svg><b>Arborescence</b><button class="btn icon ghost" id="treeClose" title="Fermer l’arborescence" aria-label="Fermer l’arborescence"><svg data-i="close"></svg></button></div>
+    <div class="seg tree-mode" id="treeMode"><button class="btn" data-mode="parts">Pièces</button><button class="btn" data-mode="kin">Liaisons</button></div>
+    <div class="tree-count" id="treeCount"></div>
+    <div id="treeBody" role="tree" aria-label="Objets de la scène"></div>
+  </aside>
 
   <main id="stage">
     <div class="float" id="tools" role="toolbar" aria-label="Outils">
@@ -60,7 +78,7 @@
         <option value="1" selected>1 mm</option><option value="2">2 mm</option><option value="5">5 mm</option><option value="10">10 mm</option>
       </select>
     </div>
-    <div class="float" id="simbar" aria-label="Simulation">
+    <div class="float" id="simbar" data-min="2" aria-label="Simulation">
       <button class="btn primary" id="sPlay"><svg data-i="play"></svg><span>Simuler</span></button>
       <button class="btn icon" id="sReset" title="Revenir à la position de départ"><svg data-i="reset"></svg></button>
       <select id="sSpeed" aria-label="Vitesse de simulation"><option value="0.25">×0,25</option><option value="0.5">×0,5</option><option value="1" selected>×1</option><option value="2">×2</option></select>
@@ -75,7 +93,7 @@
   <aside id="insp">
     <div class="tabs" role="tablist">
       <button role="tab" id="tabPart" class="on">Pièce</button>
-      <button role="tab" id="tabMove">Mouvements<span class="count" id="jCount">0</span></button>
+      <button role="tab" id="tabMove" data-min="2">Mouvements<span class="count" id="jCount">0</span></button>
     </div>
     <div id="inspBody"></div>
   </aside>
@@ -91,6 +109,7 @@
       <button class="tbtn" data-tool="line" title="Ligne (L)"><svg data-i="k_line"></svg>Ligne</button>
       <button class="tbtn" data-tool="rect" title="Rectangle (R)"><svg data-i="k_rect"></svg>Rectangle</button>
       <button class="tbtn" data-tool="circle" title="Cercle (C)"><svg data-i="k_circle"></svg>Cercle</button>
+      <button class="tbtn" data-tool="bezier" data-min="3" title="Courbe de Bézier (B)"><svg data-i="k_bez"></svg>Bézier</button>
     </div>
     <div class="tgroup"><span class="lbl">Coter</span>
       <button class="tbtn" data-tool="dim" title="Cote (D)"><svg data-i="k_dim"></svg>Cote</button>
@@ -100,11 +119,11 @@
     <div class="tgroup"><span class="lbl">Contraindre</span>
       <button class="tbtn" data-tool="h" title="Horizontale"><span class="g">H</span></button>
       <button class="tbtn" data-tool="v" title="Verticale"><span class="g">V</span></button>
-      <button class="tbtn" data-tool="par" title="Parallèles"><span class="g">∥</span></button>
-      <button class="tbtn" data-tool="perp" title="Perpendiculaires"><span class="g">⊥</span></button>
-      <button class="tbtn" data-tool="eq" title="Égales"><span class="g">=</span></button>
-      <button class="tbtn" data-tool="coinc" title="Coïncidence (relier deux points)"><span class="g">⦿</span></button>
-      <button class="tbtn" data-tool="fix" title="Fixer un point"><svg data-i="pin"></svg></button>
+      <button class="tbtn" data-min="3" data-tool="par" title="Parallèles"><span class="g">∥</span></button>
+      <button class="tbtn" data-min="3" data-tool="perp" title="Perpendiculaires"><span class="g">⊥</span></button>
+      <button class="tbtn" data-min="3" data-tool="eq" title="Égales"><span class="g">=</span></button>
+      <button class="tbtn" data-min="3" data-tool="coinc" title="Coïncidence (relier deux points)"><span class="g">⦿</span></button>
+      <button class="tbtn" data-min="3" data-tool="fix" title="Fixer un point"><svg data-i="pin"></svg></button>
     </div>
     <div class="tgroup">
       <button class="tbtn" id="skDel" title="Supprimer la sélection (Suppr)"><svg data-i="trash"></svg></button>
@@ -122,7 +141,7 @@
       <h3>Transformer en volume</h3>
       <div class="mode2">
         <button class="btn on" id="skModeExt"><svg data-i="extrude"></svg>Extrusion</button>
-        <button class="btn" id="skModeRev"><svg data-i="revolve"></svg>Révolution</button>
+        <button class="btn" data-min="3" id="skModeRev"><svg data-i="revolve"></svg>Révolution</button>
       </div>
       <div class="row" id="skHRow"><label for="skH">Hauteur d'extrusion</label><div class="num"><input id="skH" type="number" step="0.5" min="0.1" value="10"><span>mm</span></div></div>
       <div class="info" id="skModeInfo"></div>
@@ -164,6 +183,12 @@
         <li><b>Encastrement</b> : la pièce suit son support. <b>Pivot</b> : rotation autour d'un axe. <b>Glissière</b> : translation.</li>
         <li>Ajoutez un moteur, ou faites entraîner une liaison par une autre (engrenages, poulies, pignon-crémaillère).</li>
         <li>Lancez <b>Simuler</b>. Réinitialisez pour modifier les pièces.</li>
+      </ul></div>
+      <div><h4>Niveaux</h4><ul>
+        <li><b>Débutant</b> : volumes simples, perçages, groupes, couleurs, export STL.</li>
+        <li><b>Intermédiaire</b> : + esquisses cotées, tube et tore, aligner, liaisons et moteurs.</li>
+        <li><b>Avancé</b> : + engrenages, transmissions, Bézier, révolution, contraintes avancées et arborescence.</li>
+        <li>Le niveau se choisit en haut à droite ; il est mémorisé dans ce navigateur.</li>
       </ul></div>
       <div><h4>Raccourcis</h4><ul>
         <li><span class="kbd">M</span> déplacer · <span class="kbd">R</span> tourner · <span class="kbd">D</span> poser</li>

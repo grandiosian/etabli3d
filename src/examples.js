@@ -19,13 +19,15 @@ function resetFor(name){ state.name=name; state.parts=[]; state.joints=[]; state
 
 /* Sketch builder: points, closed polylines (automatic H / V), circles, dimensions. */
 function SKB(){
-  const d={nid:2, pts:[{id:1,x:0,y:0,fixed:true,origin:true}], lines:[], circles:[], cons:[]};
+  const d={nid:2, pts:[{id:1,x:0,y:0,fixed:true,origin:true}], lines:[], circles:[], beziers:[], cons:[]};
   const P=id=>d.pts.find(p=>p.id===id);
   const con=c=>{ c.id=d.nid++; d.cons.push(c); return c; };
   const api={ d,
     pt(x,y){ const ex=d.pts.find(p=>Math.abs(p.x-x)<1e-9&&Math.abs(p.y-y)<1e-9); if(ex) return ex.id; const p={id:d.nid++,x,y}; d.pts.push(p); return p.id; },
     poly(coords){ const ids=coords.map(([x,y])=>api.pt(x,y)); ids.forEach((a,i)=>{ const b=ids[(i+1)%ids.length]; const l={id:d.nid++,a,b}; d.lines.push(l);
         if(Math.abs(P(a).y-P(b).y)<1e-9) con({type:'h',l:l.id}); else if(Math.abs(P(a).x-P(b).x)<1e-9) con({type:'v',l:l.id}); }); return ids; },
+    line(a,b){ const l={id:d.nid++,a,b}; d.lines.push(l); if(Math.abs(P(a).y-P(b).y)<1e-9) con({type:'h',l:l.id}); else if(Math.abs(P(a).x-P(b).x)<1e-9) con({type:'v',l:l.id}); return l.id; },
+    bez(a,b,t1,t2){ const z={id:d.nid++,a,b,t1,t2}; d.beziers.push(z); return z.id; },
     circle(x,y,diam){ const c={id:d.nid++, c:api.pt(x,y), r:diam/2}; d.circles.push(c); return c.id; },
     dx(a,b,off){ const v=P(b).x-P(a).x; return con({type:'dx',a,b,value:Math.abs(v),sign:Math.sign(v)||1,off}); },
     dy(a,b,off){ const v=P(b).y-P(a).y; return con({type:'dy',a,b,value:Math.abs(v),sign:Math.sign(v)||1,off}); },
@@ -39,7 +41,7 @@ function SKB(){
 const DARK='#2c3331', WHITE='#f2f2ee', GREY='#6c7a89';
 const SAMPLES={
   /* ---------------- Modéliser ---------------- */
-  maison:{cat:'model', title:'Maison', icon:'ex_house', tags:['Perçage','Groupe','Coin'],
+  maison:{level:1, cat:'model', title:'Maison', icon:'ex_house', tags:['Perçage','Groupe','Coin'],
     desc:'Murs creusés par des perçages, toit fait de deux coins.',
     build(){
       resetFor('Maison');
@@ -63,7 +65,7 @@ const SAMPLES={
     note:{observe:['La maison est un <b>groupe</b> : un cube plein et cinq <b>perçages</b> (intérieur, porte, fenêtres).','Le toit est un autre groupe : deux <b>coins</b> dos à dos et une cheminée.'],
       try:['Sélectionnez les murs puis <b>Dégrouper</b> : les perçages apparaissent en gris transparent.','Agrandissez une fenêtre dans l’onglet Pièce, puis regroupez avec <span class="kbd">Ctrl</span>+<span class="kbd">G</span>.']}},
 
-  crayons:{cat:'model', title:'Pot à crayons gravé', icon:'ex_cup', tags:['Texte','Perçage','Gravure'],
+  crayons:{level:1, cat:'model', title:'Pot à crayons gravé', icon:'ex_cup', tags:['Texte','Perçage','Gravure'],
     desc:'Un bloc percé de cinq trous, avec un nom gravé en creux.',
     build(){
       resetFor('Pot à crayons');
@@ -81,7 +83,7 @@ const SAMPLES={
     note:{observe:['Le mot <b>TECHNO</b> est un texte transformé en <b>perçage</b> : il creuse 1 mm dans la face avant.','Les trous ne descendent pas jusqu’en bas : ils commencent à Z = 4 mm pour garder un fond.'],
       try:['Dégroupez, cliquez sur la gravure et écrivez votre prénom.','Passez la gravure en <b>Solide</b> : le texte ressort au lieu d’être creusé.']}},
 
-  de:{cat:'model', title:'Dé à jouer', icon:'ex_die', tags:['Sphère','Perçage','Positions'],
+  de:{level:1, cat:'model', title:'Dé à jouer', icon:'ex_die', tags:['Sphère','Perçage','Positions'],
     desc:'Un cube de 20 mm et 21 sphères en perçage pour les points.',
     build(){
       resetFor('Dé à jouer');
@@ -97,7 +99,7 @@ const SAMPLES={
     note:{observe:['Chaque point est une <b>sphère</b> dont le centre est posé sur une face : elle creuse une demi-sphère.','Les faces opposées font toujours 7 : 1 et 6, 2 et 5, 3 et 4.'],
       try:['Dégroupez et regardez la position X, Y, Z d’un point.','Changez le diamètre des points puis regroupez tout (<span class="kbd">Ctrl</span>+<span class="kbd">A</span> puis <span class="kbd">Ctrl</span>+<span class="kbd">G</span>).']}},
 
-  porteCles:{cat:'model', title:'Porte-clés', icon:'ex_key', tags:['Esquisse','Texte'],
+  porteCles:{level:2, cat:'model', title:'Porte-clés', icon:'ex_key', tags:['Esquisse','Texte'],
     desc:'Une plaque dessinée en esquisse cotée, avec un texte en relief.',
     build(){
       resetFor('Porte-clés');
@@ -111,7 +113,7 @@ const SAMPLES={
       try:['Double-cliquez la plaque pour ouvrir l’esquisse, puis double-cliquez la cote 50 et tapez 60.','Changez le texte dans l’onglet Pièce.']}},
 
   /* ---------------- Esquisser ---------------- */
-  plaque:{cat:'sketch', title:'Plaque de fixation', icon:'ex_plate', tags:['Cotes','Contraintes','Extrusion'],
+  plaque:{level:2, cat:'sketch', title:'Plaque de fixation', icon:'ex_plate', tags:['Cotes','Contraintes','Extrusion'],
     desc:'Esquisse totalement contrainte : cotes en chaîne et cercles égaux.',
     build(){
       resetFor('Plaque de fixation');
@@ -128,7 +130,7 @@ const SAMPLES={
       try:['Double-cliquez la cote Ø 5 et tapez 6 : les deux trous grandissent.','Changez la cote 60 en 80 : les trous gardent leur distance au bord gauche.','Avec l’outil Sélection, essayez de déplacer un point : il reste bloqué.']},
     },
 
-  pion:{cat:'sketch', title:'Pion d’échecs', icon:'ex_pawn', tags:['Révolution','Cotes','Profil'],
+  pion:{level:3, cat:'sketch', title:'Pion d’échecs', icon:'ex_pawn', tags:['Révolution','Cotes','Profil'],
     desc:'Un demi-profil dessiné à droite de l’axe, tourné sur 360°.',
     build(){
       resetFor('Pion d’échecs');
@@ -141,8 +143,33 @@ const SAMPLES={
     note:{observe:['Le profil est dessiné à droite de l’<b>axe vertical</b> : la révolution le fait tourner sur un tour complet.','La cote 12 est un <b>rayon</b> : le pion mesure 24 mm de diamètre à la base.'],
       try:['Ouvrez l’esquisse et déplacez un point de la tête pour changer sa forme.','Passez en <b>Extrusion</b> pour voir la différence avec le même profil.']}},
 
+  coeur:{level:3, cat:'sketch', title:'Pendentif cœur', icon:'ex_heart', tags:['Bézier','Extrusion','Cotes'],
+    desc:'Quatre courbes de Bézier symétriques forment un cœur.',
+    build(){
+      resetFor('Pendentif cœur');
+      const s=SKB(); const D=s.pt(0,8), R=s.pt(17,6), T=s.pt(0,-16), L=s.pt(-17,6);
+      s.bez(D,R,[0,9],[0,10]); s.bez(R,T,[0,-9],[8,8]); s.bez(T,L,[-8,8],[0,-9]); s.bez(L,D,[0,10],[0,9]);
+      const h=s.circle(-9,9,3.5); s.diam(h,2.6,3);
+      s.dx(L,R,-26); s.dy(T,D,-24);
+      state.parts.push(P_('sketch',{name:'Cœur (esquisse)',params:{sk:s.d,mode:'extrude',h:3},color:'#c45b8e',pos:[0,0,0]}));
+    },
+    note:{observe:['Le contour est fait de <b>4 courbes de Bézier</b> : chacune va d’un point à un autre et se règle avec deux <b>poignées</b>.','Le trou d’accroche est un cercle dessiné à l’intérieur du contour.'],
+      try:['Ouvrez l’esquisse, prenez l’outil Sélection et tirez une poignée (petit rond) pour changer la forme.','Tapez 40 dans la cote 34 : le cœur s’élargit en gardant ses courbes.']}},
+
+  vase:{level:3, cat:'sketch', title:'Vase', icon:'ex_vase', tags:['Bézier','Révolution','Creux'],
+    desc:'Un profil courbe avec une paroi de 2 mm, tourné sur 360°.',
+    build(){
+      resetFor('Vase');
+      const s=SKB(); const A0=1, A1=s.pt(15,0), A2=s.pt(9,42), A3=s.pt(12,47), A4=s.pt(10,47), A5=s.pt(7,42), A7=s.pt(13,2), A8=s.pt(0,2);
+      s.line(A0,A1); s.bez(A1,A2,[12,14],[9,-14]); s.line(A2,A3); s.line(A3,A4); s.line(A4,A5); s.bez(A5,A7,[9,-14],[12,12]); s.line(A7,A8); s.line(A8,A0);
+      s.dx(A0,A1,-5); s.dy(A0,A3,-7);
+      state.parts.push(P_('sketch',{name:'Vase (révolution)',params:{sk:s.d,mode:'revolve',h:10},color:'#3d8bd0',pos:[0,0,0]}));
+    },
+    note:{observe:['Deux courbes de Bézier dessinent la <b>paroi extérieure</b> et la <b>paroi intérieure</b> : l’écart entre elles donne l’épaisseur.','La ligne du bas, à 2 mm, forme le <b>fond</b> du vase.'],
+      try:['Ouvrez l’esquisse et tirez les poignées de la courbe extérieure pour rendre le vase plus ventru.','Passez en <b>Extrusion</b> pour voir le profil seul, puis revenez en <b>Révolution</b>.']}},
+
   /* ---------------- Mettre en mouvement ---------------- */
-  barriere:{cat:'move', title:'Barrière de parking', icon:'ex_barrier', tags:['Pivot','Butées','Encastrement'],
+  barriere:{level:2, cat:'move', title:'Barrière de parking', icon:'ex_barrier', tags:['Pivot','Butées','Encastrement'],
     desc:'Une lisse qui se lève de 0 à 90° et redescend.',
     build(){
       resetFor('Barrière de parking');
@@ -162,7 +189,7 @@ const SAMPLES={
     note:{observe:['Une seule liaison <b>pivot</b> (axe Y) porte un moteur <b>aller-retour</b> limité par des <b>butées</b> de −90° à 0°.','Les bandes et le contrepoids sont <b>encastrés</b> sur la lisse : ils la suivent.'],
       try:['Mettez la simulation en pause et bougez le curseur de L1.','Modifiez L1 pour une butée à −60° : la barrière s’ouvre moins.']}},
 
-  gears:{cat:'move', title:'Engrenages et crémaillère', icon:'gear', tags:['Engrenage','Pignon-crémaillère','Glissière'],
+  gears:{level:3, cat:'move', title:'Engrenages et crémaillère', icon:'gear', tags:['Engrenage','Pignon-crémaillère','Glissière'],
     desc:'Une roue Z20 entraîne un pignon Z10 et une crémaillère.',
     build(){
       resetFor('Engrenages et crémaillère');
@@ -183,7 +210,7 @@ const SAMPLES={
     note:{observe:['Le pignon Z10 tourne <b>2 fois plus vite</b> et en <b>sens inverse</b> : rapport −20/10 = −2.','La crémaillère avance de π × d / 360 = <b>0,35 mm par degré</b> (d = 40 mm).'],
       try:['Cliquez la roue menante : l’onglet Pièce donne son diamètre primitif d = m × Z.','Modifiez L2 et utilisez <b>Calculer le rapport</b> avec d’autres nombres de dents.']}},
 
-  reducteur:{cat:'move', title:'Réducteur à deux étages', icon:'ex_reducer', tags:['Train d’engrenages','Rapport','Moteur continu'],
+  reducteur:{level:3, cat:'move', title:'Réducteur à deux étages', icon:'ex_reducer', tags:['Train d’engrenages','Rapport','Moteur continu'],
     desc:'Deux étages Z10 → Z30 : la sortie tourne 9 fois moins vite.',
     build(){
       resetFor('Réducteur à deux étages');
@@ -209,7 +236,7 @@ const SAMPLES={
     note:{observe:['Chaque étage divise la vitesse par 3 : rapport global (10/30) × (10/30) = <b>1/9</b>.','Le moteur tourne à 180 °/s, l’aiguille de sortie à <b>20 °/s</b>, dans le même sens (deux inversions).','Le pignon de l’étage 2 est <b>encastré</b> sur la roue de l’étage 1 : ils tournent ensemble.'],
       try:['Comparez les valeurs de L1 et L5 pendant la simulation.','Mettez −1 comme rapport de L5 : la roue verte tourne alors aussi vite que la roue orange.']}},
 
-  poulies:{cat:'move', title:'Poulies et courroie', icon:'ex_pulley', tags:['Poulies','Groupe','Moteur continu'],
+  poulies:{level:3, cat:'move', title:'Poulies et courroie', icon:'ex_pulley', tags:['Poulies','Groupe','Moteur continu'],
     desc:'Poulie Ø40 vers poulie Ø20 : la petite tourne 2 fois plus vite.',
     build(){
       resetFor('Poulies et courroie');
@@ -232,7 +259,7 @@ const SAMPLES={
     note:{observe:['Rapport = Ø menante / Ø menée = 40 / 20 = <b>2</b>, et les poulies tournent dans le <b>même sens</b>.','Chaque poulie est un <b>groupe</b> : un disque creusé par une gorge (tore), un alésage et un trou d’allègement.','La courroie est dessinée immobile : seul le mouvement des poulies est simulé.'],
       try:['Dégroupez une poulie pour voir ses trois perçages.','Changez le rapport de L2 à 0,5 : la petite poulie ralentit.']}},
 
-  etau:{cat:'move', title:'Étau (vis-écrou)', icon:'ex_vise', tags:['Vis-écrou','Glissière','Encastrement'],
+  etau:{level:3, cat:'move', title:'Étau (vis-écrou)', icon:'ex_vise', tags:['Vis-écrou','Glissière','Encastrement'],
     desc:'Tourner la vis fait avancer le mors mobile de 2 mm par tour.',
     build(){
       resetFor('Étau');
@@ -255,7 +282,7 @@ const SAMPLES={
     note:{observe:['La vis fait <b>10 tours</b> (3 600°). Avec un pas de 2 mm, le mors avance de <b>20 mm</b> et touche la pièce.','Le rapport de L3 vaut pas / 360 = <b>0,0056 mm par degré</b>.'],
       try:['Dans L3, choisissez <b>Vis et écrou</b> dans « Calculer le rapport », tapez un pas de 4 mm puis Appliquer.','Que se passe-t-il ? Ajustez la butée max de L1 pour que le mors s’arrête sur la pièce.']}},
 
-  bras:{cat:'move', title:'Bras articulé', icon:'ex_arm', tags:['Pivots en chaîne','Butées'],
+  bras:{level:2, cat:'move', title:'Bras articulé', icon:'ex_arm', tags:['Pivots en chaîne','Butées'],
     desc:'Tourelle, épaule et coude : chaque pivot porte le suivant.',
     build(){
       resetFor('Bras articulé');
@@ -277,7 +304,7 @@ const SAMPLES={
     note:{observe:['Le bras est <b>porté</b> par la tourelle, l’avant-bras par le bras : chaque mouvement s’ajoute au précédent.','Trois moteurs aller-retour à des vitesses différentes donnent un mouvement complexe.'],
       try:['Mettez en pause, puis pilotez chaque pivot avec son curseur.','Supprimez le moteur de L1 (Modifier → Manuelle) et observez.']}},
 
-  eolienne:{cat:'move', title:'Éolienne', icon:'ex_wind', tags:['Pivot continu','Groupe','Axe X'],
+  eolienne:{level:2, cat:'move', title:'Éolienne', icon:'ex_wind', tags:['Pivot continu','Groupe','Axe X'],
     desc:'Le rotor tourne sans fin pendant que la nacelle s’oriente.',
     build(){
       resetFor('Éolienne');
@@ -301,6 +328,7 @@ const CATS=[['model','Modéliser avec des volumes'],['sketch','Esquisser et cote
 
 function loadExample(k){
   const S=SAMPLES[k]; if(!S) return;
+  if(S.level>prefs.level){ setLevel(S.level,true); setTimeout(()=>toast(`Niveau ${LEVELS[S.level-1].name} activé pour cet exemple.`),50); }
   simReset(true); S.build();
   state.note={key:k, title:S.title, observe:S.note.observe, try:S.note.try};
   selection=[]; selJoint=null; jf=null;
@@ -319,7 +347,7 @@ function renderGallery(){
     for(const [k,S] of Object.entries(SAMPLES)) if(S.cat===cat){
       grid.append(h('button',{class:'gal-card',onclick:()=>loadExample(k)},
         svgIcon(S.icon),
-        h('div',{class:'gal-txt'}, h('b',{},S.title), h('span',{},S.desc), h('div',{class:'gal-tags'}, S.tags.map(t=>h('span',{class:'gal-tag'},t))))));
+        h('div',{class:'gal-txt'}, h('div',{class:'gal-title'}, h('b',{},S.title), h('span',{class:'gal-lvl l'+S.level},LEVELS[S.level-1].name)), h('span',{},S.desc), h('div',{class:'gal-tags'}, S.tags.map(t=>h('span',{class:'gal-tag'},t))))));
     }
     wrap.append(h('section',{class:'gal-sec'}, h('h3',{},label), grid));
   }

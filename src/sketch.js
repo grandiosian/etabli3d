@@ -10,11 +10,14 @@ const toW=(sx,sy)=>[(sx-skW/2)/SK.view.s+SK.view.cx, -(sy-skH/2)/SK.view.s+SK.vi
 const skP=id=>SK.d.pts.find(p=>p.id===id);
 const skL=id=>SK.d.lines.find(l=>l.id===id);
 const skC=id=>SK.d.circles.find(c=>c.id===id);
+const skB=id=>SK.d.beziers.find(z=>z.id===id);
 
 function openSketch(part=null){
   SK.part=part?part.id:null;
   if(part){ SK.d=clone(part.params.sk); SK.mode=part.params.mode||'extrude'; SK.h=part.params.h||10; }
-  else { SK.d={nid:2,pts:[{id:1,x:0,y:0,fixed:true,origin:true}],lines:[],circles:[],cons:[]}; SK.mode='extrude'; SK.h=10; }
+  else { SK.d={nid:2,pts:[{id:1,x:0,y:0,fixed:true,origin:true}],lines:[],circles:[],beziers:[],cons:[]}; SK.mode='extrude'; SK.h=10; }
+  SK.d.beziers ||= [];
+  if(!lv(3) && SK.mode==='revolve') toast('Cette esquisse utilise la révolution, réservée au niveau Avancé.');
   SK.hist=[]; SK.hidx=-1; SK.sel=null; SK.chain=null; SK.pend=null; SK.editing=null;
   $('#sk').hidden=false; $('#skH').value=fmtIn(SK.h); setSkMode(SK.mode,false);
   skResize(); skFit(); skPush(); setSkTool(part?'select':'rect');
@@ -45,6 +48,7 @@ const HINTS={
   line:'Cliquez pour poser les points. Revenez sur le <b>premier point</b> pour fermer le contour. <b>Échap</b> ou double-clic pour arrêter. Les lignes presque horizontales ou verticales sont redressées.',
   rect:'Cliquez un premier coin, puis le coin opposé. Le rectangle reçoit des contraintes horizontales et verticales.',
   circle:'Cliquez le centre, puis un point du cercle.',
+  bezier:'Courbe de Bézier en 3 clics : <b>départ</b>, <b>arrivée</b>, puis un point par lequel la courbe doit passer. Les courbes s’enchaînent ; revenez au premier point pour fermer. Glissez ensuite les <b>poignées</b> (ronds) avec l’outil Sélection.',
   dim:'Cliquez une <b>ligne</b> (longueur), un <b>cercle</b> (diamètre) ou <b>deux points</b> (distance), puis tapez la valeur et <b>Entrée</b>.',
   dimh:'Cliquez une ligne ou deux points pour coter l’écart <b>horizontal</b>.',
   dimv:'Cliquez une ligne ou deux points pour coter l’écart <b>vertical</b>.',
@@ -54,12 +58,13 @@ const HINTS={
   coinc:'Cliquez deux points pour les <b>réunir</b> en un seul (pour fermer un contour par exemple).',
   fix:'Cliquez un point pour le <b>bloquer</b> ou le débloquer. L’origine est toujours fixe.',
 };
-function setSkTool(t){ SK.tool=t; SK.chain=null; SK.pend=null; $$('#skbar [data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===t)); $('#skHint').innerHTML=HINTS[t]||''; skCanvas.style.cursor= t==='select'?'default':'crosshair'; skDraw(); }
+function setSkTool(t){ SK.tool=t; SK.chain=null; SK.pend=null; if(SK.d) skCleanup(); $$('#skbar [data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===t)); $('#skHint').innerHTML=HINTS[t]||''; skCanvas.style.cursor= t==='select'?'default':'crosshair'; skDraw(); }
 function skResize(){ const r=$('#skCanvasWrap').getBoundingClientRect(); const dpr=Math.min(2,devicePixelRatio||1); skW=r.width; skH=r.height; skCanvas.width=Math.max(1,r.width*dpr); skCanvas.height=Math.max(1,r.height*dpr); skCtx.setTransform(dpr,0,0,dpr,0,0); skDraw(); }
 new ResizeObserver(()=>{ if(!$('#sk').hidden) skResize(); }).observe($('#skCanvasWrap'));
 function skFit(){
   const d=SK.d; let xs=d.pts.map(p=>p.x), ys=d.pts.map(p=>p.y);
   for(const c of d.circles){ const p=skP(c.c); xs.push(p.x-c.r,p.x+c.r); ys.push(p.y-c.r,p.y+c.r); }
+  for(const z of d.beziers||[]){ for(const q of bezCtrl(d,z)){ xs.push(q[0]); ys.push(q[1]); } }
   let minx=Math.min(...xs), maxx=Math.max(...xs), miny=Math.min(...ys), maxy=Math.max(...ys);
   if(maxx-minx<40){ const m=(minx+maxx)/2; minx=Math.min(minx,m-20)-10; maxx=Math.max(maxx,m+20)+30; }
   if(maxy-miny<30){ const m=(miny+maxy)/2; miny=Math.min(miny,m-15)-10; maxy=Math.max(maxy,m+15)+20; }
@@ -127,16 +132,18 @@ function skCleanup(){
   // duplicate lines
   const seen=new Set(); d.lines=d.lines.filter(l=>{ const k=[l.a,l.b].sort((x,y)=>x-y).join('-'); if(seen.has(k)) return false; seen.add(k); return true; });
   d.circles=d.circles.filter(c=>d.pts.some(p=>p.id===c.c));
+  d.beziers=(d.beziers||[]).filter(z=>z.a!==z.b && d.pts.some(p=>p.id===z.a) && d.pts.some(p=>p.id===z.b));
   const LS=new Set(d.lines.map(l=>l.id)), CS=new Set(d.circles.map(c=>c.id)), PS=new Set(d.pts.map(p=>p.id));
   d.cons=d.cons.filter(c=>{ const r=consRefs(c); return r.lines.every(i=>LS.has(i)) && r.circles.every(i=>CS.has(i)) && r.pts.every(i=>PS.has(i)) && !(r.pts.length===2&&r.pts[0]===r.pts[1]) && !(r.lines.length===2&&r.lines[0]===r.lines[1]); });
-  const used=new Set(); d.lines.forEach(l=>{used.add(l.a);used.add(l.b);}); d.circles.forEach(c=>used.add(c.c));
+  const used=new Set(); d.lines.forEach(l=>{used.add(l.a);used.add(l.b);}); d.circles.forEach(c=>used.add(c.c)); d.beziers.forEach(z=>{used.add(z.a);used.add(z.b);});
   d.pts=d.pts.filter(p=>p.origin||used.has(p.id));
 }
 function skDelete(){
   const s=SK.sel; if(!s) return; const d=SK.d;
-  if(s.type==='pt'){ const p=skP(s.id); if(p?.origin){ toast('L’origine ne peut pas être supprimée.'); return; } d.lines=d.lines.filter(l=>l.a!==s.id&&l.b!==s.id); d.circles=d.circles.filter(c=>c.c!==s.id); d.pts=d.pts.filter(p=>p.id!==s.id); }
+  if(s.type==='pt'){ const p=skP(s.id); if(p?.origin){ toast('L’origine ne peut pas être supprimée.'); return; } d.lines=d.lines.filter(l=>l.a!==s.id&&l.b!==s.id); d.circles=d.circles.filter(c=>c.c!==s.id); d.beziers=d.beziers.filter(z=>z.a!==s.id&&z.b!==s.id); d.pts=d.pts.filter(p=>p.id!==s.id); }
   if(s.type==='line') d.lines=d.lines.filter(l=>l.id!==s.id);
   if(s.type==='circle') d.circles=d.circles.filter(c=>c.id!==s.id);
+  if(s.type==='bez') d.beziers=d.beziers.filter(z=>z.id!==s.id);
   if(s.type==='con') d.cons=d.cons.filter(c=>c.id!==s.id);
   SK.sel=null; skCleanup(); skSolve(); skPush(); skDraw();
 }
@@ -145,6 +152,7 @@ function skMerge(keepId, dropId){
   if(q.origin||(q.fixed&&!k.fixed)) return skMerge(dropId, keepId);
   for(const l of d.lines){ if(l.a===dropId) l.a=keepId; if(l.b===dropId) l.b=keepId; }
   for(const c of d.circles) if(c.c===dropId) c.c=keepId;
+  for(const z of d.beziers){ if(z.a===dropId) z.a=keepId; if(z.b===dropId) z.b=keepId; }
   for(const c of d.cons){ if(c.a===dropId) c.a=keepId; if(c.b===dropId) c.b=keepId; }
   d.pts=d.pts.filter(p=>p.id!==dropId); skCleanup();
 }
@@ -153,6 +161,13 @@ function skMerge(keepId, dropId){
 function hitPoint(sx,sy,r=10,exclude=null){ let best=null,bd=r; for(const p of SK.d.pts){ if(p.id===exclude) continue; const [x,y]=toS(p.x,p.y); const dd=Math.hypot(x-sx,y-sy); if(dd<bd){bd=dd;best=p;} } return best; }
 function hitLine(sx,sy,r=7){ let best=null,bd=r; for(const l of SK.d.lines){ const [ax,ay]=toS(skP(l.a).x,skP(l.a).y), [bx,by]=toS(skP(l.b).x,skP(l.b).y); const vx=bx-ax, vy=by-ay, L2=vx*vx+vy*vy||1; const t=clamp(((sx-ax)*vx+(sy-ay)*vy)/L2,0,1); const dd=Math.hypot(ax+vx*t-sx, ay+vy*t-sy); if(dd<bd){bd=dd;best=l;} } return best; }
 function hitCircle(sx,sy,r=7){ let best=null,bd=r; for(const c of SK.d.circles){ const p=skP(c.c); const [x,y]=toS(p.x,p.y); const dd=Math.abs(Math.hypot(x-sx,y-sy)-c.r*SK.view.s); if(dd<bd){bd=dd;best=c;} } return best; }
+function bezScreen(z){ return bezCtrl(SK.d,z).map(q=>toS(q[0],q[1])); }
+function hitBez(sx,sy,r=7){ let best=null,bd=r; for(const z of SK.d.beziers){ const c=bezScreen(z); let prev=c[0];
+    for(let i=1;i<=40;i++){ const q=bezAt(c,i/40); const vx=q[0]-prev[0], vy=q[1]-prev[1], L2=vx*vx+vy*vy||1; const t=clamp(((sx-prev[0])*vx+(sy-prev[1])*vy)/L2,0,1); const dd=Math.hypot(prev[0]+vx*t-sx, prev[1]+vy*t-sy); if(dd<bd){bd=dd;best=z;} prev=q; } } return best; }
+function hitHandle(sx,sy,r=8){ for(const z of SK.d.beziers){ const c=bezScreen(z); if(Math.hypot(c[1][0]-sx,c[1][1]-sy)<r) return {id:z.id,which:1}; if(Math.hypot(c[2][0]-sx,c[2][1]-sy)<r) return {id:z.id,which:2}; } return null; }
+/* handles so that the curve passes through world point (px,py) at t = 0.5 */
+function bezThrough(A,B,px,py){ const mx=(A.x+B.x)/2, my=(A.y+B.y)/2; const vx=(px-mx)/0.75, vy=(py-my)/0.75;
+  return {t1:[(B.x-A.x)/3+vx,(B.y-A.y)/3+vy], t2:[(A.x-B.x)/3+vx,(A.y-B.y)/3+vy]}; }
 function hitLabel(sx,sy){ return SK.labels.find(b=>sx>=b.x-b.w/2-3&&sx<=b.x+b.w/2+3&&sy>=b.y-b.h/2-3&&sy<=b.y+b.h/2+3)||null; }
 function hitBadge(sx,sy){ return SK.badges.find(b=>Math.abs(sx-b.x)<=9&&Math.abs(sy-b.y)<=9)||null; }
 function snapW(sx,sy, exclude=null){
@@ -220,8 +235,10 @@ skCanvas.addEventListener('pointerdown', ev=>{
   if(t==='select'){
     const lb=hitLabel(sx,sy); if(lb){ SK.sel={type:'con',id:lb.id}; SK.drag={kind:'label',id:lb.id,moved:false}; skDraw(); return; }
     const bg=hitBadge(sx,sy); if(bg){ SK.sel={type:'con',id:bg.id}; skDraw(); return; }
+    const hd=hitHandle(sx,sy); if(hd){ SK.sel={type:'bez',id:hd.id}; SK.drag={kind:'handle',...hd,moved:false}; skDraw(); return; }
     const p=hitPoint(sx,sy); if(p){ SK.sel={type:'pt',id:p.id}; if(!p.fixed&&!p.origin) SK.drag={kind:'pt',id:p.id,moved:false}; skDraw(); return; }
     const l=hitLine(sx,sy); if(l){ SK.sel={type:'line',id:l.id}; const [wx,wy]=toW(sx,sy); SK.drag={kind:'line',id:l.id,wx,wy,a:{...skP(l.a)},b:{...skP(l.b)},moved:false}; skDraw(); return; }
+    const z=hitBez(sx,sy); if(z){ SK.sel={type:'bez',id:z.id}; const [wx,wy]=toW(sx,sy); SK.drag={kind:'line',bez:true,id:z.id,wx,wy,a:{...skP(z.a)},b:{...skP(z.b)},moved:false}; skDraw(); return; }
     const c=hitCircle(sx,sy); if(c){ SK.sel={type:'circle',id:c.id}; SK.drag={kind:'circle',id:c.id,moved:false}; skDraw(); return; }
     SK.sel=null; SK.drag={kind:'pan',sx,sy,cx:SK.view.cx,cy:SK.view.cy}; skDraw(); return;
   }
@@ -236,6 +253,19 @@ skCanvas.addEventListener('pointerdown', ev=>{
     else if(s.lock==='v' || (existed && Math.abs(dx)<1e-6 && Math.abs(dy)>1e-6)) skAddCon({type:'v',l:l.id});
     if(existed){ SK.chain=null; } else SK.chain.last=q.id;
     skCleanup(); skSolve(); skPush(); skDraw(); return;
+  }
+  if(t==='bezier'){
+    const s=snapW(sx,sy);
+    if(!SK.pend){ // stage 1: start point (or continue the chain)
+      const p=s.pt||skNewPoint(s.x,s.y); SK.pend={bz:1,a:p.id,first:p.id}; skDraw(); return; }
+    if(SK.pend.bz===1){ if(s.pt && s.pt.id===SK.pend.a) return; SK.pend={...SK.pend,bz:2,b:{x:s.x,y:s.y,pt:s.pt?.id??null}}; skDraw(); return; }
+    // stage 3: shape point
+    const A=skP(SK.pend.a), Bi=SK.pend.b; const [wx,wy]=toW(sx,sy);
+    const B=Bi.pt!=null? skP(Bi.pt) : skNewPoint(Bi.x,Bi.y);
+    const hh=bezThrough(A,B,wx,wy);
+    d.beziers.push({id:d.nid++, a:A.id, b:B.id, t1:hh.t1.map(v=>+v.toFixed(4)), t2:hh.t2.map(v=>+v.toFixed(4))});
+    SK.pend = Bi.pt!=null ? null : {bz:1, a:B.id, first:SK.pend.first};
+    skCleanup(); skPush(); skDraw(); return;
   }
   if(t==='rect'){
     const s=snapW(sx,sy);
@@ -257,6 +287,7 @@ skCanvas.addEventListener('pointerdown', ev=>{
   }
   // constraint & dimension tools
   const p=hitPoint(sx,sy), l=p?null:hitLine(sx,sy), c=(p||l)?null:hitCircle(sx,sy);
+  if(!p && !l && !c && hitBez(sx,sy)){ toast(t.startsWith('dim')? 'Pour coter une courbe, cliquez ses deux extrémités.' : 'Les contraintes s’appliquent aux lignes et aux cercles, pas aux courbes.'); return; }
   if(t==='dim'||t==='dimh'||t==='dimv'){
     const type= t==='dim'?'dist': t==='dimh'?'dx':'dy';
     if(p){ if(SK.pend && SK.pend.pt!==p.id){ const a=SK.pend.pt; SK.pend=null; addDim(type,a,p.id); } else { SK.pend={pt:p.id}; skDraw(); } return; }
@@ -303,8 +334,12 @@ skCanvas.addEventListener('pointermove', ev=>{
     dr.moved=true;
     if(dr.kind==='pt'){ const s=snapW(sx,sy,dr.id); const p=skP(dr.id); p.x=s.x; p.y=s.y; skSolve(dr.id,200); skDraw(); return; }
     if(dr.kind==='line'){ const [wx,wy]=toW(sx,sy); let dx=wx-dr.wx, dy=wy-dr.wy; if($('#skSnap').checked){ const g=snapStep(); dx=Math.round(dx/g)*g; dy=Math.round(dy/g)*g; }
-      const l=skL(dr.id), a=skP(l.a), b=skP(l.b); if(!a.fixed&&!a.origin){ a.x=dr.a.x+dx; a.y=dr.a.y+dy; } if(!b.fixed&&!b.origin){ b.x=dr.b.x+dx; b.y=dr.b.y+dy; }
+      const l=dr.bez? skB(dr.id) : skL(dr.id), a=skP(l.a), b=skP(l.b); if(!a.fixed&&!a.origin){ a.x=dr.a.x+dx; a.y=dr.a.y+dy; } if(!b.fixed&&!b.origin){ b.x=dr.b.x+dx; b.y=dr.b.y+dy; }
       skSolve(null,200); skDraw(); return; }
+    if(dr.kind==='handle'){ const z=skB(dr.id); let [wx,wy]=toW(sx,sy); if($('#skSnap').checked){ const g=snapStep()/2; wx=Math.round(wx/g)*g; wy=Math.round(wy/g)*g; }
+      const E=skP(dr.which===1? z.a : z.b); const v=[+(wx-E.x).toFixed(4), +(wy-E.y).toFixed(4)];
+      if(dr.which===1) z.t1=v; else z.t2=v;
+      skDraw(); return; }
     if(dr.kind==='circle'){ const c=skC(dr.id); if(SK.d.cons.some(k=>k.type==='diam'&&k.c===c.id)) return; const p=skP(c.c); let [wx,wy]=toW(sx,sy); let r=Math.hypot(wx-p.x,wy-p.y); if($('#skSnap').checked){ const g=snapStep()/2; r=Math.max(g,Math.round(r/g)*g); } c.r=r; skSolve(null,200); skDraw(); return; }
     if(dr.kind==='label'){ const c=SK.d.cons.find(k=>k.id===dr.id); const [wx,wy]=toW(sx,sy);
       if(c.type==='dist'){ const a=skP(c.a), b=skP(c.b); const L=Math.hypot(b.x-a.x,b.y-a.y)||1; const nx=-(b.y-a.y)/L, ny=(b.x-a.x)/L; c.off=(wx-(a.x+b.x)/2)*nx+(wy-(a.y+b.y)/2)*ny; }
@@ -314,7 +349,7 @@ skCanvas.addEventListener('pointermove', ev=>{
       skDraw(); return; }
   }
   // hover snapping preview
-  if(['line','rect','circle'].includes(SK.tool)) snapW(sx,sy); else SK.snapPt=null;
+  if(['line','rect','circle','bezier'].includes(SK.tool)) snapW(sx,sy); else SK.snapPt=null;
   skDraw();
 });
 skCanvas.addEventListener('pointerup', ()=>{
@@ -326,6 +361,7 @@ skCanvas.addEventListener('dblclick', ev=>{
   const [sx,sy]=skEvt(ev);
   const lb=hitLabel(sx,sy); if(lb){ showDimEdit(SK.d.cons.find(k=>k.id===lb.id)); return; }
   if(SK.tool==='line') finishChain();
+  if(SK.tool==='bezier'){ SK.pend=null; skCleanup(); skPush(); skDraw(); }
 });
 skCanvas.addEventListener('wheel', ev=>{ ev.preventDefault(); const [sx,sy]=skEvt(ev); const [wx,wy]=toW(sx,sy); SK.view.s=clamp(SK.view.s*Math.exp(-ev.deltaY*0.0015),0.3,80); const [nx,ny]=toW(sx,sy); SK.view.cx+=wx-nx; SK.view.cy+=wy-ny; skDraw(); },{passive:false});
 
@@ -360,11 +396,24 @@ function skDraw(){
   const isSel=(type,id)=> SK.sel && SK.sel.type===type && SK.sel.id===id;
   for(const l of d.lines){ const a=skP(l.a), b=skP(l.b); const [ax,ay]=toS(a.x,a.y), [bx,by]=toS(b.x,b.y);
     g.strokeStyle=isSel('line',l.id)? col.mark : col.ink; g.lineWidth=isSel('line',l.id)?3.5:2; g.beginPath(); g.moveTo(ax,ay); g.lineTo(bx,by); g.stroke(); }
+  const showHandles = SK.tool==='select' || SK.tool==='bezier';
+  for(const z of d.beziers){ const c=bezScreen(z); const sel=isSel('bez',z.id);
+    g.strokeStyle=sel? col.mark : col.ink; g.lineWidth=sel?3.5:2; g.beginPath(); g.moveTo(c[0][0],c[0][1]); g.bezierCurveTo(c[1][0],c[1][1],c[2][0],c[2][1],c[3][0],c[3][1]); g.stroke();
+    if(showHandles){ g.save(); g.strokeStyle=sel?col.mark:col.acc; g.globalAlpha=sel?1:.6; g.lineWidth=1.2; g.setLineDash([4,3]);
+      g.beginPath(); g.moveTo(c[0][0],c[0][1]); g.lineTo(c[1][0],c[1][1]); g.moveTo(c[3][0],c[3][1]); g.lineTo(c[2][0],c[2][1]); g.stroke(); g.setLineDash([]);
+      for(const q of [c[1],c[2]]){ g.fillStyle=col.panel; g.beginPath(); g.arc(q[0],q[1],4.5,0,Math.PI*2); g.fill(); g.stroke(); } g.restore(); } }
   for(const c of d.circles){ const p=skP(c.c); const [X,Y]=toS(p.x,p.y); g.strokeStyle=isSel('circle',c.id)?col.mark:col.ink; g.lineWidth=isSel('circle',c.id)?3.5:2; g.beginPath(); g.arc(X,Y,c.r*s,0,Math.PI*2); g.stroke(); }
   // previews
   g.save(); g.setLineDash([6,4]); g.strokeStyle=col.acc; g.lineWidth=1.8;
   const m=SK.mouse;
   if(m && SK.tool==='line' && SK.chain){ const last=skP(SK.chain.last); const s2=axisLock(last,m.sx,m.sy); const [ax,ay]=toS(last.x,last.y), [bx,by]=toS(s2.x,s2.y); g.beginPath(); g.moveTo(ax,ay); g.lineTo(bx,by); g.stroke(); tag(`${fmt(Math.hypot(s2.x-last.x,s2.y-last.y),1)} mm${s2.lock?' · '+s2.lock.toUpperCase():''}`, bx+12, by-12); }
+  if(m && SK.tool==='bezier' && SK.pend){ const A=skP(SK.pend.a); const [ax,ay]=toS(A.x,A.y);
+    if(SK.pend.bz===1){ const s2=snapW(m.sx,m.sy); const [bx,by]=toS(s2.x,s2.y); g.beginPath(); g.moveTo(ax,ay); g.lineTo(bx,by); g.stroke(); tag('Cliquez l’arrivée', bx+12, by-12); }
+    else { const B=SK.pend.b; const [wx,wy]=toW(m.sx,m.sy); const hh=bezThrough(A,B,wx,wy);
+      const c=[[A.x,A.y],[A.x+hh.t1[0],A.y+hh.t1[1]],[B.x+hh.t2[0],B.y+hh.t2[1]],[B.x,B.y]].map(q=>toS(q[0],q[1]));
+      g.setLineDash([]); g.lineWidth=2.4; g.beginPath(); g.moveTo(c[0][0],c[0][1]); g.bezierCurveTo(c[1][0],c[1][1],c[2][0],c[2][1],c[3][0],c[3][1]); g.stroke();
+      g.setLineDash([3,3]); g.lineWidth=1; g.beginPath(); g.moveTo(c[0][0],c[0][1]); g.lineTo(c[1][0],c[1][1]); g.moveTo(c[3][0],c[3][1]); g.lineTo(c[2][0],c[2][1]); g.stroke();
+      tag('Cliquez pour courber', m.sx+12, m.sy-12); } }
   if(m && SK.tool==='rect' && SK.pend){ const s2=snapW(m.sx,m.sy); const [ax,ay]=toS(SK.pend.x,SK.pend.y), [bx,by]=toS(s2.x,s2.y); g.strokeRect(Math.min(ax,bx),Math.min(ay,by),Math.abs(bx-ax),Math.abs(by-ay)); tag(`${fmt(Math.abs(s2.x-SK.pend.x),1)} × ${fmt(Math.abs(s2.y-SK.pend.y),1)} mm`, bx+12, by-12); }
   if(m && SK.tool==='circle' && SK.pend){ const s2=snapW(m.sx,m.sy); const [ax,ay]=toS(SK.pend.x,SK.pend.y); let r=Math.hypot(s2.x-SK.pend.x,s2.y-SK.pend.y); if($('#skSnap').checked){ const gg=snapStep()/2; r=Math.max(gg,Math.round(r/gg)*gg); } g.beginPath(); g.arc(ax,ay,r*s,0,Math.PI*2); g.stroke(); tag(`Ø ${fmt(2*r,1)} mm`, m.sx+12, m.sy-12); }
   g.restore();
@@ -390,7 +439,7 @@ function skDraw(){
   for(const c of d.cons) if(c.type==='eqr'){ for(const cid of [c.c1,c.c2]){ const ci=skC(cid), p=skP(ci.c); const [X,Y]=toS(p.x+ci.r*0.71,p.y+ci.r*0.71); const t='='+pairNo.get(c.id); const sel=SK.sel?.type==='con'&&SK.sel.id===c.id; g.fillStyle=sel?col.mark:col.panel; g.strokeStyle=col.acc; roundRect(g,X-6,Y-8,24,16,4); g.fill(); g.stroke(); g.fillStyle=sel?'#000':col.acc; g.fillText(t,X+6,Y+.5); SK.badges.push({id:c.id,x:X+6,y:Y}); } }
   g.textAlign='left'; g.textBaseline='alphabetic';
   // points
-  for(const p of d.pts){ const [X,Y]=toS(p.x,p.y); const sel=isSel('pt',p.id)||SK.pend?.pt===p.id||SK.chain?.last===p.id;
+  for(const p of d.pts){ const [X,Y]=toS(p.x,p.y); const sel=isSel('pt',p.id)||SK.pend?.pt===p.id||SK.pend?.a===p.id||SK.chain?.last===p.id;
     if(p.origin){ g.strokeStyle=col.ink; g.lineWidth=1.5; g.beginPath(); g.arc(X,Y,6,0,Math.PI*2); g.moveTo(X-10,Y); g.lineTo(X+10,Y); g.moveTo(X,Y-10); g.lineTo(X,Y+10); g.stroke(); continue; }
     g.fillStyle= sel? col.mark : col.panel; g.strokeStyle= sel? col.mark : col.ink; g.lineWidth=1.5; g.fillRect(X-3.5,Y-3.5,7,7); g.strokeRect(X-3.5,Y-3.5,7,7);
     if(p.fixed){ g.strokeStyle=col.danger; g.lineWidth=1.5; g.beginPath(); g.moveTo(X,Y+5); g.lineTo(X-6,Y+13); g.lineTo(X+6,Y+13); g.closePath(); g.stroke(); for(let i=-6;i<=4;i+=4){ g.moveTo(X+i,Y+13); g.lineTo(X+i+3,Y+17); } g.stroke(); } }
@@ -430,8 +479,9 @@ function skStatus(pr){
   const el=$('#skStatus'); const nC=pr.loops.length, nO=pr.open; const dof=Math.max(0,skDOF());
   let cls='ok', html='';
   if(SK.err>1e-3){ cls='err'; html='<b>Contraintes incompatibles.</b> Annulez la dernière action (Ctrl+Z) ou supprimez une contrainte.'; }
-  else if(!nC){ cls='warn'; html= nO? `<b>Contour ouvert.</b> Revenez sur le premier point pour le fermer, ou utilisez l’outil ⦿ pour réunir deux extrémités.` : 'Tracez un contour fermé : rectangle, cercle ou suite de lignes.'; }
+  else if(!nC){ cls='warn'; html= nO? `<b>Contour ouvert.</b> Revenez sur le premier point pour le fermer, ou utilisez l’outil ⦿ pour réunir deux extrémités.` : 'Tracez un contour fermé : rectangle, cercle, suite de lignes ou de courbes.'; }
   else { html=`<b>${nC} contour${nC>1?'s':''} fermé${nC>1?'s':''}</b>${nO?` · ${nO} tracé${nO>1?'s':''} ouvert${nO>1?'s':''} ignoré${nO>1?'s':''}`:''}.`; }
+  const nb=SK.d.beziers.length; if(nb) html+=`<br>Courbes de Bézier : <b>${nb}</b> (forme réglée par les poignées)`;
   html+= `<br>Contraintes et cotes : <b>${SK.d.cons.length}</b><br>Degrés de liberté restants ≈ <b>${dof}</b>${dof===0&&SK.err<=1e-3&&nC?' · esquisse totalement contrainte':''}`;
   if(SK.mode==='revolve' && SK.d.pts.some(p=>p.x<-1e-3) && cls!=='err'){ cls='warn'; html+='<br><b>Révolution :</b> la partie à gauche de l’axe sera ignorée.'; }
   el.className='status '+cls; el.innerHTML=html; $('#skOk').disabled=!nC;

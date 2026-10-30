@@ -4,12 +4,43 @@
    ========================================================= */
 hydrateIcons();
 for(const [host,list] of [['#rackBasic',BASIC],['#rackMeca',MECA]]){
-  for(const k of list){ const b=h('button',{class:'shape',title:`Ajouter : ${KINDS[k].label}`}, svgIcon(k), KINDS[k].label);
+  for(const k of list){ const b=h('button',{class:'shape',title:`Ajouter : ${KINDS[k].label}`,'data-min':KIND_LVL[k]>1?String(KIND_LVL[k]):null}, svgIcon(k), KINDS[k].label);
     b.addEventListener('pointerdown',e=>{ if(e.button!==0) return; e.preventDefault(); startPaletteDrag(k,e); });
     b.addEventListener('click',e=>{ if(e.detail===0) addPart(k); });
     $(host).append(b); }
 }
-$('#bSketch').addEventListener('click',()=>{ if(guard()) openSketch(null); });
+$('#bSketch').addEventListener('click',()=>{ if(simLocked()){ toast('Réinitialisez la simulation (bouton ⟲) pour modifier les pièces.'); return; } openSketch(null); });
+
+/* ---- level */
+function setLevel(n, quiet=false){
+  const prev=prefs.level; prefs.level=n; savePrefs(); applyLevelAttr();
+  $$('#lvl [data-lvl]').forEach(b=>b.setAttribute('aria-checked', String(+b.dataset.lvl===n)));
+  if(!lv(2)){ if(simActive()) simReset(true); if(tab==='move') setTab('part'); if(!$('#sk').hidden) closeSketch(false); jf=null; }
+  if(!lv(3) && SK.tool==='bezier') setSkTool('select');
+  if(lv(3) && prefs.tree && !$('#app').classList.contains('with-tree') && !matchMedia('(max-width: 860px)').matches) setTreeOpen(true);
+  sync(); renderInspector(); applyViewOffset();
+  if(!quiet && n!==prev) toast(`Niveau ${LEVELS[n-1].name} : ${LEVELS[n-1].desc}`, 3400);
+}
+$$('#lvl [data-lvl]').forEach(b=>b.onclick=()=>setLevel(+b.dataset.lvl));
+$('#lvl').addEventListener('keydown',e=>{ if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft') return; e.preventDefault(); const n=clamp(prefs.level+(e.key==='ArrowRight'?1:-1),1,3); setLevel(n); $(`#lvl [data-lvl="${n}"]`).focus(); });
+
+/* ---- outliner */
+$('#bTree').onclick=()=>setTreeOpen(!$('#app').classList.contains('with-tree'));
+$('#treeClose').onclick=()=>setTreeOpen(false);
+$$('#treeMode [data-mode]').forEach(b=>b.onclick=()=>{ tree.mode=b.dataset.mode; renderOutliner(); });
+
+/* ---- appearance */
+function renderLook(){
+  const m=$('#menuLook'); m.innerHTML='';
+  const seg=h('div',{class:'seg'}, ...[['auto','Auto'],['light','Clair'],['dark','Sombre']].map(([v,l])=>h('button',{class:'btn'+(prefs.theme===v?' on':''),'aria-pressed':String(prefs.theme===v),onclick:()=>{ prefs.theme=v; savePrefs(); applyTheme(); renderLook(); afterLook(); }}, l)));
+  const acc=h('div',{class:'look-sw'}, ...Object.entries(ACCENTS).map(([k,A])=>h('button',{'aria-pressed':String(prefs.accent===k),onclick:()=>{ prefs.accent=k; savePrefs(); applyTheme(); renderLook(); afterLook(); }}, h('i',{style:`background:${A.light[0]}`}), A.name)));
+  const mats=h('div',{class:'look-sw'}, ...Object.entries(MATS).map(([k,M])=>h('button',{'aria-pressed':String(prefs.mat===k),onclick:()=>{ prefs.mat=k; savePrefs(); refreshMat(); renderLook(); }}, h('i',{style:`background:${M.fill}`}), M.name)));
+  m.append(h('div',{}, h('h4',{},'Thème'), seg), h('div',{}, h('h4',{},'Couleur principale'), acc), h('div',{}, h('h4',{},'Plan de travail'), mats),
+    h('p',{class:'jsub',style:'margin:0'},'Ces réglages restent dans ce navigateur.'));
+}
+function afterLook(){ sceneBg(); sync(); skDraw(); }
+$('#bLook').onclick=e=>{ e.stopPropagation(); const m=$('#menuLook'); if(m.hidden) renderLook(); m.hidden=!m.hidden; };
+document.addEventListener('pointerdown',e=>{ if(!e.target.closest('.menu-wrap')) $('#menuLook').hidden=true; });
 $('#tMove').onclick=()=>setGizmoMode('translate'); $('#tRot').onclick=()=>setGizmoMode('rotate');
 $('#tSolid').onclick=()=>setHole(false); $('#tHole').onclick=()=>setHole(true);
 $('#tGroup').onclick=groupSel; $('#tUngroup').onclick=ungroupSel; $('#tDup').onclick=duplicateSel; $('#tDrop').onclick=dropSel; $('#tDel').onclick=deleteSel;
@@ -51,13 +82,14 @@ document.addEventListener('keydown', e=>{
     if(mod&&k==='z'){ e.preventDefault(); e.shiftKey?skRedo():skUndo(); return; }
     if(mod&&k==='y'){ e.preventDefault(); skRedo(); return; }
     if(mod) return;
-    if(k==='escape'){ if(SK.chain) finishChain(); else if(SK.pend){ SK.pend=null; SK.sel=null; skDraw(); } else if(SK.tool!=='select') setSkTool('select'); return; }
+    if(k==='escape'){ if(SK.chain) finishChain(); else if(SK.pend){ SK.pend=null; SK.sel=null; skCleanup(); skPush(); skDraw(); } else if(SK.tool!=='select') setSkTool('select'); return; }
     if(k==='delete'||k==='backspace'){ e.preventDefault(); skDelete(); return; }
-    const map={v:'select',l:'line',r:'rect',c:'circle',d:'dim'}; if(map[k]) setSkTool(map[k]);
+    const map={v:'select',l:'line',r:'rect',c:'circle',d:'dim',b:'bezier'}; if(map[k] && (k!=='b'||lv(3))) setSkTool(map[k]);
     return;
   }
   if(!$('#help').hidden){ if(k==='escape') $('#help').hidden=true; return; }
   if(!$('#gallery').hidden){ if(k==='escape') $('#gallery').hidden=true; return; }
+  if(k==='escape' && !$('#menuLook').hidden){ $('#menuLook').hidden=true; return; }
   if(e.target.closest?.('input,select,textarea')) return;
   if(mod&&k==='z'){ e.preventDefault(); e.shiftKey?redo():undo(); }
   else if(mod&&k==='y'){ e.preventDefault(); redo(); }
@@ -84,9 +116,12 @@ document.addEventListener('keydown', e=>{
 setGizmoMode('translate'); applySnap();
 csgReady.then(()=>{ for(const k of [...geoCache.keys()]) if(k.startsWith('g:')) geoCache.delete(k); for(const r of meshes.values()) r.key=null; sync(); });
 (function boot(){
+  $$('#lvl [data-lvl]').forEach(b=>b.setAttribute('aria-checked', String(+b.dataset.lvl===prefs.level)));
+  if(lv(3) && prefs.tree && !matchMedia('(max-width: 860px)').matches) $('#app').classList.add('with-tree');
+  $('#bTree').classList.toggle('on', $('#app').classList.contains('with-tree'));
   let loaded=false;
   try{ const s=localStorage.getItem('etabli3d.autosave'); if(s){ const o=JSON.parse(s); if(o.parts && o.parts.length){ loadProject(o,true); loaded=true; } } }catch(e){}
-  if(!loaded){ loadExample('gears'); hist.stack=[hist.stack[hist.stack.length-1]]; hist.idx=0; openGallery(); }
+  if(!loaded){ loadExample('maison'); hist.stack=[hist.stack[hist.stack.length-1]]; hist.idx=0; openGallery(); }
   else { renderInspector(); renderDemo(); }
   simUI(); updateUndo();
 })();

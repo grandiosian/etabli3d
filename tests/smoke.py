@@ -33,9 +33,18 @@ with sync_playwright() as p:
 
     check('galerie ouverte à la première visite', pg.is_visible('#gallery'))
     pg.click('#galleryClose')
-    n = pg.evaluate(f'()=>[{E}.state.parts.length,{E}.state.joints.length]')
-    check('exemple de démarrage chargé', n == [8, 4], n)
+    n = pg.evaluate(f'()=>[{E}.state.parts.length,{E}.state.joints.length,document.documentElement.dataset.level]')
+    check('démarrage : maison, niveau débutant', n == [4, 0, '1'], n)
+    check('débutant : pas d’esquisse ni de simulation', not pg.is_visible('#bSketch') and not pg.is_visible('#simbar') and not pg.is_visible('#tabMove'))
+    pg.click('#lvl [data-lvl="2"]'); pg.wait_for_timeout(200)
+    check('intermédiaire : esquisse et mouvements visibles', pg.is_visible('#bSketch') and pg.is_visible('#tabMove') and not pg.is_visible('#bTree'))
+    pg.click('#lvl [data-lvl="3"]'); pg.wait_for_timeout(300)
+    check('avancé : arborescence visible', pg.is_visible('#outliner') and pg.locator('#treeBody .tr').count() == 4)
+    pg.locator('#treeBody .tr').nth(0).locator('.tr-btn').nth(0).click(); pg.wait_for_timeout(200)
+    check('arborescence : masquer une pièce', pg.evaluate(f'()=>{E}.state.parts[0].hidden===true && ![...{E}.meshes.values()][0].mesh.visible'))
+    pg.locator('#treeBody .tr').nth(0).locator('.tr-btn').nth(0).click()
 
+    pg.evaluate(f"()=>{E}.loadExample('gears')"); pg.wait_for_timeout(500)
     pg.click('#sPlay'); pg.wait_for_timeout(1500)
     v = pg.evaluate(f'()=>{E}.state.joints.map(j=>j.id).map(id=>{E}.sim.values[id]||0)')
     check('le moteur fait tourner la roue', abs(v[0]) > 1, v)
@@ -86,6 +95,20 @@ with sync_playwright() as p:
     pg.screenshot(path=os.path.join(OUT, 'esquisse.png'))
     pg.click('#skOk'); pg.wait_for_timeout(400)
     check('esquisse extrudée', pg.evaluate(f"()=>{E}.state.parts.some(p=>p.kind==='sketch')"))
+
+    # Bézier: a straight base closed by one curve
+    pg.evaluate(f'()=>{E}.openSketch(null)'); pg.wait_for_timeout(300)
+    bb = pg.locator('#skCanvas').bounding_box()
+    pg.click('[data-tool=line]'); pg.mouse.click(*w2s(0, 0)); pg.mouse.click(*w2s(30, 0)); pg.keyboard.press('Escape')
+    pg.click('[data-tool=bezier]'); pg.mouse.click(*w2s(30, 0)); pg.mouse.click(*w2s(0, 0)); pg.mouse.click(*w2s(15, 18))
+    r = pg.evaluate(f'()=>{{const d={E}.SK.d; return [d.beziers.length, {E}.skProfiles(d).loops.length]}}')
+    check('courbe de Bézier fermant un contour', r == [1, 1], r)
+    pg.screenshot(path=os.path.join(OUT, 'bezier.png'))
+    pg.click('#skOk'); pg.wait_for_timeout(300)
+    for k in ['coeur', 'vase']:
+        pg.evaluate(f"()=>{E}.loadExample('{k}')"); pg.wait_for_timeout(300)
+        n = pg.evaluate(f'()=>{E}.getGeometry({E}.state.parts[0]).attributes.position.count')
+        check(f'volume Bézier ({k})', n > 500, n)
 
     check('aucune erreur JavaScript', not errors, errors[:3])
     b.close()

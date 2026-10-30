@@ -50,6 +50,13 @@ const I = {
   close:'<path d="M6 6l12 12M18 6 6 18"/>',
   k_line:'<path d="M4 19 20 5"/><circle cx="4" cy="19" r="2" fill="currentColor"/><circle cx="20" cy="5" r="2" fill="currentColor"/>',
   k_rect:'<rect x="4" y="6" width="16" height="12"/>',
+  k_bez:'<path d="M4 19C7 5 17 19 20 5"/><path d="M4 19 8 8M20 5l-4 11" stroke-dasharray="2 2" opacity=".7"/><circle cx="8" cy="8" r="1.6"/><circle cx="16" cy="16" r="1.6"/>',
+  palette:'<path d="M12 3a9 9 0 1 0 0 18c1.2 0 2-.8 2-1.8 0-1.3-1-1.6-1-2.7 0-1 .8-1.5 1.8-1.5H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/>',
+  tree:'<path d="M5 4v16M5 8h5M5 14h5M5 20h5"/><rect x="11" y="6" width="9" height="4" rx="1"/><rect x="11" y="12" width="9" height="4" rx="1"/><rect x="11" y="18" width="9" height="4" rx="1"/>',
+  eyeOff:'<path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6 0 10 7 10 7a17 17 0 0 1-3.2 3.9M6.3 6.3C3.6 8 2 12 2 12s4 7 10 7a9.6 9.6 0 0 0 4.4-1.1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
+  lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  unlock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/>',
+  caret:'<path d="m9 6 6 6-6 6"/>',
   k_circle:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/>',
   k_dim:'<path d="M4 8v8M20 8v8M4 12h16M4 12l3-2M4 12l3 2M20 12l-3-2M20 12l-3 2"/>',
 };
@@ -77,6 +84,8 @@ const S = {
   ex_pulley:'<circle cx="13" cy="20" r="9" fill="#e4574b"/><circle cx="31" cy="20" r="5" fill="#3d8bd0"/><path d="M13 11 31 15M13 29l18-4" stroke="#2c3331" stroke-width="2"/><circle cx="13" cy="20" r="2" fill="var(--panel)"/>',
   ex_vise:'<rect x="3" y="28" width="34" height="5" fill="#6c7a89"/><rect x="28" y="12" width="6" height="16" fill="#6c7a89"/><rect x="14" y="12" width="6" height="16" fill="#e4574b"/><rect x="21" y="18" width="6" height="10" fill="#3d8bd0"/><path d="M4 20h24" stroke="#9aa5a1" stroke-width="3"/><path d="M4 12v16" stroke="#2c3331" stroke-width="2.5"/>',
   ex_arm:'<rect x="5" y="31" width="14" height="5" rx="1" fill="#6c7a89"/><rect x="9" y="22" width="6" height="9" fill="#e6a23a"/><path d="M12 22 24 12" stroke="#3a6fc4" stroke-width="5" stroke-linecap="round"/><path d="M24 12l9 9" stroke="#4aa36b" stroke-width="4" stroke-linecap="round"/><circle cx="33" cy="22" r="3" fill="#e4574b"/>',
+  ex_heart:'<path d="M20 34C9 26 5 20 5 14a7.5 7.5 0 0 1 15-1 7.5 7.5 0 0 1 15 1c0 6-4 12-15 20z" fill="#c45b8e"/><circle cx="12.5" cy="13" r="2" fill="var(--panel)"/>',
+  ex_vase:'<path d="M14 5h12l-1 3c6 6 9 11 7 18-1 5-4 8-12 8S9 31 8 26c-2-7 1-12 7-18z" fill="#3d8bd0"/><path d="M15 8h10" stroke="#1f5a8e" stroke-width="2"/>',
   ex_wind:'<path d="M19 36h4l-1-20h-2z" fill="#9aa5a1"/><g fill="#6c7a89"><path d="M21 15 19.5 2h3z"/><path d="M21 15l11.5 6.5-1.5 2.6z"/><path d="M21 15 9.5 21.5l1.5 2.6z"/></g><circle cx="21" cy="15" r="2.5" fill="#2c3331"/>',
   k_sketch:'<rect x="5" y="9" width="20" height="16" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="15" cy="17" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 31h20M5 29v4M25 29v4" stroke="currentColor" stroke-width="1.6"/><path d="M29 30 35 8l2 1-6 22z" fill="currentColor"/>',
   group:'<path d="M20 6 34 13v14L20 34 6 27V13z" fill="#7d8a86"/><path d="M6 13l14 7 14-7-14-7z" fill="#a8b4b0"/><ellipse cx="20" cy="13" rx="5" ry="2.5" fill="#4d5755"/>',
@@ -112,13 +121,13 @@ function cssVar(n){ return getComputedStyle(document.documentElement).getPropert
 const F = (k,label,o={}) => ({k,label,unit:'mm',min:0.1,step:1,...o});
 const KINDS = {
   box:{label:'Cube',color:'#e4574b',params:{L:20,l:20,h:20},fields:[F('L','Longueur (X)'),F('l','Largeur (Y)'),F('h','Hauteur (Z)')]},
-  cylinder:{label:'Cylindre',color:'#e6a23a',params:{d:20,h:20,seg:48},fields:[F('d','Diamètre'),F('h','Hauteur'),F('seg','Facettes',{unit:'',min:3,max:128,step:1,int:true})]},
-  sphere:{label:'Sphère',color:'#3d8bd0',params:{d:20,seg:32},fields:[F('d','Diamètre'),F('seg','Facettes',{unit:'',min:6,max:96,step:1,int:true})]},
-  cone:{label:'Cône',color:'#8c5ac2',params:{d:20,d2:0,h:20,seg:48},fields:[F('d','Diamètre de base'),F('d2','Diamètre du haut',{min:0}),F('h','Hauteur'),F('seg','Facettes',{unit:'',min:3,max:128,step:1,int:true})]},
+  cylinder:{label:'Cylindre',color:'#e6a23a',params:{d:20,h:20,seg:48},fields:[F('d','Diamètre'),F('h','Hauteur'),F('seg','Facettes',{lvl:3,unit:'',min:3,max:128,step:1,int:true})]},
+  sphere:{label:'Sphère',color:'#3d8bd0',params:{d:20,seg:32},fields:[F('d','Diamètre'),F('seg','Facettes',{lvl:3,unit:'',min:6,max:96,step:1,int:true})]},
+  cone:{label:'Cône',color:'#8c5ac2',params:{d:20,d2:0,h:20,seg:48},fields:[F('d','Diamètre de base'),F('d2','Diamètre du haut',{min:0}),F('h','Hauteur'),F('seg','Facettes',{lvl:3,unit:'',min:3,max:128,step:1,int:true})]},
   pyramid:{label:'Pyramide',color:'#e0bd3f',params:{L:20,l:20,h:20},fields:[F('L','Longueur (X)'),F('l','Largeur (Y)'),F('h','Hauteur (Z)')]},
   wedge:{label:'Coin',color:'#4aa36b',params:{L:20,l:20,h:20},fields:[F('L','Longueur (X)'),F('l','Largeur (Y)'),F('h','Hauteur (Z)')]},
-  tube:{label:'Tube',color:'#d4774a',params:{d:20,di:14,h:20,seg:48},fields:[F('d','Diamètre extérieur'),F('di','Diamètre intérieur'),F('h','Hauteur'),F('seg','Facettes',{unit:'',min:3,max:128,step:1,int:true})]},
-  torus:{label:'Tore',color:'#c45b8e',params:{d:24,e:6,seg:48},fields:[F('d','Diamètre moyen'),F('e','Épaisseur'),F('seg','Facettes',{unit:'',min:6,max:128,step:1,int:true})]},
+  tube:{label:'Tube',color:'#d4774a',params:{d:20,di:14,h:20,seg:48},fields:[F('d','Diamètre extérieur'),F('di','Diamètre intérieur'),F('h','Hauteur'),F('seg','Facettes',{lvl:3,unit:'',min:3,max:128,step:1,int:true})]},
+  torus:{label:'Tore',color:'#c45b8e',params:{d:24,e:6,seg:48},fields:[F('d','Diamètre moyen'),F('e','Épaisseur'),F('seg','Facettes',{lvl:3,unit:'',min:6,max:128,step:1,int:true})]},
   text:{label:'Texte',color:'#3a6fc4',params:{txt:'TECHNO',size:12,h:4,font:'sans'},fields:[F('txt','Texte',{type:'text'}),F('size','Hauteur des lettres'),F('h','Épaisseur'),F('font','Police',{type:'select',opts:[['sans','Bâton'],['serif','Avec empattements'],['mono','Machine à écrire'],['round','Arrondie']]})]},
   gear:{label:'Roue dentée',color:'#6c7a89',params:{z:20,m:2,e:6,dh:5},fields:[F('z','Nombre de dents Z',{unit:'',min:6,max:150,step:1,int:true}),F('m','Module m',{step:0.5}),F('e','Épaisseur'),F('dh',"Diamètre de l'alésage",{min:0})]},
   rack:{label:'Crémaillère',color:'#8a6c55',params:{n:12,m:2,e:6,hb:6},fields:[F('n','Nombre de dents',{unit:'',min:2,max:200,step:1,int:true}),F('m','Module m',{step:0.5}),F('e','Épaisseur'),F('hb','Hauteur sous les dents')]},
@@ -126,6 +135,8 @@ const KINDS = {
   group:{label:'Groupe',color:'#7d8a86',params:{},fields:[]},
 };
 const BASIC = ['box','cylinder','sphere','cone','pyramid','wedge','tube','torus','text'];
+/* Level at which each shape appears in the rack: 1 débutant, 2 intermédiaire, 3 avancé. */
+const KIND_LVL = {box:1,cylinder:1,sphere:1,cone:1,pyramid:1,wedge:1,text:1,tube:2,torus:2,sketch:2,gear:3,rack:3};
 const MECA = ['gear','rack'];
 const PALETTE = ['#e4574b','#e6a23a','#e0bd3f','#4aa36b','#2b9a8a','#3d8bd0','#3a6fc4','#8c5ac2','#c45b8e','#8a6c55','#6c7a89','#f2f2ee','#2c3331'];
 
@@ -255,21 +266,32 @@ function rdpClosed(pts, eps){
   return a.slice(0,-1).concat(b.slice(0,-1));
 }
 /* ---- sketch profiles (shared by the sketch editor and the 3D builder) */
+/* Cubic Bézier between sketch points a and b; handles are stored as offsets t1 (from a) and t2 (from b). */
+function bezCtrl(sk, z){ const P=id=>sk.pts.find(p=>p.id===id); const A=P(z.a), B=P(z.b);
+  return [[A.x,A.y],[A.x+z.t1[0],A.y+z.t1[1]],[B.x+z.t2[0],B.y+z.t2[1]],[B.x,B.y]]; }
+function bezAt(c, t){ const u=1-t; const k0=u*u*u, k1=3*u*u*t, k2=3*u*t*t, k3=t*t*t;
+  return [k0*c[0][0]+k1*c[1][0]+k2*c[2][0]+k3*c[3][0], k0*c[0][1]+k1*c[1][1]+k2*c[2][1]+k3*c[3][1]]; }
 function skProfiles(sk){
   const P=new Map(sk.pts.map(p=>[p.id,p]));
-  const adj=new Map(); for(const l of sk.lines){ for(const e of [l.a,l.b]){ if(!adj.has(e)) adj.set(e,[]); adj.get(e).push(l); } }
+  const BZ_N=32;
+  const edges=[...sk.lines.map(l=>({k:'l',a:l.a,b:l.b,o:l})), ...(sk.beziers||[]).map(z=>({k:'b',a:z.a,b:z.b,o:z}))];
+  const adj=new Map(); for(const e of edges){ for(const v of [e.a,e.b]){ if(!adj.has(v)) adj.set(v,[]); adj.get(v).push(e); } }
+  const edgePts=(e, from)=>{ // points after `from`, up to the other end
+    const to= e.a===from? e.b : e.a; const T=P.get(to);
+    if(e.k==='l') return [[T.x,T.y]];
+    const c=bezCtrl(sk,e.o), out=[]; for(let i=1;i<=BZ_N;i++){ const t=i/BZ_N; out.push(bezAt(c, e.a===from? t : 1-t)); } return out; };
   const seen=new Set(); const loops=[]; let open=0;
-  for(const l0 of sk.lines){
-    if(seen.has(l0.id)) continue;
-    // collect component
-    const comp=[]; const st=[l0]; seen.add(l0.id);
-    while(st.length){ const l=st.pop(); comp.push(l); for(const e of [l.a,l.b]) for(const m of adj.get(e)) if(!seen.has(m.id)){ seen.add(m.id); st.push(m);} }
-    const ptsIn=new Set(); comp.forEach(l=>{ptsIn.add(l.a);ptsIn.add(l.b);});
-    const ok=[...ptsIn].every(id=>adj.get(id).length===2) && comp.length>=3;
+  for(const e0 of edges){
+    if(seen.has(e0)) continue;
+    const comp=[]; const st=[e0]; seen.add(e0);
+    while(st.length){ const e=st.pop(); comp.push(e); for(const v of [e.a,e.b]) for(const m of adj.get(v)) if(!seen.has(m)){ seen.add(m); st.push(m);} }
+    const ptsIn=new Set(); comp.forEach(e=>{ptsIn.add(e.a);ptsIn.add(e.b);});
+    const ok=[...ptsIn].every(id=>adj.get(id).length===2) && (comp.length>=3 || (comp.length===2 && comp.some(e=>e.k==='b')));
     if(!ok){ open++; continue; }
-    const order=[comp[0].a]; let prevLine=comp[0]; let cur=comp[0].b;
-    while(cur!==order[0] && order.length<=comp.length){ order.push(cur); const nl=adj.get(cur).find(m=>m!==prevLine); prevLine=nl; cur= nl.a===cur?nl.b:nl.a; }
-    loops.push({kind:'poly', ids:order, pts:order.map(id=>[P.get(id).x,P.get(id).y])});
+    const S=P.get(e0.a); const pts=[[S.x,S.y]]; let prev=e0, cur=e0.b; pts.push(...edgePts(e0,e0.a)); let guard=0;
+    while(cur!==e0.a && guard++<=comp.length){ const nx=adj.get(cur).find(m=>m!==prev); pts.push(...edgePts(nx,cur)); prev=nx; cur= nx.a===cur? nx.b : nx.a; }
+    pts.pop(); // last point repeats the first
+    loops.push({kind:'poly', pts});
   }
   for(const c of sk.circles){ const ctr=P.get(c.c); const pts=[]; for(let i=0;i<72;i++){ const t=i/72*Math.PI*2; pts.push([ctr.x+c.r*Math.cos(t), ctr.y+c.r*Math.sin(t)]); } loops.push({kind:'circle', c:[ctr.x,ctr.y], r:c.r, pts}); }
   const area=p=>{ let A=0; for(let i=0;i<p.length;i++){ const a=p[i],b=p[(i+1)%p.length]; A+=a[0]*b[1]-b[0]*a[1]; } return A/2; };

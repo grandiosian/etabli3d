@@ -4,22 +4,36 @@ Modeleur 3D pour les cours de technologie, dans l'esprit de Tinkercad, qui fonct
 
 **Application en ligne :** https://grandiosian.github.io/etabli3d/
 
+## Trois niveaux
+
+Le niveau se choisit en haut à droite (mémorisé dans le navigateur) :
+
+| Niveau | Ce qui s'affiche |
+|---|---|
+| **Débutant** | Volumes simples (cube, cylindre, sphère, cône, pyramide, coin, texte), perçages, groupes, couleurs, export STL |
+| **Intermédiaire** | + esquisses cotées (lignes, rectangles, cercles, cotes, H/V), tube et tore, aligner, liaisons, moteurs et simulation |
+| **Avancé** | + roues dentées et crémaillère, transmissions entre liaisons, courbes de Bézier, révolution, contraintes ∥ ⊥ = ⦿ fixe, facettes, **arborescence** |
+
+Un exemple d'un niveau supérieur fait passer automatiquement à ce niveau.
+
 ## Ce que l'on peut faire
 
 - **Volumes** : cube, cylindre, sphère, cône, pyramide, coin, tube, tore, texte en relief, roue dentée, crémaillère. Cotes, position et rotation au dixième de millimètre.
 - **Perçages et groupes** : une forme devient un perçage ; groupée avec un solide, elle retire la matière.
-- **Esquisses** : lignes, rectangles, cercles, cotes (longueur, horizontale, verticale, diamètre) et contraintes (horizontale, verticale, parallèle, perpendiculaire, égale, coïncidence, point fixe). L'esquisse devient un volume par extrusion ou révolution.
+- **Esquisses** : lignes, rectangles, cercles, courbes de Bézier à poignées, cotes (longueur, horizontale, verticale, diamètre) et contraintes (horizontale, verticale, parallèle, perpendiculaire, égale, coïncidence, point fixe). L'esquisse devient un volume par extrusion ou révolution.
 - **Mouvements** : liaisons encastrement, pivot et glissière ; moteur continu ou aller-retour ; transmissions par rapport (engrenages, poulies, pignon-crémaillère, vis-écrou) ; simulation animée.
+- **Arborescence** (avancé) : vue par pièces (groupes dépliables) ou par liaisons (arbre cinématique), masquer, verrouiller, renommer.
+- **Apparence** : thème auto / clair / sombre, couleur principale, couleur du plan de travail.
 - **Fichiers** : projet en `.json` (Enregistrer / Ouvrir), export `.stl` pour l'impression 3D. Sauvegarde automatique dans le navigateur.
 
 ## Exemples de démonstration
 
-Le bouton **Exemples** ouvre une galerie de 13 projets prêts à l'emploi. Chacun s'ouvre avec une fiche « À observer / À essayer ».
+Le bouton **Exemples** ouvre une galerie de 15 projets prêts à l'emploi, chacun marqué de son niveau. Chacun s'ouvre avec une fiche « À observer / À essayer ».
 
 | Famille | Exemples |
 |---|---|
 | Modéliser avec des volumes | Maison (perçages, groupes, coins) · Pot à crayons gravé (texte en creux) · Dé à jouer (sphères en perçage) · Porte-clés |
-| Esquisser et coter | Plaque de fixation (esquisse totalement contrainte) · Pion d'échecs (révolution) |
+| Esquisser et coter | Plaque de fixation (esquisse totalement contrainte) · Pion d'échecs (révolution) · Pendentif cœur (Bézier) · Vase (Bézier + révolution) |
 | Mettre en mouvement | Barrière de parking (pivot, butées) · Engrenages et crémaillère · Réducteur à deux étages (rapport 1/9) · Poulies et courroie · Étau (vis-écrou) · Bras articulé · Éolienne |
 
 Pour ajouter un exemple, complétez l'objet `SAMPLES` dans `src/examples.js`.
@@ -29,11 +43,13 @@ Pour ajouter un exemple, complétez l'objet `SAMPLES` dans `src/examples.js`.
 ```
 src/head.html    titre et feuille de style (couleurs, mise en page)
 src/body.html    structure de la page (barres d'outils, panneaux, éditeur d'esquisse, aide)
-src/core.js      icônes, catalogue des formes, construction des géométries, groupes (CSG)
+src/core.js      icônes, catalogue des formes, construction des géométries, profils d'esquisse et Bézier, groupes (CSG)
+src/prefs.js     niveaux, thème et couleurs (mémorisés dans le navigateur)
 src/scene.js     scène 3D, sélection, déplacements, historique, opérations d'édition
 src/ui.js        panneau de réglages, liaisons, simulation, fichiers (.json, .stl)
 src/sketch.js    éditeur d'esquisse et solveur de contraintes
 src/examples.js  exemples de démonstration, galerie et fiche démo
+src/outliner.js  arborescence des objets (niveau avancé)
 src/init.js      exemples, raccourcis clavier, démarrage
 build.py         assemble src/ en une seule page dans dist/
 ```

@@ -19,8 +19,9 @@ function numInput(label, val, unit, onSet, o={}){
 }
 function row(label, ctrl){ return h('div',{class:'row'}, h('label',{},label), ctrl); }
 function sec(title, ...kids){ return h('div',{class:'sec'}, title? h('h3',{},title):null, ...kids); }
+const minLvl=(el,n)=>{ if(n>1) el.dataset.min=n; return el; };
 
-function setTab(t){ tab=t; $('#tabPart').classList.toggle('on',t==='part'); $('#tabMove').classList.toggle('on',t==='move'); if(t!=='move') cancelPick(); renderInspector(); updateMarkers(); }
+function setTab(t){ if(t==='move' && !lv(2)) t='part'; tab=t; $('#tabPart').classList.toggle('on',t==='part'); $('#tabMove').classList.toggle('on',t==='move'); if(t!=='move') cancelPick(); renderInspector(); updateMarkers(); }
 function renderInspector(){
   const body=$('#inspBody'); const st=body.scrollTop; body.innerHTML='';
   if(tab==='move') renderJoints(body); else renderPart(body);
@@ -52,7 +53,7 @@ function modeSec(parts){
   return sec('Type', h('div',{class:'mode2'},
     h('button',{class:'btn'+(allSolid?' on':''),onclick:()=>setHole(false)}, svgIcon('solid'),'Solide'),
     h('button',{class:'btn hole'+(allHole?' on':''),onclick:()=>setHole(true)}, svgIcon('hole'),'Perçage')),
-    allHole? h('div',{class:'info'},'Un perçage creuse les solides avec lesquels il est <b>groupé</b>.') : null);
+    allHole? h('div',{class:'info',html:'Un perçage creuse les solides avec lesquels il est <b>groupé</b>.'}) : null);
 }
 function sceneList(){
   const list=h('div',{style:'display:flex;flex-direction:column;gap:2px'});
@@ -64,7 +65,7 @@ function sceneList(){
       p.hole? h('span',{class:'badge fixe'},'perçage'):null, j? h('span',{class:'badge'},jointLabel(j.type)):null);
     list.append(b);
   }
-  return sec(`Pièces de la scène (${state.parts.length})`, state.parts.length? list : h('p',{class:'empty'},'Le tapis est vide.'));
+  const s=sec(`Pièces de la scène (${state.parts.length})`, state.parts.length? list : h('p',{class:'empty'},'Le tapis est vide.')); s.dataset.max=2; return s;
 }
 function renderPart(body){
   const ps=selParts();
@@ -72,22 +73,23 @@ function renderPart(body){
     body.append(sec('Pour commencer', h('div',{class:'empty',html:'Cliquez une forme à gauche pour la poser sur le tapis, ou ouvrez un <b>exemple</b>.<br><br>Cliquez une pièce pour la régler. <span class="kbd">Maj</span> + clic pour en sélectionner plusieurs.<br><br>Glissez dans le vide pour tourner la vue, molette pour zoomer.'})));
     body.append(sceneList()); return;
   }
-  const lock=simLocked();
+  let lock=simLocked();
   if(ps.length>1){
     body.append(sec(null, h('div',{class:'kind-head'}, svgIcon('group'), h('div',{style:'font-family:var(--f-display);font-weight:600;font-size:17px'},`${ps.length} pièces sélectionnées`))));
     body.append(modeSec(ps)); body.append(colorSec(ps));
     const g=h('div',{class:'align-grid'}, h('span'), h('small',{style:'text-align:center;color:var(--ink-2)'},'min'), h('small',{style:'text-align:center;color:var(--ink-2)'},'centre'), h('small',{style:'text-align:center;color:var(--ink-2)'},'max'));
     for(const ax of ['x','y','z']){ g.append(h('b',{class:ax},ax.toUpperCase())); for(const m of ['min','center','max']) g.append(h('button',{class:'btn',onclick:()=>alignSel(ax,m),title:`Aligner sur ${m==='center'?'le centre':m} en ${ax.toUpperCase()}`}, m==='min'?'⇤':m==='max'?'⇥':'⇹')); }
-    body.append(sec('Aligner', g));
+    body.append(minLvl(sec('Aligner', g),2));
     body.append(sec('Assembler', h('button',{class:'btn primary',style:'justify-content:center',onclick:groupSel}, svgIcon('group'),'Grouper la sélection'), h('div',{class:'info',html:'Grouper fusionne les solides et <b>retire la matière des perçages</b>.'})));
     body.append(sec('Encombrement', h('div',{class:'info','data-live':'bbox',html:bboxText()})));
     body.append(sceneList());
     return;
   }
-  const p=ps[0]; const K=KINDS[p.kind];
+  const p=ps[0]; const K=KINDS[p.kind]; lock = lock || isLocked(p);
   const nameIn=h('input',{value:p.name,'aria-label':'Nom de la pièce'}); nameIn.addEventListener('change',()=>{ p.name=nameIn.value.trim()||K.label; commit(); renderInspector(); });
   body.append(sec(null, h('div',{class:'kind-head'}, svgIcon(p.kind), nameIn)));
-  if(lock) body.append(h('div',{class:'info',html:'Simulation en cours : réinitialisez (⟲) pour modifier.'}));
+  if(isLocked(p)) body.append(h('div',{class:'info',html:'<b>Pièce verrouillée.</b> Cliquez le cadenas dans l’arborescence pour la modifier.'}));
+  else if(lock) body.append(h('div',{class:'info',html:'Simulation en cours : réinitialisez (⟲) pour modifier.'}));
   body.append(modeSec([p]));
   if(!p.hole) body.append(colorSec([p]));
   // dimensions
@@ -95,7 +97,7 @@ function renderPart(body){
   for(const f of K.fields){
     if(f.type==='text'){ const t=h('input',{class:'field',value:p.params[f.k],'aria-label':f.label,maxlength:'40',disabled:lock||null}); t.addEventListener('change',()=>{ p.params[f.k]=t.value; partChanged(p); }); dims.append(row(f.label,t)); }
     else if(f.type==='select'){ const s=h('select',{class:'field','aria-label':f.label,disabled:lock||null}, f.opts.map(([v,l])=>h('option',{value:v,selected:p.params[f.k]===v||null},l))); s.addEventListener('change',()=>{ p.params[f.k]=s.value; partChanged(p); }); dims.append(row(f.label,s)); }
-    else dims.append(row(f.label, numInput(f.label,p.params[f.k],f.unit,v=>{ if(!guard())return; p.params[f.k]=v; partChanged(p, p.kind==='gear'||p.kind==='rack'); }, {...f, disabled:lock})));
+    else dims.append(minLvl(row(f.label, numInput(f.label,p.params[f.k],f.unit,v=>{ if(!guard())return; p.params[f.k]=v; partChanged(p, p.kind==='gear'||p.kind==='rack'); }, {...f, disabled:lock})), f.lvl||1));
   }
   if(p.kind==='gear'){ const z=p.params.z, m=p.params.m; dims.append(h('div',{class:'info',html:`Diamètre primitif <b>d = m × Z = ${fmt(m*z)} mm</b><br>Diamètre extérieur ${fmt(m*(z+2))} mm · pas ${fmt(Math.PI*m)} mm<br>Deux roues engrènent si elles ont le <b>même module</b>. Entraxe = (d₁ + d₂) / 2.`})); }
   if(p.kind==='rack'){ const m=p.params.m; dims.append(h('div',{class:'info',html:`Pas <b>p = π × m = ${fmt(Math.PI*m)} mm</b> · longueur ${fmt(Math.PI*m*p.params.n,1)} mm<br>La ligne primitive passe par l'origine de la pièce (Y = 0) : placez-la à <b>d/2</b> du centre du pignon.`})); }
@@ -103,7 +105,7 @@ function renderPart(body){
   if(p.kind==='sketch'){
     dims.append(h('div',{class:'info',html: p.params.mode==='revolve'? 'Volume obtenu par <b>révolution</b> du profil autour de l’axe vertical de l’esquisse (axe Z de la pièce).' : `Profil <b>extrudé</b> sur ${fmt(p.params.h)} mm.`}));
     if(p.params.mode!=='revolve') dims.append(row("Hauteur d'extrusion", numInput('Hauteur',p.params.h,'mm',v=>{ if(!guard())return; p.params.h=v; partChanged(p); },{min:0.1,step:1,disabled:lock})));
-    dims.append(h('button',{class:'btn',style:'justify-content:center',disabled:lock||null,onclick:()=>openSketch(p)}, svgIcon('edit'),"Modifier l'esquisse"));
+    dims.append(minLvl(h('button',{class:'btn',style:'justify-content:center',disabled:lock||null,onclick:()=>openSketch(p)}, svgIcon('edit'),"Modifier l'esquisse"),2));
   }
   if(p.kind==='group'){ const nh=p.children.filter(c=>c.hole).length; dims.append(h('div',{class:'info',html:`Assemblage de <b>${p.children.length} pièces</b>${nh?` dont ${nh} perçage${nh>1?'s':''}`:''}.`}), h('button',{class:'btn',style:'justify-content:center',disabled:lock||null,onclick:ungroupSel}, svgIcon('ungroup'),'Dégrouper')); }
   if(K.fields.length||p.kind==='group'||p.kind==='sketch') body.append(dims);
@@ -115,8 +117,8 @@ function renderPart(body){
   body.append(sec('Encombrement', h('div',{class:'info','data-live':'bbox',html:bboxText()})));
   const j=state.joints.find(j=>j.child===p.id);
   const supports=state.joints.filter(j=>j.parent===p.id);
-  body.append(sec('Mouvement', h('div',{class:'info',html: j? `Reliée à <b>${partName(j.parent)}</b> par une liaison <b>${jointLabel(j.type).toLowerCase()}</b>.` : supports.length? `Support de ${supports.length} liaison${supports.length>1?'s':''}.` : 'Aucune liaison.'}),
-    h('button',{class:'btn',style:'justify-content:center',onclick:()=>{ if(!j) openJointForm(null,p.id); else selJoint=j.id; setTab('move'); }}, svgIcon('link'), j?'Voir la liaison':'Ajouter une liaison')));
+  body.append(minLvl(sec('Mouvement', h('div',{class:'info',html: j? `Reliée à <b>${partName(j.parent)}</b> par une liaison <b>${jointLabel(j.type).toLowerCase()}</b>.` : supports.length? `Support de ${supports.length} liaison${supports.length>1?'s':''}.` : 'Aucune liaison.'}),
+    h('button',{class:'btn',style:'justify-content:center',onclick:()=>{ if(!j) openJointForm(null,p.id); else selJoint=j.id; setTab('move'); }}, svgIcon('link'), j?'Voir la liaison':'Ajouter une liaison')),2));
   body.append(sceneList());
 }
 
@@ -234,13 +236,13 @@ function jointForm(){
     const opt=(v,on)=>{ const inp=h('input',{type:'text',inputmode:'decimal',value:v==null?'':fmtIn(v),placeholder:'libre','aria-label':'Butée'}); inp.addEventListener('change',()=>{ const x=parseNum(inp.value); on(isFinite(x)?x:null); }); return h('div',{class:'num'},inp,h('span',{},u)); };
     form.append(row('Butée min', opt(f.min,v=>f.min=v)), row('Butée max', opt(f.max,v=>f.max=v)));
     const others=state.joints.filter(k=>k.id!==f.edit && k.type!=='fixe');
-    form.append(row('Mise en mouvement', sel([['none','Manuelle (curseur)'],['continu','Moteur continu'],['alternatif','Moteur aller-retour'],...(others.length?[['driven','Entraînée par une liaison']]:[])], f.driver!=null?'driven':f.motor, v=>{ if(v==='driven'){ f.driver=others[0].id; f.motor='none'; suggestRatio(); } else { f.driver=null; f.motor=v; } rer(); }, 'Mise en mouvement')));
+    form.append(row('Mise en mouvement', sel([['none','Manuelle (curseur)'],['continu','Moteur continu'],['alternatif','Moteur aller-retour'],...(others.length&&(lv(3)||f.driver!=null)?[['driven','Entraînée par une liaison']]:[])], f.driver!=null?'driven':f.motor, v=>{ if(v==='driven'){ f.driver=others[0].id; f.motor='none'; suggestRatio(); } else { f.driver=null; f.motor=v; } rer(); }, 'Mise en mouvement')));
     if(f.driver==null && f.motor!=='none') form.append(row('Vitesse', numInput('Vitesse', f.speed, u+'/s', v=>f.speed=v, {min:-1e4,max:1e4,step:5})));
     if(f.motor==='alternatif' && f.driver==null) form.append(h('div',{class:'info'},`L’aller-retour se fait entre les butées (par défaut ${f.type==='pivot'?'−45° et 45°':'0 et 20 mm'}).`));
     if(f.driver!=null){
       form.append(row('Menante', sel(others.map(k=>[k.id,k.name]), f.driver, v=>{ f.driver=+v; suggestRatio(); rer(); }, 'Liaison menante')));
       form.append(row('Rapport', numInput('Rapport', f.ratio, '', v=>f.ratio=v, {min:-1e4,max:1e4,step:0.1})));
-      form.append(transmissionCalc());
+      if(lv(3)) form.append(transmissionCalc());
     }
   }
   form.append(h('div',{style:'display:flex;gap:6px'}, h('button',{class:'btn primary',style:'flex:1;justify-content:center',onclick:saveJoint}, svgIcon('check'), f.edit!=null?'Enregistrer':'Créer la liaison'), h('button',{class:'btn',onclick:()=>{ jf=null; cancelPick(); renderInspector(); updateMarkers(); }},'Annuler')));
@@ -403,9 +405,9 @@ function zipStore(files){ // [{name, data:Uint8Array}]
 }
 async function exportStl(){
   const ids = selection.length? selection : state.parts.map(p=>p.id);
-  const list=ids.map(id=>({p:findPart(id), r:meshes.get(id)})).filter(x=>x.p&&x.r&&!x.p.hole);
+  const list=ids.map(id=>({p:findPart(id), r:meshes.get(id)})).filter(x=>x.p&&x.r&&!x.p.hole&&!isHidden(x.p));
   const skipped=ids.length-list.length;
-  if(!list.length){ toast('Rien à exporter : les perçages seuls ne sont pas imprimables.'); return; }
+  if(!list.length){ toast('Rien à exporter : les perçages seuls et les pièces masquées ne sont pas imprimés.'); return; }
   list.forEach(x=>x.r.mesh.updateMatrixWorld(true));
   const base=slug(state.name)+(selection.length?'-selection':'');
   const stl=stlBinary(list.map(x=>x.r));

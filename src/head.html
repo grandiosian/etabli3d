@@ -158,6 +158,70 @@ button{cursor:pointer}
 
 #mobileInsp{display:none}
 
+/* levels: elements marked data-min appear from that level; data-max disappear above it */
+html[data-level="1"] [data-min="2"], html[data-level="1"] [data-min="3"], html[data-level="2"] [data-min="3"],
+html[data-level="2"] [data-max="1"], html[data-level="3"] [data-max="1"], html[data-level="3"] [data-max="2"]{display:none!important}
+.lvl{display:flex;align-items:center;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:2px;gap:2px}
+.lvl-lbl{font-family:var(--f-display);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);padding:0 6px 0 6px}
+.lvl button{border:0;background:transparent;border-radius:6px;padding:5px 9px;font-size:13px;color:var(--ink-2);white-space:nowrap}
+.lvl button:hover{background:var(--panel-2);color:var(--ink)}
+.lvl button[aria-checked="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.lvl .s{display:none}
+.menu.look{left:auto;right:0;min-width:280px;padding:12px;gap:12px}
+.look h4{margin:0 0 6px;font-family:var(--f-display);font-weight:600;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+.look .seg{display:flex}
+.look .seg .btn{flex:1;justify-content:center;padding:6px 8px}
+.look-sw{display:flex;flex-wrap:wrap;gap:8px}
+.look-sw button{display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--bg);border-radius:7px;padding:4px 8px 4px 4px;font-size:12.5px}
+.look-sw button[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.look-sw i{width:18px;height:18px;border-radius:5px;display:block}
+
+/* outliner */
+#outliner{grid-area:tree;display:none;flex-direction:column;min-height:0;background:var(--panel);border-right:1px solid var(--line)}
+html[data-level="3"] #app.with-tree{grid-template-columns:96px 260px 1fr 312px;grid-template-areas:"top top top top" "rack tree stage insp"}
+html[data-level="3"] #app.with-tree #outliner{display:flex}
+.tree-head{display:flex;align-items:center;gap:8px;padding:10px 8px 6px 12px}
+.tree-head>svg{width:18px;height:18px;color:var(--accent)}
+.tree-head b{flex:1;font-family:var(--f-display);font-weight:600;font-size:15px}
+#treeClose{display:none}
+.tree-mode{margin:0 12px;display:flex}
+.tree-mode .btn{flex:1;justify-content:center;padding:5px 6px;font-size:12.5px}
+.tree-mode .btn.on{background:var(--accent-soft);color:var(--ink)}
+.tree-count{padding:8px 12px 6px;font-size:11.5px;color:var(--ink-2)}
+#treeBody{flex:1;overflow:auto;padding:0 6px 16px;min-height:0}
+.tr{display:flex;align-items:center;gap:5px;min-height:30px;padding:2px 4px 2px calc(4px + var(--d)*16px);border-radius:6px;cursor:default;font-size:13px;position:relative}
+.tr:hover{background:var(--panel-2)}
+.tr.sel{background:var(--accent-soft)}
+.tr.sel-child{background:color-mix(in srgb,var(--accent-soft) 45%,transparent)}
+.tr.off .tr-name,.tr.off .tr-ic{opacity:.45}
+.tr-info{color:var(--ink-2);font-size:12px;font-style:italic}
+.tr-info:hover{background:transparent}
+.tr-caret,.tr-caret-sp{width:18px;height:18px;flex:none;border:0;background:transparent;padding:0;display:grid;place-items:center;color:var(--ink-2);border-radius:4px}
+.tr-caret svg{width:14px;height:14px;transition:transform .15s}
+.tr-caret.open svg{transform:rotate(90deg)}
+.tr-caret:hover{background:var(--line)}
+.tr-ic{width:18px;height:18px;flex:none}
+.tr-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tr-info .tr-name{white-space:normal}
+.tr .badge{font-size:10px;padding:1px 5px;flex:none}
+.tr-joint{border:0;cursor:pointer}
+.tr-joint:hover{filter:brightness(.95);outline:1px solid var(--accent)}
+.tr-act{display:flex;gap:1px;flex:none}
+.tr-btn{width:24px;height:24px;border:0;background:transparent;border-radius:5px;display:grid;place-items:center;color:var(--ink-2);opacity:.35}
+.tr:hover .tr-btn,.tr-btn.on,.tr-btn:focus-visible{opacity:1}
+.tr-btn.on{color:var(--mark)}
+.tr-btn:hover{background:var(--line)}
+.tr-btn svg{width:15px;height:15px}
+.tr-rename{flex:1;min-width:0;font-size:13px;border:1px solid var(--accent);border-radius:4px;padding:2px 4px;background:var(--bg)}
+.tr-empty{padding:8px 8px;font-size:13px}
+.gal-lvl{font-family:var(--f-display);font-weight:600;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;border-radius:5px;padding:1px 6px;border:1px solid var(--line);color:var(--ink-2);align-self:flex-start}
+.gal-lvl.l2{border-color:var(--accent);color:var(--accent)}
+.gal-lvl.l3{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.gal-title{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+@media (max-width: 1600px){ .hide-mid{display:none} .lvl-lbl{display:none} }
+@media (max-width: 1100px){ #projName{width:120px} .brand span{display:none} }
+
+
 /* ---------- sketch editor */
 #sk{position:fixed;inset:0;z-index:60;background:var(--bg);display:grid;grid-template-rows:auto 1fr auto;grid-template-columns:minmax(0,1fr) 290px;grid-template-areas:"skbar skbar" "skcanvas skside" "skhint skside"}
 #skbar{grid-area:skbar;display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--panel);border-bottom:1px solid var(--line);
@@ -226,7 +290,11 @@ button{cursor:pointer}
 
 /* ---------- narrow screens */
 @media (max-width: 860px){
-  #app{grid-template-columns:1fr;grid-template-rows:auto 1fr auto;grid-template-areas:"top" "stage" "rack"}
+  #app, html[data-level="3"] #app.with-tree{grid-template-columns:1fr;grid-template-rows:auto 1fr auto;grid-template-areas:"top" "stage" "rack"}
+  html[data-level="3"] #app.with-tree #outliner{position:fixed;left:0;top:0;bottom:0;width:min(300px,86vw);z-index:25;box-shadow:var(--shadow);padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-left,0px)}
+  #treeClose{display:inline-flex}
+  .lvl .l{display:none} .lvl .s{display:inline}
+  .tr-btn{opacity:1}
   #rack{flex-direction:row;overflow-x:auto;overflow-y:hidden;border-right:0;border-top:1px solid var(--line);padding:4px 8px;gap:2px}
   .rack-title{display:none}
   .shape{min-width:64px}
