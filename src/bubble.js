@@ -296,7 +296,7 @@ function freeJointLabels(host, lay){
   const H=STG.h, m=8, top=54;   // keep clear of the layout buttons at the top
   const d=$('#demo'); const L0= (d && !d.hidden && !movedDemo() && STG.w>760)? d.offsetLeft+d.offsetWidth : 0;   // not under the demo card
   const v=$('#views'); const R0= (v && v.offsetParent && LAYOUT.views?.x==null && !LAYOUT.views?.c)? v.offsetWidth+14 : 0;   // nor under the view buttons
-  const W=STG.w-L0-R0;
+  const W=STG.w-L0-Math.max(R0, rightReserve());
   const sb=systemScreenBox(); const bx= sb? {x0:sb.x0-L0, x1:sb.x1-L0, y0:sb.y0, y1:sb.y1} : {x0:W*.35,x1:W*.65,y0:H*.35,y1:H*.65};
   const pts=els.map(el=>{ const j=state.joints.find(k=>k.id===+el.dataset.j); const p= j? toStage(jointWorld(j, simActive()).o) : {x:W/2+L0,y:H/2}; return {x:p.x-L0, y:p.y}; });
   const fit=sz=>{ const r=placeJointLabels(lay, bx, ORB.sizes[sz], pts, W, H, top, m); r.ok= r.fill<=1 && r.room>=0.6; r.roomy= r.fill<=0.87 && r.room>=0.7; r.S=ORB.sizes[sz]; return r; };

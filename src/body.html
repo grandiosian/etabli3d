@@ -42,7 +42,9 @@
     <div id="rackBasic" style="display:contents"></div>
     <div class="rack-title" data-min="3">Mécanique</div>
     <div id="rackMeca" style="display:contents"></div>
-    <div class="rack-title">Modifier</div>
+    <button class="rackmin-btn" id="rackMin" title="Réduire la barre des formes" aria-label="Réduire la barre des formes"><svg data-i="chevUp"></svg></button>
+  </nav>
+  <nav id="toolbar" data-ws="model" aria-label="Outils de modification">
     <div id="tools" data-ws="model" role="toolbar" aria-label="Outils">
       <button class="btn tool" id="tSolid" title="Solide (S)"><svg data-i="solid"></svg><span>Solide</span></button>
       <button class="btn tool" id="tHole" title="Perçage (H)"><svg data-i="hole"></svg><span>Perçage</span></button>
@@ -52,7 +54,6 @@
       <button class="btn tool" id="tDrop" title="Poser sur le plan (D)"><svg data-i="drop"></svg><span>Poser</span></button>
       <button class="btn tool danger" id="tDel" title="Supprimer (Suppr)"><svg data-i="trash"></svg><span>Supprimer</span></button>
     </div>
-    <button class="rackmin-btn" id="rackMin" title="Réduire la barre des formes" aria-label="Réduire la barre des formes"><svg data-i="chevUp"></svg></button>
   </nav>
 
   <aside id="outliner" data-ws="model check mech" aria-label="Arborescence">
@@ -116,7 +117,7 @@
 
   <aside id="insp">
     <div class="insp-head"><span class="step-n" id="inspStep">1</span><div class="insp-tt"><b id="inspTitle">Modéliser</b><small id="inspSub"></small></div>
-      <button class="btn icon ghost insp-tool" id="inspSide" title="Placer le panneau de l’autre côté" aria-label="Placer le panneau de l’autre côté"><svg data-i="side"></svg></button>
+      <button class="btn icon ghost insp-tool" id="inspSide" title="Remettre le panneau sous le cube de vue" aria-label="Remettre le panneau à sa place"><svg data-i="reset"></svg></button>
       <button class="btn icon ghost insp-tool" id="inspMin" title="Réduire le panneau" aria-label="Réduire le panneau"><svg data-i="chevUp"></svg></button>
     </div>
     <div id="inspBody"></div>
@@ -192,7 +193,7 @@
         <li>Cliquez sur une forme de la barre du haut (ou glissez-la sur le tapis) pour l'ajouter. Les outils Solide, Perçage, Grouper… sont au bout de la même barre.</li>
         <li>En glissant une pièce, elle s'<b>aimante</b> aux bords et aux centres des autres pièces (traits roses). Alt : glisser librement.</li>
         <li><b>Cube de vue</b> (en haut à droite) : cliquez une face, une arête ou un coin pour voir de ce côté ; glissez dessus pour tourner. Boutons autour : vue de départ, tout voir, zoomer sur la sélection, réglage de la souris.</li>
-        <li>Réglez les cotes, la position et la rotation dans le panneau de droite.</li>
+        <li>Réglez les cotes, la position et la rotation dans le panneau des propriétés.</li>
         <li><b>Perçage</b> : la forme devient un trou. <b>Grouper</b> une forme et un perçage creuse la forme.</li>
         <li>Cliquez une pièce : <b>poignées</b> aux coins (longueur et largeur, Maj pour garder les proportions), au milieu des côtés (une cote), en haut (hauteur), cône noir (soulever), flèches courbes (tourner par pas de 15°, Maj : 1°). Survolez une poignée pour voir les cotes ; cliquez une cote pour la taper.</li>
         <li><b>Groupe</b> : double-clic dessus (ou « Modifier l'intérieur ») pour changer ses pièces, puis « Terminer le groupe » : les perçages sont recalculés.</li>

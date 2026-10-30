@@ -42,11 +42,9 @@ button{cursor:pointer}
 :focus-visible{outline:2px solid var(--mark);outline-offset:2px}
 .mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 
-#app{height:100%;display:grid;grid-template-rows:auto auto 1fr;grid-template-columns:auto auto 1fr;
-  grid-template-areas:"top top top" "rack rack rack" "tree insp stage";}
-#app.insp-right{grid-template-columns:auto 1fr auto;grid-template-areas:"top top top" "rack rack rack" "tree stage insp"}
+#app{position:relative;height:100%;display:grid;grid-template-rows:auto auto auto 1fr;grid-template-columns:1fr auto;
+  grid-template-areas:"top top" "rack rack" "tools tools" "stage tree";}
 #insp{width:312px}
-#app:not(.insp-right) #insp{border-left:0;border-right:1px solid var(--line)}
 #outliner{width:260px}
 
 /* ---------- top bar */
@@ -79,7 +77,10 @@ button{cursor:pointer}
 
 /* ---------- shape rack */
 #rack{grid-area:rack;background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto;overflow-y:hidden;padding:3px 8px;display:flex;flex-direction:row;align-items:stretch;gap:2px;scrollbar-width:thin}
+#toolbar{grid-area:tools;display:flex;align-items:center;gap:6px;padding:2px 8px;border-bottom:1px solid var(--line);background:var(--panel);overflow-x:auto;scrollbar-width:thin}
 #tools{display:flex;align-items:stretch;gap:2px}
+#tools .tool{flex-direction:row!important;gap:5px!important;min-width:0!important;padding:4px 9px!important;font-size:12px!important}
+#tools .tool svg{width:18px!important;height:18px!important}
 #tools .tool{flex-direction:column;gap:2px;padding:4px 6px;min-width:58px;font-size:10.5px;border-color:transparent;background:transparent}
 #tools .tool svg{width:22px;height:22px}
 #tools .tool:hover:not(:disabled){background:var(--panel-2);border-color:var(--line)}
@@ -97,6 +98,8 @@ button{cursor:pointer}
 #stage canvas.gl{display:block;width:100%;height:100%;touch-action:none}
 .float{position:absolute;display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px;box-shadow:var(--shadow);z-index:5}
 #views{top:10px;right:10px;flex-direction:column;align-items:center;padding:2px 4px 4px}
+#views.float{background:transparent!important;border-color:transparent;box-shadow:none;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+#views .pgrip{opacity:.5} #views:hover .pgrip{opacity:1}
 .vc-wrap{position:relative;width:150px;height:150px}
 #vcube{position:absolute;left:17px;top:17px;width:116px;height:116px;cursor:grab;touch-action:none}
 #vcube:active{cursor:grabbing}
@@ -195,7 +198,8 @@ html[data-level="2"] [data-max="1"], html[data-level="3"] [data-max="1"], html[d
 .look-sw i{width:18px;height:18px;border-radius:5px;display:block}
 
 /* outliner */
-#outliner{grid-area:tree;display:none;flex-direction:column;min-height:0;background:var(--panel);border-right:1px solid var(--line)}
+#outliner{grid-area:tree;display:none;flex-direction:column;min-height:0;background:var(--panel);border-left:1px solid var(--line)}
+#outliner > #demo{position:static;width:auto;max-height:46%;margin:8px;flex:none;transform:none!important}
 html[data-level="3"] #app.with-tree #outliner{display:flex}
 .tree-head{display:flex;align-items:center;gap:8px;padding:10px 8px 6px 12px}
 .tree-head>svg{width:18px;height:18px;color:var(--accent)}
@@ -272,7 +276,7 @@ html[data-level="3"] #app.with-tree #outliner{display:flex}
 
 
 /* demo note card */
-#demo{position:absolute;left:10px;top:62px;z-index:6;width:min(320px,calc(100% - 20px));max-height:calc(100% - 140px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--mark);border-radius:10px;box-shadow:var(--shadow);padding:6px 6px 10px 10px;display:flex;flex-direction:column;gap:8px}
+#demo{position:absolute;left:10px;top:10px;z-index:6;width:min(320px,calc(100% - 20px));max-height:calc(100% - 140px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--mark);border-radius:10px;box-shadow:var(--shadow);padding:6px 6px 10px 10px;display:flex;flex-direction:column;gap:8px}
 #demo.closed{padding-bottom:6px}
 .demo-head{display:flex;align-items:flex-start;gap:4px}
 .demo-toggle{flex:1;min-width:0;display:grid;grid-template-columns:1fr auto;align-items:center;text-align:left;border:0;background:transparent;padding:2px 0;column-gap:6px}
@@ -564,12 +568,17 @@ html:not([data-glass="opaque"]) #bubble .bub-row input[type=range]{background:tr
 .tg-corner{width:13px;height:13px;background:#fff;border:2px solid #333;border-radius:2px;box-shadow:0 1px 3px rgba(0,0,0,.3)}
 .tg-edge{width:9px;height:9px;background:#333;border:1.5px solid #fff;border-radius:1px}
 .tg-corner:hover,.tg-edge:hover{background:var(--danger,#d64035);border-color:#fff}
-.tg-lift{color:#222;width:18px;height:18px;display:grid;place-items:center;cursor:ns-resize}
+.tg-lift{color:#222;width:28px;height:28px;display:grid;place-items:center;cursor:ns-resize;border-radius:50%;border:2px solid transparent}
 .tg-lift svg{width:16px;height:16px;filter:drop-shadow(0 0 1.5px #fff)}
 .tg-lift:hover{color:var(--accent)}
-.tg-rot{width:36px;height:36px;display:grid;place-items:center;color:#2b2f2e;border-radius:50%;cursor:grab}
-.tg-rot svg{width:30px;height:30px;filter:drop-shadow(0 0 2px #fff) drop-shadow(0 0 1px #fff)}
-.tg-rot:hover{color:var(--accent);background:color-mix(in srgb,var(--panel) 70%,transparent)}
+.tg-rot{width:26px;height:26px;border-radius:50%;cursor:grab;background:transparent;border:2px solid transparent}
+.tg-rot:hover,.tg-lift:hover{background:rgba(255,255,255,.55);border-color:rgba(255,255,255,.9);box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.tg-arcg path{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.tg-arcw{stroke:#fff;stroke-width:6;opacity:.9}
+.tg-arc{stroke-width:2.8}
+.tg-arch{stroke:transparent;stroke-width:18;pointer-events:stroke;cursor:grab}
+.tg-arcg.hot .tg-arc{stroke-width:4}
+.tg-arcg.hot .tg-arcw{stroke-width:9}
 .tg-dimv{position:absolute;left:0;top:0;pointer-events:auto;font:600 12px var(--f-mono);background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:2px 6px;box-shadow:var(--shadow);cursor:text}
 .tg-dimv:hover{border-color:var(--accent)}
 .tg-dimin{width:62px;font:600 12px var(--f-mono);border:0;background:transparent;color:var(--ink);text-align:center;outline:none}
@@ -585,14 +594,23 @@ html[data-glass="opaque"]{--insp-a:100%}
   #stage{overflow:visible;clip-path:inset(calc(-1 * var(--ovr-t,0px)) calc(-1 * var(--ovr-r,0px)) 0 calc(-1 * var(--ovr-l,0px)))}
   #stage canvas.gl{position:absolute;top:calc(-1 * var(--ovr-t,0px));left:calc(-1 * var(--ovr-l,0px));width:calc(100% + var(--ovr-l,0px) + var(--ovr-r,0px));height:calc(100% + var(--ovr-t,0px))}
   #stWrap{top:calc(-1 * var(--ovr-t,0px));left:calc(-1 * var(--ovr-l,0px));right:calc(-1 * var(--ovr-r,0px))}
-  /* the panels around the view (creation bar, settings, tree) are see-through: the 3D view continues under them */
-  #insp,#rack,#outliner{position:relative;z-index:30;background:color-mix(in srgb,var(--panel) var(--insp-a),transparent);-webkit-backdrop-filter:blur(8px) saturate(1.15);backdrop-filter:blur(8px) saturate(1.15)}
-  html[data-glass="opaque"] :is(#insp,#rack,#outliner){-webkit-backdrop-filter:none;backdrop-filter:none}
+  /* the panels around the view (creation bar, tools, tree) are see-through: the 3D view continues under them;
+     the properties panel floats over the view, under the view cube (placed by placeInsp) */
+  #insp{position:absolute;z-index:31;width:300px;grid-area:auto;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+  #insp .insp-head{cursor:grab;touch-action:none}
+  #app.insp-min #insp{width:300px} #app.insp-min .insp-head{flex-direction:row;padding:8px 12px;border-bottom:0} #app.insp-min .insp-tt{display:block} #app.insp-min #inspSide{display:inline-flex}
+  #insp.dragging{opacity:.92}
+  #rack,#toolbar,#outliner{position:relative;z-index:30;}
+  #insp,#rack,#toolbar,#outliner{background:color-mix(in srgb,var(--panel) var(--insp-a),transparent);-webkit-backdrop-filter:blur(8px) saturate(1.15);backdrop-filter:blur(8px) saturate(1.15)}
+  html[data-glass="opaque"] :is(#insp,#rack,#toolbar,#outliner){-webkit-backdrop-filter:none;backdrop-filter:none}
 }
+
+@media (min-width: 861px){ html[data-ws="struct"] #stage > #demo{top:62px} }
 
 /* ---------- narrow screens */
 @media (max-width: 860px){
-  #app, #app.insp-right, html[data-level="3"] #app.with-tree{grid-template-columns:1fr;grid-template-rows:auto 1fr auto;grid-template-areas:"top" "stage" "rack"}
+  #app, html[data-level="3"] #app.with-tree{grid-template-columns:1fr;grid-template-rows:auto 1fr auto auto;grid-template-areas:"top" "stage" "tools" "rack"}
+  #toolbar{border-bottom:0;border-top:1px solid var(--line)}
   #insp{width:auto} .insp-tool,.rackmin-btn{display:none!important} #app.insp-min #inspBody{display:flex} #app.insp-min .insp-tt{display:block}
   .flow-t{display:none}
   #rack{width:auto}

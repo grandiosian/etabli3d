@@ -19,18 +19,21 @@ const _tv=new THREE.Vector3(), _tw=new THREE.Vector3();
 function tgBuild(){
   const root=h('div',{id:'tg',hidden:true});
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('class','tg-lines');
-  svg.innerHTML='<path class="tg-base"/><path class="tg-axes"/><path class="tg-dim"/><path class="tg-snap"/>'; root.append(svg);
+  svg.innerHTML='<path class="tg-base"/><path class="tg-axes"/><path class="tg-dim"/><path class="tg-snap"/>'+['rx','ry','rz'].map(k=>`<g class="tg-arcg" data-k="${k}"><path class="tg-arcw"/><path class="tg-arc"/><path class="tg-arch" data-k="${k}"/></g>`).join(''); root.append(svg);
   const mk=(cls,data,title,html='')=>{ const e=h('div',{class:'tg-h '+cls,title,...data,html}); root.append(e); return e; };
   TG.corners=TG_BASE.map((s,i)=>mk('tg-corner',{'data-k':'c'+i},'Tirer pour changer la longueur et la largeur (Maj : garder les proportions)'));
   TG.edges=TG_EDGE.map((s,i)=>mk('tg-edge',{'data-k':'e'+i},'Tirer pour changer cette cote'));
   TG.top=mk('tg-corner',{'data-k':'top'},'Tirer pour changer la hauteur');
   TG.lift=mk('tg-lift',{'data-k':'lift'},'Tirer pour soulever ou descendre la pièce','<svg viewBox="0 0 16 16"><path d="M8 2 13 12H3z" fill="currentColor"/></svg>');
-  const arc='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 15.5a8.5 8.5 0 0 1 15 0"/><path d="M3 11.5l1.5 4.2 4.2-1.4M21 11.5l-1.5 4.2-4.2-1.4"/></svg>';
+  const arc='';   // the arrow itself is an arc drawn in the rotation plane (tgArc); this is the round grip on it
   TG.rot={x:mk('tg-rot',{'data-k':'rx'},'Tourner autour de l’axe X (rouge)',arc), y:mk('tg-rot',{'data-k':'ry'},'Tourner autour de l’axe Y (vert)',arc), z:mk('tg-rot',{'data-k':'rz'},'Tourner autour de l’axe vertical Z (bleu)',arc)};
   TG.dims={x:h('button',{class:'tg-dimv','data-a':'x'}), y:h('button',{class:'tg-dimv','data-a':'y'}), z:h('button',{class:'tg-dimv','data-a':'z'})};
   for(const b of Object.values(TG.dims)){ root.append(b); b.onclick=()=>tgEditDim(b.dataset.a); b.addEventListener('pointerenter',()=>{ TG.dimUntil=performance.now()+4000; }); }
   TG.ang=h('div',{class:'tg-ang',hidden:true}); root.append(TG.ang);
   TG.svg=svg; TG.el=root; $('#stage').append(root);
+  for(const p of svg.querySelectorAll('.tg-arch')){ p.addEventListener('pointerdown', ev=>tgStart(ev, p.dataset.k));
+    p.addEventListener('pointerenter',()=>p.parentNode.classList.add('hot')); p.addEventListener('pointerleave',()=>p.parentNode.classList.remove('hot')); }
+  for(const k of ['x','y','z']){ const e=TG.rot[k], g=svg.querySelector(`.tg-arcg[data-k="r${k}"]`); e.addEventListener('pointerenter',()=>g.classList.add('hot')); e.addEventListener('pointerleave',()=>g.classList.remove('hot')); }
   for(const e of root.querySelectorAll('.tg-h')){
     e.addEventListener('pointerdown', ev=>tgStart(ev, e.dataset.k));
     if(/^(c|e)\d$|^top$/.test(e.dataset.k)) e.addEventListener('pointerenter', ()=>{ TG.dimUntil=performance.now()+4000; });
@@ -58,7 +61,7 @@ function tgTick(){
   if(!TG.el) tgBuild();
   const F= tgVisible()? tgFrame() : null;
   TG.el.hidden=!F; if(!F){ TG.ring.visible=false; return; }
-  const b=F.b, cx=(b.min.x+b.max.x)/2, cy=(b.min.y+b.max.y)/2, z0=b.min.z, z1=b.max.z;
+  TG.frame=F; const b=F.b, cx=(b.min.x+b.max.x)/2, cy=(b.min.y+b.max.y)/2, z0=b.min.z, z1=b.max.z;
   const X=[b.min.x,b.max.x], Y=[b.min.y,b.max.y], S=(x,y,z)=>toStage(tgW(F,x,y,z));
   const base=TG_BASE.map(([sx,sy])=>S(X[(sx+1)/2],Y[(sy+1)/2],z0));
   TG.svg.querySelector('.tg-base').setAttribute('d', 'M'+base.map(p=>`${p.x},${p.y}`).join('L')+'Z');
@@ -67,12 +70,13 @@ function tgTick(){
   const scal= F.single && !!SCALE_MAP[F.p.kind];
   TG.corners.forEach((e,i)=>tgPlace(e, base[i], scal)); TG.edges.forEach((e,i)=>tgPlace(e, mids[i], scal)); tgPlace(TG.top, cT, scal);
   tgPlace(TG.lift, {x:cT.x, y:cT.y-26, vis:cT.vis});
-  // rotation arrows on the edges nearest to the camera, pushed a little outside the box
+  // rotation arrows: short arcs lying in the plane of each rotation, on the edges nearest to the camera
   const cam=camera.position, near=(a,b2)=>tgW(F,...a).distanceTo(cam) < tgW(F,...b2).distanceTo(cam);
   const fy= near([cx,Y[0],z1],[cx,Y[1],z1])? Y[0] : Y[1], fx= near([X[0],cy,z1],[X[1],cy,z1])? X[0] : X[1];
-  const cc=S(cx,cy,(z0+z1)/2), out=(p,d=30)=>{ const vx=p.x-cc.x, vy=p.y-cc.y, l=Math.hypot(vx,vy)||1; return {x:p.x+vx/l*d, y:p.y+vy/l*d, vis:p.vis}; };
-  tgPlace(TG.rot.x, out(S(cx,fy,z1))); tgPlace(TG.rot.y, out(S(fx,cy,z1)));
-  const cornerZ=[[X[1],fy],[X[0],fy]].map(([x,y])=>S(x,y,z0)).sort((a,c)=>c.x-a.x)[0]; tgPlace(TG.rot.z, out(cornerZ,26));
+  const xz= S(X[1],fy,z0).x > S(X[0],fy,z0).x ? X[1] : X[0], cz=(z0+z1)/2, C=axisColors();
+  tgArc('z', a=>[cx+Math.cos(a), cy+Math.sin(a), z0], [cx,cy,z0], [xz,fy,z0], C.z);
+  tgArc('x', a=>[cx, cy+Math.cos(a), cz+Math.sin(a)], [cx,cy,cz], [cx,fy,z1], C.x);
+  tgArc('y', a=>[cx+Math.cos(a), cy, cz+Math.sin(a)], [cx,cy,cz], [fx,cy,z1], C.y);
   // dimensions
   const showDim= scal && (performance.now()<TG.dimUntil || (TG.drag && TG.drag.kind==='scale') || TG.editing);
   let dpath='';
@@ -90,6 +94,24 @@ function tgTick(){
   else TG.ang.hidden=true;
 }
 
+/* one rotation arrow: an arc of the circle around the axis through the box centre, passing just outside the
+   anchor edge, about 60 px long on screen, with arrowheads at both ends and a round grip in the middle */
+function tgArc(k, unit, c, anchor, color){
+  const F=TG.frame; const g=TG.svg.querySelector(`.tg-arcg[data-k="r${k}"]`); const grip=TG.rot[k];
+  // circle parameters in the frame: unit(a) gives c + (cos a, sin a) along the two plane axes when c is subtracted
+  const u0=unit(0), u1=unit(Math.PI/2); const ax=[u0[0]-c[0],u0[1]-c[1],u0[2]-c[2]], ay=[u1[0]-c[0],u1[1]-c[1],u1[2]-c[2]];
+  const d=[anchor[0]-c[0],anchor[1]-c[1],anchor[2]-c[2]], px=d[0]*ax[0]+d[1]*ax[1]+d[2]*ax[2], py=d[0]*ay[0]+d[1]*ay[1]+d[2]*ay[2];
+  const r=Math.max(1, Math.hypot(px,py))*1.14+1.5, a0=Math.atan2(py,px);
+  const P=a=>toStage(tgW(F, c[0]+r*(Math.cos(a)*ax[0]+Math.sin(a)*ay[0]), c[1]+r*(Math.cos(a)*ax[1]+Math.sin(a)*ay[1]), c[2]+r*(Math.cos(a)*ax[2]+Math.sin(a)*ay[2])));
+  const m=P(a0), q=P(a0+0.05), ppr=Math.max(1, Math.hypot(q.x-m.x,q.y-m.y)/0.05), da=clamp(30/ppr, 0.08, 0.9);
+  const pts=[]; for(let i=0;i<=14;i++) pts.push(P(a0-da+2*da*i/14));
+  if(!m.vis){ g.style.display='none'; grip.hidden=true; return; } g.style.display='';
+  let dpath='M'+pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join('L');
+  for(const [e,f] of [[pts[14],pts[12]],[pts[0],pts[2]]]){ const vx=e.x-f.x, vy=e.y-f.y, l=Math.hypot(vx,vy)||1, ux=vx/l, uy=vy/l;   // arrowheads
+    for(const s of [1,-1]){ const cs=Math.cos(0.5), sn=s*Math.sin(0.5); dpath+=`M${e.x.toFixed(1)},${e.y.toFixed(1)}l${(-(ux*cs-uy*sn)*8).toFixed(1)},${(-(uy*cs+ux*sn)*8).toFixed(1)}`; } }
+  for(const p of g.children) p.setAttribute('d', dpath); g.children[1].style.stroke=color;
+  tgPlace(grip, m);
+}
 /* ---- dragging a handle */
 function tgRay(ev){ const r=renderer.domElement.getBoundingClientRect(); ndc.set(((ev.clientX-r.left)/r.width)*2-1, -((ev.clientY-r.top)/r.height)*2+1); ray.setFromCamera(ndc,camera); return ray.ray; }
 function tgHit(ev, plane){ const p=new THREE.Vector3(); return tgRay(ev).intersectPlane(plane,p)? p : null; }

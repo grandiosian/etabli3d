@@ -274,9 +274,9 @@ with sync_playwright() as p:
 
     # Panneaux déplaçables et réductibles, disposition mémorisée
     g = pg.locator('#views .pgrip').bounding_box(); pg.mouse.move(g['x']+4, g['y']+4); pg.mouse.down(); pg.mouse.move(500, 500, steps=5); pg.mouse.up()
-    pg.click('#simbar .pmin'); pg.click('#inspSide'); pg.wait_for_timeout(200)
+    pg.click('#simbar .pmin'); h = pg.locator('#insp .insp-tt').bounding_box(); pg.mouse.move(h['x']+20, h['y']+8); pg.mouse.down(); pg.mouse.move(h['x']-200, h['y']+40, steps=5); pg.mouse.up(); pg.wait_for_timeout(200)
     L = pg.evaluate(f"()=>{E}.LAYOUT()")
-    check('panneau déplacé, réduit, côté changé', L.get('views',{}).get('x') is not None and L.get('simbar',{}).get('c') and L.get('inspLeft') is False, L)
+    check('panneaux déplacés (vues, propriétés) et réduit', L.get('views',{}).get('x') is not None and L.get('simbar',{}).get('c') and L.get('insp',{}).get('x') is not None, L)
     check('panneau réduit masque son contenu', pg.is_hidden('#sPlay'))
     pg.evaluate(f"()=>{E}.resetLayout()"); pg.wait_for_timeout(200)
     check('disposition réinitialisée', pg.evaluate(f"()=>JSON.stringify({E}.LAYOUT())")=='{}' and pg.is_visible('#sPlay'))
@@ -348,8 +348,8 @@ with sync_playwright() as p:
 
     # Nouvelle disposition, cube de vue, magnétisme, cadre partiel
     pg.evaluate(f"()=>{E}.loadExample('maison')"); pg.wait_for_timeout(500)
-    r = pg.evaluate("()=>{const r=document.querySelector('#rack').getBoundingClientRect(), i=document.querySelector('#insp').getBoundingClientRect(), s=document.querySelector('#stage').getBoundingClientRect(), c=document.querySelector('#stage canvas.gl').getBoundingClientRect(); return [r.width>r.height*4, i.right<=s.left+1, !!document.querySelector('#rack #tSolid'), Math.round(s.top-c.top)>20]}")
-    check('barre de création en haut (avec les outils), réglages à gauche, vue dessous', r == [True, True, True, True], r)
+    r = pg.evaluate("()=>{const r=document.querySelector('#rack').getBoundingClientRect(), t=document.querySelector('#toolbar').getBoundingClientRect(), i=document.querySelector('#insp').getBoundingClientRect(), v=document.querySelector('#views').getBoundingClientRect(), s=document.querySelector('#stage').getBoundingClientRect(), c=document.querySelector('#stage canvas.gl').getBoundingClientRect(); return [r.width>r.height*4, Math.abs(t.top-r.bottom)<2 && !!document.querySelector('#toolbar #tSolid'), i.right<=s.right+1 && i.right>s.right-40 && i.top>=v.bottom-2, Math.round(s.top-c.top)>20]}")
+    check('barre de création, puis barre d’outils dessous ; propriétés sous le cube de vue ; vue dessous', r == [True, True, True, True], r)
     pg.evaluate(f"()=>{{const E={E}; E.camera.position.set(170,-240,180); E.orbit_().target.set(0,0,10); E.orbit_().update();}}"); pg.wait_for_timeout(200)
     c = pg.locator('#vcube').bounding_box(); pg.mouse.move(c['x']+c['width']*0.42, c['y']+c['height']*0.25); pg.wait_for_timeout(100); pg.mouse.down(); pg.mouse.up(); pg.wait_for_timeout(700)
     d = pg.evaluate(f"()=>{{const E={E}; return E.camera.position.clone().sub(E.orbit_().target).normalize().z}}")
@@ -363,8 +363,8 @@ with sync_playwright() as p:
     gv = pg.evaluate("()=>document.querySelector('#stage') && true"); pg.mouse.up(); pg.wait_for_timeout(200)
     r = pg.evaluate(f"()=>{E}.state.parts[1].pos.slice()")
     check('magnétisme : la pièce vient se coller au bord et s’aligner', abs(r[0]-20) < 1e-6 and abs(r[1]-0) < 1e-6, r)
-    pg.evaluate(f"()=>{E}.setSel([])"); st = pg.locator('#stage').bounding_box()
-    q0 = proj(-6, -6, 10); q1 = [q0[0]-220, q0[1]+160]
+    pg.evaluate("()=>{const d=document.querySelector('#demo'); if(d) d.hidden=true;}"); pg.evaluate(f"()=>{E}.setSel([])"); st = pg.locator('#stage').bounding_box()
+    q0 = proj(-6, -6, 10); q1 = [max(st['x']+8, q0[0]-220), min(st['y']+st['height']-8, q0[1]+160)]
     pg.keyboard.down('Shift'); pg.mouse.move(q1[0], q1[1]); pg.mouse.down(); pg.mouse.move(q0[0], q0[1], steps=6); pg.mouse.up(); pg.keyboard.up('Shift'); pg.wait_for_timeout(200)
     check('cadre sur une partie de la pièce : elle est sélectionnée', pg.evaluate(f"()=>{E}.selection()") == [pg.evaluate(f"()=>{E}.state.parts[0].id")], pg.evaluate(f"()=>{E}.selection()"))
 

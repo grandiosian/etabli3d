@@ -66,8 +66,8 @@ function evStage(ev){ const r=stage.getBoundingClientRect(); return [ev.clientX-
 /* On wide screens the demo card covers the left of the scene: shift the picture right by half its width. */
 function applyViewOffset(){
   const r=stage.getBoundingClientRect(); if(r.width<2||r.height<2) return; const d=document.getElementById('demo');
-  const shift = (d && !d.hidden && r.width>760 && !movedDemo()) ? Math.round((d.offsetWidth+10)/2) : 0;
-  const W=r.width+OVR.l+OVR.r, H=r.height+OVR.t, x=(OVR.r-OVR.l)/2-shift, y=-OVR.t/2;   // centre the picture in the part of the view left free
+  const shift = (d && !d.hidden && r.width>760 && !movedDemo() && d.parentElement===stage) ? Math.round((d.offsetWidth+10)/2) : 0;
+  const W=r.width+OVR.l+OVR.r, H=r.height+OVR.t, x=(OVR.r-OVR.l)/2-shift+rightReserve()/2, y=-OVR.t/2;   // centre the picture in the part of the view left free
   if(x||y) camera.setViewOffset(W,H,x,y,W,H); else camera.clearViewOffset();
 }
 new ResizeObserver(resize).observe(stage);
@@ -230,7 +230,22 @@ const SCALE_MAP={box:{L:'x',l:'y',h:'z'}, pyramid:{L:'x',l:'y',h:'z'}, wedge:{L:
 function scaleParams(p, f){ const M=SCALE_MAP[p.kind]; if(!M) return;
   const one=v=>Math.abs(v-1)<1e-9, xy= one(f[0])? f[1] : one(f[1])? f[0] : (f[0]+f[1])/2;   // a round part dragged on one side follows that side
   const F={x:f[0],y:f[1],z:f[2],xy,xyz: one(f[0])&&one(f[1])? f[2] : one(f[2])? xy : (f[0]+f[1]+f[2])/3};
-  for(const [k,a] of Object.entries(M)) if(typeof p.params[k]==='number' && p.params[k]>0) p.params[k]=Math.max(0.1, Math.round(p.params[k]*F[a]*10)/10); }
+  for(const [k,a] of Object.entries(M)) if(typeof p.params[k]==='number' && p.params[k]>0) p.params[k]=Math.max(0.1, Math.round(p.params[k]*F[a]*10)/10);
+  if(p.kind==='sketch' && p.params.sk && (!one(f[0]) || !one(f[1]))) scaleSketch(p.params.sk, f[0], f[1]); }
+/* stretch a sketch: points, circles, Bézier handles, and the values of its dimensions so that it stays solved */
+function scaleSketch(sk, fx, fy){
+  for(const q of sk.pts){ q.x=+(q.x*fx).toFixed(4); q.y=+(q.y*fy).toFixed(4); }
+  const g=Math.sqrt(fx*fy); for(const c of sk.circles) c.r=+(c.r*g).toFixed(4);
+  for(const z of sk.beziers||[]) for(const t of ['t1','t2']) if(z[t]) z[t]=[z[t][0]*fx, z[t][1]*fy];
+  const P=new Map(sk.pts.map(q=>[q.id,q])), C=new Map(sk.circles.map(c=>[c.id,c]));
+  for(const c of sk.cons){
+    if(c.type==='dx'){ const a=P.get(c.a), b=P.get(c.b); if(a&&b) c.value=+Math.abs(b.x-a.x).toFixed(4); }
+    else if(c.type==='dy'){ const a=P.get(c.a), b=P.get(c.b); if(a&&b) c.value=+Math.abs(b.y-a.y).toFixed(4); }
+    else if(c.type==='dist'){ const a=P.get(c.a), b=P.get(c.b); if(a&&b) c.value=+Math.hypot(b.x-a.x,b.y-a.y).toFixed(4); }
+    else if(c.type==='diam'){ const ci=C.get(c.c); if(ci) c.value=+(ci.r*2).toFixed(4); }
+    if(typeof c.off==='number') c.off*=g;
+  }
+}
 function applySnap(){ const v=+$('#snapSel').value; tc.setTranslationSnap(v>0?v:null); tc.setRotationSnap(v>0? 15*DEG : null); }
 
 /* =========================================================

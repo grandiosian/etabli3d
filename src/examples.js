@@ -63,7 +63,7 @@ const SAMPLES={
       state.parts.push(ground,path,body,roof);
     },
     note:{observe:['La maison est un <b>groupe</b> : un cube plein et cinq <b>perçages</b> (intérieur, porte, fenêtres).','Le toit est un autre groupe : deux <b>coins</b> dos à dos et une cheminée.'],
-      try:['Sélectionnez les murs puis <b>Dégrouper</b> : les perçages apparaissent en gris transparent.','Agrandissez une fenêtre dans le panneau de droite, puis regroupez avec <span class="kbd">Ctrl</span>+<span class="kbd">G</span>.']}},
+      try:['Sélectionnez les murs puis <b>Dégrouper</b> : les perçages apparaissent en gris transparent.','Agrandissez une fenêtre dans le panneau des propriétés, puis regroupez avec <span class="kbd">Ctrl</span>+<span class="kbd">G</span>.']}},
 
   crayons:{level:1, cat:'model', title:'Pot à crayons gravé', icon:'ex_cup', tags:['Texte','Perçage','Gravure'],
     desc:'Un bloc percé de cinq trous, avec un nom gravé en creux.',
@@ -110,7 +110,7 @@ const SAMPLES={
         P_('text',{name:'Texte',params:{txt:'TECHNO',size:6,h:1.5,font:'round'},color:WHITE,pos:[3,0,3]}));
     },
     note:{observe:['La plaque est une <b>esquisse</b> : un rectangle de 50 × 20 mm et un cercle de 5 mm qui devient un trou.','Le texte est posé à Z = 3 mm, exactement sur la plaque.'],
-      try:['Double-cliquez la plaque pour ouvrir l’esquisse, puis double-cliquez la cote 50 et tapez 60.','Changez le texte dans le panneau de droite.']}},
+      try:['Double-cliquez la plaque pour ouvrir l’esquisse, puis double-cliquez la cote 50 et tapez 60.','Changez le texte dans le panneau des propriétés.']}},
 
   /* ---------------- Esquisser ---------------- */
   plaque:{level:2, cat:'sketch', title:'Plaque de fixation', icon:'ex_plate', tags:['Cotes','Contraintes','Extrusion'],
@@ -208,7 +208,7 @@ const SAMPLES={
       J_({name:'L4 Manivelle',type:'fixe',child:crank.id,parent:g1.id,origin:[0,13,11]});
     },
     note:{observe:['Le pignon Z10 tourne <b>2 fois plus vite</b> et en <b>sens inverse</b> : rapport −20/10 = −2.','La crémaillère avance de π × d / 360 = <b>0,35 mm par degré</b> (d = 40 mm).'],
-      try:['Cliquez la roue menante : le panneau de droite donne son diamètre primitif d = m × Z.','Modifiez L2 et utilisez <b>Calculer le rapport</b> avec d’autres nombres de dents.']}},
+      try:['Cliquez la roue menante : le panneau des propriétés donne son diamètre primitif d = m × Z.','Modifiez L2 et utilisez <b>Calculer le rapport</b> avec d’autres nombres de dents.']}},
 
   reducteur:{level:3, cat:'move', title:'Réducteur à deux étages', icon:'ex_reducer', tags:['Train d’engrenages','Rapport','Moteur continu'],
     desc:'Deux étages Z10 → Z30 : la sortie tourne 9 fois moins vite.',
@@ -431,8 +431,8 @@ let demoClosed=false, demoOpen=true;
 function renderDemo(){
   const el=$('#demo'); const n=state.note;
   if(!n || demoClosed){ el.hidden=true; applyViewOffset(); return; }
-  el.hidden=false; el.classList.toggle('closed',!demoOpen); el.innerHTML='';
-  const grip=h('span',{class:'pgrip demo-grip',title:'Glisser pour déplacer la fiche'}, svgIcon('dots')); grip.addEventListener('pointerdown',e=>startPanelDrag(e, el, 'demo'));
+  placeDemo(); el.hidden=false; el.classList.toggle('closed',!demoOpen); el.innerHTML='';
+  const grip=h('span',{class:'pgrip demo-grip',title:'Glisser pour déplacer la fiche'}, svgIcon('dots')); grip.addEventListener('pointerdown',e=>{ if(!el.classList.contains('in-tree')) startPanelDrag(e, el, 'demo'); });
   const head=h('div',{class:'demo-head'}, grip,
     h('button',{class:'demo-toggle','aria-expanded':String(demoOpen),onclick:()=>{ demoOpen=!demoOpen; renderDemo(); }},
       h('span',{class:'demo-kicker'},'Fiche démo'), h('b',{},n.title), svgIcon(demoOpen?'chevUp':'chevDown')),

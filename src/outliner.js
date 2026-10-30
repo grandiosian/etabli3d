@@ -11,7 +11,7 @@ function setTreeOpen(v){
   $('#app').classList.toggle('with-tree', v);
   if(!matchMedia('(max-width: 860px)').matches){ prefs.tree=v; savePrefs(); }
   $('#bTree').classList.toggle('on', v); $('#bTree').setAttribute('aria-pressed', String(v));
-  renderOutliner();
+  renderOutliner(); placeDemo(); requestAnimationFrame(()=>{ updateOverlay(); placeInsp(); applyViewOffset(); });
 }
 function selectFromTree(id, e){
   if(e?.shiftKey) selection = selection.includes(id)? selection.filter(i=>i!==id) : [...selection,id];

@@ -246,9 +246,10 @@ function structBox(){
   return {minx,maxx,miny,maxy};
 }
 function stFit(){ const b=structBox(); const w=Math.max(40,b.maxx-b.minx), hh=Math.max(40,b.maxy-b.miny);
-  const d=$('#demo'); const left= OVR.l + ((d && !d.hidden && stW-OVR.l-OVR.r>760 && !movedDemo())? d.offsetWidth+20 : 0);   // keep clear of the demo card and of the settings panel
-  ST.view.s=Math.min((stW-left-OVR.r-110)/(w*1.12), (stH-OVR.t-190)/(hh*1.45)); if(!(ST.view.s>0)) ST.view.s=1;
-  ST.view.cx=(b.minx+b.maxx)/2 - (left-OVR.r)/2/ST.view.s; ST.view.cy=(b.miny+b.maxy)/2 - hh*0.05 + OVR.t/2/ST.view.s; ST.fitted=true; }
+  const d=$('#demo'); const left= OVR.l + ((d && !d.hidden && stW-OVR.l-OVR.r>760 && !movedDemo() && d.parentElement===$('#stage'))? d.offsetWidth+20 : 0);   // keep clear of the demo card and of the panels
+  const right=OVR.r+rightReserve();
+  ST.view.s=Math.min((stW-left-right-110)/(w*1.12), (stH-OVR.t-190)/(hh*1.45)); if(!(ST.view.s>0)) ST.view.s=1;
+  ST.view.cx=(b.minx+b.maxx)/2 - (left-right)/2/ST.view.s; ST.view.cy=(b.miny+b.maxy)/2 - hh*0.05 + OVR.t/2/ST.view.s; ST.fitted=true; }
 /* canvas coordinates (the 2D canvas also extends under the settings panel) → stage coordinates */
 const stStage=(sx,sy)=>[sx-OVR.l, sy-OVR.t];
 function stGrid(){ const s=ST.view.s; for(const g of [1,2,5,10,20,50,100,200,500,1000]) if(g*s>=14) return g; return 2000; }
