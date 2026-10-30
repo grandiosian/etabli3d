@@ -186,7 +186,7 @@ function tickBubble(){ if(BUB.kind==='mech'){ const p=findPart(BUB.target?.pid);
 /* ---- Étiquettes de liaison : « L1 · Pivot — Roue menante tourne sur Platine » */
 /* Labels are gathered in a movable group (#jlGroup) laid out in a row, a column, a square, a rectangle
    or a circle — or left next to their joint (« libre »), or spread on an oval around the moving system
-   (« orbite », the default: see orbitJointLabels). They shrink (full → compact → mini) to fit the view.
+   (« orbite », the default). All of them are placed around the moving system: see placeJointLabels. They shrink (full → compact → mini) to fit the view.
    A numbered dot at each joint matches the number on its label. */
 const JL_LAYOUTS=[['orbite','Autour du mécanisme (auto)'],['libre','Près des liaisons'],['ligne','En ligne'],['colonne','En colonne'],['carre','En carré'],['rect','En rectangle'],['cercle','En cercle']];
 const JL_ICON={
@@ -222,29 +222,14 @@ function buildJointLabels(){
   });
   hydrateIcons(host); applyLayout('jlGroup'); layoutJointGroup(); positionJointLabels();
 }
-/* arrange the labels of the group, then shrink them until the group fits in the view */
-function layoutJointGroup(){
-  const host=$('#jlabels'), grp=$('#jlGroup'); if(!grp || host.hidden) return;
-  const lay=prefs.jl||'orbite', body=grp.querySelector('.jl-body'), items=[...body.children], n=items.length;
-  const W=STG.w||$('#stage').clientWidth, H=STG.h||$('#stage').clientHeight;
-  if(lay==='libre'){ host.dataset.sz= W<700? 'mini' : W<1000? 'compact' : 'full'; return; }
-  if(lay==='orbite'){ ORB.sz=null; applyLayout('jlGroup'); return; }   // sized every frame by orbitJointLabels
-  const arrange=()=>{
-    body.style.cssText=''; items.forEach(el=>{ el.style.cssText=el.style.cssText.replace(/(position|left|top):[^;]*;?/g,''); });
-    if(lay==='ligne') body.style.cssText='display:flex;flex-direction:row;flex-wrap:nowrap';
-    else if(lay==='colonne') body.style.cssText='display:flex;flex-direction:column';
-    else if(lay==='carre'||lay==='rect'){ const c= lay==='carre'? Math.ceil(Math.sqrt(n)) : Math.min(n, Math.ceil(Math.sqrt(n))+1); body.style.cssText=`display:grid;grid-template-columns:repeat(${c},auto)`; }
-    else { // circle
-      items.forEach(el=>{ el.style.position='absolute'; el.style.left='0px'; el.style.top='0px'; });
-      const w=Math.max(...items.map(e=>e.offsetWidth)), hh=Math.max(...items.map(e=>e.offsetHeight));
-      const R= n<=1? 0 : (Math.hypot(w,hh)*0.62+6)/(2*Math.sin(Math.PI/n));
-      const cw=2*R+w, ch=2*R+hh; body.style.cssText=`position:relative;width:${Math.ceil(cw)}px;height:${Math.ceil(ch)}px`;
-      items.forEach((el,i)=>{ const a=-Math.PI/2+i*2*Math.PI/n; el.style.left=Math.round(cw/2+R*Math.cos(a)-el.offsetWidth/2)+'px'; el.style.top=Math.round(ch/2+R*Math.sin(a)-el.offsetHeight/2)+'px'; });
-    } };
-  for(const sz of ['full','compact','mini']){ host.dataset.sz=sz; arrange(); if(grp.offsetWidth<=W-20 && grp.offsetHeight<=H-100) break; }
+function layoutJointGroup(){   // the labels are placed every frame (freeJointLabels); here only the size level is reset
+  const host=$('#jlabels'); if(!$('#jlGroup') || host.hidden) return;
+  const W=STG.w||$('#stage').clientWidth;
+  if((prefs.jl||'orbite')==='libre') host.dataset.sz= W<700? 'mini' : W<1000? 'compact' : 'full';
+  else ORB.sz=null;
   applyLayout('jlGroup');
 }
-const FREE_LAY=new Set(['libre','orbite']);
+const FREE_LAY=new Set(['libre','orbite','ligne','colonne','carre','rect','cercle']);
 /* « orbite » : the labels sit on an oval drawn around the screen box of the moving system (every part
    carried by a joint). Each label goes to the slot of the oval nearest to its joint's number, the slots
    being evenly spread; the size level (full / compact / mini) is the largest whose labels fit on the oval. */
@@ -263,44 +248,68 @@ function systemScreenBox(){
 }
 function measureJl(host, els){ const keep=host.dataset.sz, out={}; for(const sz of ['full','compact','mini']){ host.dataset.sz=sz; out[sz]=els.map(e=>[e.offsetWidth,e.offsetHeight]); } host.dataset.sz=keep; return out; }
 function angDiff(a,b){ let d=a-b; while(d>Math.PI) d-=2*Math.PI; while(d<-Math.PI) d+=2*Math.PI; return d; }
-function orbitJointLabels(host){
+/* Every layout is placed around the screen box of the moving system, each frame:
+   orbite = oval, cercle = circle, ligne = row above (or below), colonne = column on the roomier side,
+   carre / rect = grid on the roomier side. Labels are sorted so that leader lines cross as little as possible. */
+function placeJointLabels(lay, bx, S, pts, W, H, top, m){
+  const n=S.length, gap=8, wm=Math.max(...S.map(s=>s[0])), hm=Math.max(...S.map(s=>s[1]));
+  const cx=(bx.x0+bx.x1)/2, cy=(bx.y0+bx.y1)/2, R=new Array(n);
+  const byKey=f=>S.map((s,i)=>i).sort((a,b)=>f(a)-f(b));
+  const ring=(A0,B0,pull)=>{   // labels on an ellipse, evenly spread, turned to match the joints
+    const A=Math.max(30,Math.min(A0,(W-2*m-wm)/2)), B=Math.max(24,Math.min(B0,(H-top-m-hm)/2));
+    const ex=clamp(cx, m+wm/2+A, W-m-wm/2-A), ey=clamp(cy, top+hm/2+B, H-m-hm/2-B);
+    const th=pts.map(p=>Math.atan2((p.y-ey)/B,(p.x-ex)/A)), idx=th.map((t,i)=>i).sort((i,k)=>th[i]-th[k]), step=2*Math.PI/n;
+    let sx=0, sy=0; idx.forEach((i,k)=>{ const d=th[i]-k*step; sx+=Math.cos(d); sy+=Math.sin(d); });
+    const phi= n>1? Math.atan2(sy,sx) : th[0];
+    idx.forEach((i,k)=>{ const slot=phi+k*step, al=slot+pull*angDiff(th[i],slot); R[i]={x:ex+A*Math.cos(al)-S[i][0]/2, y:ey+B*Math.sin(al)-S[i][1]/2}; });
+    const P=Math.PI*(3*(A+B)-Math.sqrt((3*A+B)*(A+3*B))), need=S.reduce((t,[w,h])=>t+Math.max(w*0.8,h*1.6)+12,0);
+    return {fill:need/P, room:Math.min(A/A0, B/B0)};
+  };
+  let fill=0, room=1;   // fill: share of the available length used (≤ 1 fits); room: how much of the wanted clearance we got
+  if(lay==='orbite'){ const a=Math.max(24,(bx.x1-bx.x0)/2), b=Math.max(24,(bx.y1-bx.y0)/2); ({fill,room}=ring(a*1.2+wm/2+14, b*1.2+hm/2+12, 0.3)); }
+  else if(lay==='cercle'){ const r=Math.hypot(bx.x1-bx.x0,bx.y1-bx.y0)/2+Math.hypot(wm,hm)/2+12, rc= n>1? (Math.hypot(wm,hm)*0.62+6)/(2*Math.sin(Math.PI/n)) : 0; const Rr=Math.max(r,rc);
+    const Rm=Math.min((W-2*m-wm)/2,(H-top-m-hm)/2); const Rf=Math.max(24,Math.min(Rr,Rm)); ({fill}=ring(Rf,Rf,0)); room=Rf/Rr; fill=Math.max(fill, rc/Rf); }
+  else if(lay==='ligne'){ const idx=byKey(i=>pts[i].x), tw=S.reduce((t,s)=>t+s[0],0)+gap*(n-1);
+    let y=bx.y0-26-hm; if(y<top) y=bx.y1+26; const clear= y+hm<=bx.y0-6 || y>=bx.y1+6; y=clamp(y,top,H-m-hm);
+    let x=clamp(cx-tw/2,m,Math.max(m,W-m-tw)); idx.forEach(i=>{ R[i]={x, y:y+(hm-S[i][1])/2}; x+=S[i][0]+gap; });
+    fill=tw/(W-2*m); room= clear? 1 : 0.5; }
+  else if(lay==='colonne'){ const idx=byKey(i=>pts[i].y), th=S.reduce((t,s)=>t+s[1],0)+gap*(n-1);
+    const rr=W-m-bx.x1, rl=bx.x0-m, right= rr>=rl; let x= right? bx.x1+28 : bx.x0-28-wm; room=Math.min(1,Math.max(right?rr:rl,0)/(wm+28)); x=clamp(x,m,W-m-wm);
+    let y=clamp(cy-th/2,top,Math.max(top,H-m-th)); idx.forEach(i=>{ R[i]={x: right? x : x+wm-S[i][0], y}; y+=S[i][1]+gap; });
+    fill=th/(H-top-m); }
+  else {   // carre / rect: grid, rows sorted top → bottom, then left → right
+    const c= lay==='carre'? Math.ceil(Math.sqrt(n)) : Math.min(n, Math.ceil(Math.sqrt(n))+1), rows=Math.ceil(n/c);
+    const byY=byKey(i=>pts[i].y), cells=[]; for(let r=0;r<rows;r++){ const row=byY.slice(r*c,(r+1)*c).sort((a,b)=>pts[a].x-pts[b].x); cells.push(row); }
+    const colW=[...Array(c)].map((_,j)=>Math.max(0,...cells.map(row=>row[j]!=null? S[row[j]][0] : 0))), rowH=cells.map(row=>Math.max(...row.map(i=>S[i][1])));
+    const gw=colW.reduce((a,b)=>a+b,0)+gap*(c-1), gh=rowH.reduce((a,b)=>a+b,0)+gap*(rows-1);
+    const sides=[['r',W-m-bx.x1-28-gw],['l',bx.x0-m-28-gw],['b',H-m-bx.y1-26-gh],['t',bx.y0-top-26-gh]].sort((a,b)=>b[1]-a[1]);
+    const sd=sides[0][0]; room= sides[0][1]>=0? 1 : 0.5;
+    let gx= sd==='r'? bx.x1+28 : sd==='l'? bx.x0-28-gw : cx-gw/2, gy= sd==='b'? bx.y1+26 : sd==='t'? bx.y0-26-gh : cy-gh/2;
+    gx=clamp(gx,m,Math.max(m,W-m-gw)); gy=clamp(gy,top,Math.max(top,H-m-gh));
+    let yy=gy; cells.forEach((row,r)=>{ let xx=gx; row.forEach((i,j)=>{ R[i]={x:xx, y:yy+(rowH[r]-S[i][1])/2}; xx+=colW[j]+gap; }); yy+=rowH[r]+gap; });
+    fill=Math.max(gw/(W-2*m), gh/(H-top-m)); }
+  return {R, fill, room};
+}
+function freeJointLabels(host, lay){
   const els=[...host.querySelectorAll(':scope > .jl')], n=els.length; if(!n) return new Map();
   if(!ORB.sizes || ORB.n!==n){ ORB.sizes=measureJl(host, els); ORB.n=n; }
   const H=STG.h, m=8, top=54;   // keep clear of the layout buttons at the top
   const d=$('#demo'); const L0= (d && !d.hidden && !movedDemo() && STG.w>760)? d.offsetLeft+d.offsetWidth : 0;   // not under the demo card
-  const W=STG.w-L0;
+  const v=$('#views'); const R0= (v && v.offsetParent && LAYOUT.views?.x==null && !LAYOUT.views?.c)? v.offsetWidth+14 : 0;   // nor under the view buttons
+  const W=STG.w-L0-R0;
   const sb=systemScreenBox(); const bx= sb? {x0:sb.x0-L0, x1:sb.x1-L0, y0:sb.y0, y1:sb.y1} : {x0:W*.35,x1:W*.65,y0:H*.35,y1:H*.65};
   const pts=els.map(el=>{ const j=state.joints.find(k=>k.id===+el.dataset.j); const p= j? toStage(jointWorld(j, simActive()).o) : {x:W/2+L0,y:H/2}; return {x:p.x-L0, y:p.y}; });
-  const fit=sz=>{   // oval for this size level
-    const S=ORB.sizes[sz], wm=Math.max(...S.map(s=>s[0])), hm=Math.max(...S.map(s=>s[1]));
-    const a=Math.max(24,(bx.x1-bx.x0)/2), b=Math.max(24,(bx.y1-bx.y0)/2);
-    const A0=a*1.2+wm/2+14, B0=b*1.2+hm/2+12;   // just outside the box of the system
-    const A=Math.max(30,Math.min(A0,(W-2*m-wm)/2)), B=Math.max(24,Math.min(B0,(H-top-m-hm)/2));
-    const cx=clamp((bx.x0+bx.x1)/2, m+wm/2+A, W-m-wm/2-A), cy=clamp((bx.y0+bx.y1)/2, top+hm/2+B, H-m-hm/2-B);
-    const P=Math.PI*(3*(A+B)-Math.sqrt((3*A+B)*(A+3*B)));            // perimeter (Ramanujan)
-    const need=S.reduce((t,[w,h])=>t+Math.max(w*0.8,h*1.6)+12,0);    // room the labels take along the oval
-    return {A,B,cx,cy,S,ok: need<=P && A>=A0*0.6 && B>=B0*0.6, roomy: need*1.15<=P && A>=A0*0.7 && B>=B0*0.7};
-  };
-  // choose the size level, with a little hysteresis so it does not flicker while the camera moves
+  const fit=sz=>{ const r=placeJointLabels(lay, bx, ORB.sizes[sz], pts, W, H, top, m); r.ok= r.fill<=1 && r.room>=0.6; r.roomy= r.fill<=0.87 && r.room>=0.7; r.S=ORB.sizes[sz]; return r; };
+  // the largest size level that fits, with a little hysteresis so it does not flicker while the camera moves
   const order=['full','compact','mini']; let sz=ORB.sz||'full', F=fit(sz);
-  const up=order.indexOf(sz)>0 ? fit(order[order.indexOf(sz)-1]) : null;
-  if(up && up.roomy){ sz=order[order.indexOf(sz)-1]; F=up; }
+  const k=order.indexOf(sz), up= k>0? fit(order[k-1]) : null;
+  if(up && up.roomy){ sz=order[k-1]; F=up; }
   while(!F.ok && sz!=='mini'){ sz=order[order.indexOf(sz)+1]; F=fit(sz); }
   if(ORB.sz!==sz){ ORB.sz=sz; host.dataset.sz=sz; }
-  const {A,B,cx,cy,S}=F;
-  // angle of each joint seen from the centre of the oval, then evenly spaced slots turned to match them best
-  const th=pts.map(p=>Math.atan2((p.y-cy)/B,(p.x-cx)/A));
-  const idx=th.map((t,i)=>i).sort((i,k)=>th[i]-th[k]); const step=2*Math.PI/n;
-  let sx=0, sy=0; idx.forEach((i,k)=>{ const d=th[i]-k*step; sx+=Math.cos(d); sy+=Math.sin(d); });
-  const phi=n>1? Math.atan2(sy,sx) : th[0];
   const out=new Map();
-  idx.forEach((i,k)=>{
-    const slot=phi+k*step, al=slot+0.3*angDiff(th[i],slot);   // mostly evenly spread, pulled a little toward its joint
-    const [w,h]=S[i]; let x=cx+A*Math.cos(al)-w/2, y=cy+B*Math.sin(al)-h/2;
-    x=clamp(x,m,W-m-w)+L0; y=clamp(y,m,H-m-h);
-    const prev=ORB.pos.get(els[i]); if(prev){ x=prev.x+(x-prev.x)*0.3; y=prev.y+(y-prev.y)*0.3; }   // glide, no jumps
-    const p={x,y,w,h}; ORB.pos.set(els[i],p); out.set(els[i],p);
-  });
+  els.forEach((el,i)=>{ const [w,h]=F.S[i]; let x=clamp(F.R[i].x,m,W-m-w)+L0, y=clamp(F.R[i].y,m,H-m-h);
+    const prev=ORB.pos.get(el); if(prev && prev.w===w){ x=prev.x+(x-prev.x)*0.3; y=prev.y+(y-prev.y)*0.3; }   // glide, no jumps
+    const p={x,y,w,h}; ORB.pos.set(el,p); out.set(el,p); });
   return out;
 }
 function positionJointLabels(){
@@ -308,13 +317,13 @@ function positionJointLabels(){
   const st=$('#stage').getBoundingClientRect(); const placed=[]; const lay=host.dataset.lay;
   const grp=$('#jlGroup'), folded= lay!=='libre' && grp?.classList.contains('collapsed');
   curCache=simActive()? new Map() : null;
-  const orb= lay==='orbite' && !folded ? orbitJointLabels(host) : null;
+  const orb= lay!=='libre' && !folded ? freeJointLabels(host, lay) : null;
   for(const el of host.querySelectorAll('.jl')){
     const j=state.joints.find(k=>k.id===+el.dataset.j); if(!j) continue;
     const {o}=jointWorld(j, simActive()); const a=toStage(o); const vis=a.vis;
     let lx, ly, w=el.offsetWidth, hh=el.offsetHeight;
     if(orb){ const p=orb.get(el); if(!p) continue; lx=p.x; ly=p.y; w=p.w; hh=p.h; el.style.transform=`translate(${Math.round(lx)}px,${Math.round(ly)}px)`; el.style.visibility='visible'; }
-    else if(lay==='orbite'){ el.style.visibility='hidden'; lx=a.x; ly=a.y; w=0; hh=0; }
+    else if(lay!=='libre'){ el.style.visibility='hidden'; lx=a.x; ly=a.y; w=0; hh=0; }
     else if(lay==='libre'){
       lx=a.x+26; ly=a.y-hh-30; // default: above right; nudge if it overlaps another label
       for(let k=0;k<8;k++){ const hit=placed.find(p=>lx<p.x+p.w+6 && lx+w+6>p.x && ly<p.y+p.h+4 && ly+hh+4>p.y); if(!hit) break; ly=hit.y-hh-6; if(ly<4){ ly=hit.y+hit.h+6; } }

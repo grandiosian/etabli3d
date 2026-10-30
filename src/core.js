@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 
 /* =========================================================
    Icons
@@ -18,6 +18,11 @@ const I = {
   sliders:'<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
   move:'<path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/>',
   rotate:'<path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/>',
+  scale:'<path d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7"/>',
+  orbit:'<ellipse cx="12" cy="12" rx="9" ry="4.5"/><path d="M16.5 6 19.5 7.6 17.2 10"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/>',
+  hand:'<path d="M8 13V6a1.5 1.5 0 0 1 3 0v6M11 11V4.5a1.5 1.5 0 0 1 3 0V11M14 11V6a1.5 1.5 0 0 1 3 0v7c0 4-2.5 7-6 7s-5-2-6.5-4.5L3 12.5a1.5 1.5 0 0 1 2.5-1.6L8 13"/>',
+  selbox:'<path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4"/><path d="M10 10l7 3-3 1-1 3z" fill="currentColor" fill-opacity=".3"/>',
+  mouse:'<rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 3v7M6 10h12"/><path d="M12 3a6 6 0 0 0-6 6v1h6z" fill="currentColor"/>',
   solid:'<path d="M12 3 20 7.5v9L12 21l-8-4.5v-9z" fill="currentColor" fill-opacity=".25"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/>',
   hole:'<path d="M12 3 20 7.5v9L12 21l-8-4.5v-9z" stroke-dasharray="2.5 2"/><path d="M4 7.5 12 12l8-4.5M12 12v9" stroke-dasharray="2.5 2"/>',
   group:'<rect x="3" y="3" width="11" height="11" rx="1.5"/><rect x="10" y="10" width="11" height="11" rx="1.5" fill="currentColor" fill-opacity=".2"/>',
@@ -319,9 +324,12 @@ function skProfiles(sk){
   const shapes=[];
   for(const L of loops.filter(L=>L.depth%2===0)){
     const toV=q=>new THREE.Vector2(q[0],q[1]);
-    let sh; if(L.kind==='circle'){ sh=new THREE.Shape(); sh.absarc(L.c[0],L.c[1],L.r,0,Math.PI*2,false); } else sh=new THREE.Shape(L.pts.map(toV));
+    // three.js only fixes the holes' winding when it has to flip the outline itself: give it an
+    // anticlockwise outline and clockwise holes, otherwise the walls of a hole come out inside-out.
+    const ccw=q=> area(q)<0? q.slice().reverse() : q, cw=q=> area(q)>0? q.slice().reverse() : q;
+    let sh; if(L.kind==='circle'){ sh=new THREE.Shape(); sh.absarc(L.c[0],L.c[1],L.r,0,Math.PI*2,false); } else sh=new THREE.Shape(ccw(L.pts).map(toV));
     for(const H of loops.filter(H=>H.depth===L.depth+1 && H.parents.includes(L))){
-      let ph; if(H.kind==='circle'){ ph=new THREE.Path(); ph.absarc(H.c[0],H.c[1],H.r,0,Math.PI*2,true); } else ph=new THREE.Path(H.pts.map(toV));
+      let ph; if(H.kind==='circle'){ ph=new THREE.Path(); ph.absarc(H.c[0],H.c[1],H.r,0,Math.PI*2,true); } else ph=new THREE.Path(cw(H.pts).map(toV));
       sh.holes.push(ph);
     }
     shapes.push({shape:sh, loop:L});

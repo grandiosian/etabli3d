@@ -452,10 +452,10 @@ html:not([data-glass="opaque"]) #bubble .bub-row input[type=range]{background:tr
 .jl-lay:hover{background:var(--panel-2)} .jl-lay.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 .jl-li svg{width:14px;height:14px;display:block}
 .jl-body{grid-column:1 / -1;gap:6px}
-#jlabels[data-lay="libre"] .jl-body,#jlabels[data-lay="orbite"] .jl-body{display:none}
+#jlabels .jl-body{display:none}
 .jl{pointer-events:auto;display:flex;flex-direction:row;align-items:center;gap:7px;max-width:240px;text-align:left;
   background:color-mix(in srgb,var(--panel) 94%,transparent);border:1px solid var(--line);border-left:4px solid var(--jc);border-radius:9px;padding:4px 9px 5px 6px;font-size:11.5px;line-height:1.3;color:var(--ink)}
-#jlabels[data-lay="libre"] > .jl,#jlabels[data-lay="orbite"] > .jl{position:absolute;left:0;top:0;box-shadow:var(--shadow);will-change:transform}
+#jlabels > .jl{position:absolute;left:0;top:0;box-shadow:var(--shadow);will-change:transform}
 /* the group itself is see-through: only its buttons and the labels show */
 #jlGroup.jl-group{background:transparent;border-color:transparent;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
 #jlGroup .pgrip,.jl-lay{background:color-mix(in srgb,var(--panel) 70%,transparent);border-radius:6px}
@@ -527,6 +527,20 @@ html:not([data-glass="opaque"]) #bubble .bub-row input[type=range]{background:tr
 #app.rack-min .shape svg{width:32px;height:32px}
 #app.rack-min .rack-title{display:none}
 #app.rack-min .rackmin-btn svg{transform:rotate(90deg)}
+
+/* ---------- hover: name, manipulation buttons, selection frame, right-click menu */
+#hovName{position:absolute;left:0;top:0;z-index:7;pointer-events:none;font:600 12.5px var(--f-display);color:var(--ink);background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--accent);border-radius:7px;padding:2px 9px;white-space:nowrap;box-shadow:var(--shadow)}
+#hovTools{position:absolute;left:0;top:0;z-index:8;display:flex;gap:6px;padding:5px;border-radius:999px;background:color-mix(in srgb,var(--panel) 45%,transparent)}
+#hovTools button{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--accent);background:var(--panel);color:var(--accent);display:grid;place-items:center;box-shadow:var(--shadow);cursor:pointer;padding:0}
+#hovTools button svg{width:19px;height:19px}
+#hovTools button:hover,#hovTools button.on{background:var(--accent);color:var(--accent-ink)}
+#hovTools button:disabled{opacity:.35;cursor:not-allowed}
+#selRect{position:absolute;z-index:7;border:1.5px dashed var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);pointer-events:none;border-radius:3px}
+.ctx{position:absolute;z-index:40;min-width:230px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:6px;display:flex;flex-direction:column;gap:1px}
+.ctx h5{margin:5px 8px 3px;font:600 10.5px var(--f-display);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2)}
+.ctx button{display:flex;align-items:center;gap:9px;border:0;background:transparent;padding:7px 8px;border-radius:7px;text-align:left;color:var(--ink);font-size:13px;cursor:pointer}
+.ctx button:hover{background:var(--panel-2)} .ctx button[aria-checked="true"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.ctx hr{border:0;border-top:1px solid var(--line);margin:4px 2px} .ctx svg{width:18px;height:18px;flex:none}
 
 /* ---------- see-through settings panel: on wide screens the 3D view continues under it */
 :root{--insp-a:84%}

@@ -78,6 +78,8 @@ const tc=new TransformControls(camera, renderer.domElement);
 tc.setSpace('world'); tc.setSize(0.85);
 const tcHelper = tc.getHelper ? tc.getHelper() : tc; scene.add(tcHelper);
 tc.addEventListener('dragging-changed', e=>{ orbit.enabled=!e.value; });
+/* no free « camera plane » handle in the middle of the move gizmo: moving is done along the axes or on the floor */
+{ const gz=tc._gizmo; if(gz) for(const set of [gz.gizmo?.translate, gz.picker?.translate, gz.helper?.translate]) if(set) for(const o of [...set.children]) if(o.name==='XYZ') set.remove(o); }
 
 /* joint markers */
 const markers=new THREE.Group(); markers.renderOrder=10; scene.add(markers);
@@ -192,11 +194,11 @@ function sync(){
   renderOutliner();
 }
 function updateGizmo(){
-  if(ws!=='model' || !selection.length || simLocked() || pickMode || selParts().some(isLocked)){ tc.detach(); return; }
+  if(ws!=='model' || !selection.length || !GZ.mode || simLocked() || pickMode || selParts().some(isLocked) || (GZ.mode==='scale' && selParts().some(p=>!SCALE_MAP[p.kind]))){ tc.detach(); return; }
   resetPivot(); tc.attach(pivot);
 }
 function selBox(ids=selection){ const b=new THREE.Box3(); for(const id of ids){ const r=meshes.get(id); if(r) b.union(new THREE.Box3().setFromObject(r.mesh, true)); } return b; }
-function resetPivot(){ const b=selBox(); if(b.isEmpty()) return; const c=new THREE.Vector3(); b.getCenter(c); pivot.position.set(c.x,c.y,b.min.z); pivot.quaternion.identity(); pivot.updateMatrixWorld(true); }
+function resetPivot(){ const b=selBox(); if(b.isEmpty()) return; const c=new THREE.Vector3(); b.getCenter(c); pivot.position.set(c.x,c.y,b.min.z); pivot.quaternion.identity(); pivot.scale.set(1,1,1); pivot.updateMatrixWorld(true); }
 
 let dragStart=null;
 tc.addEventListener('mouseDown', ()=>{ if(down){ down.drag=null; down.gizmo=true; } pivot.updateMatrixWorld(true); dragStart={pm:pivot.matrixWorld.clone(), items:selection.map(id=>({id, m:meshes.get(id).mesh.matrix.clone()}))}; });
@@ -208,10 +210,25 @@ tc.addEventListener('objectChange', ()=>{
 });
 tc.addEventListener('mouseUp', ()=>{
   if(!dragStart) return;
-  for(const it of dragStart.items){ const p=findPart(it.id), r=meshes.get(it.id); if(p&&r){ r.mesh.updateMatrix(); setPartFromMatrix(p, r.mesh.matrix); } }
-  dragStart=null; sync(); commit(); renderInspector();
+  const scaling= tc.mode==='scale'; const s=pivot.scale.clone();
+  for(const it of dragStart.items){ const p=findPart(it.id), r=meshes.get(it.id); if(!p||!r) continue; r.mesh.updateMatrix();
+    if(scaling){ const pos=new THREE.Vector3(), q=new THREE.Quaternion(), sc=new THREE.Vector3(); r.mesh.matrix.decompose(pos,q,sc);
+      const R=new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(...p.rot.map(a=>a*DEG),'XYZ')); const ax=[0,1,2].map(i=>new THREE.Vector3().setFromMatrixColumn(R,i));
+      const f=ax.map(u=>Math.hypot(u.x*s.x,u.y*s.y,u.z*s.z));   // how much each of the part's own axes was stretched
+      scaleParams(p,f); p.pos=[+pos.x.toFixed(3),+pos.y.toFixed(3),+pos.z.toFixed(3)]; }
+    else setPartFromMatrix(p, r.mesh.matrix); }
+  pivot.scale.set(1,1,1); dragStart=null; sync(); commit(); renderInspector();
 });
-function setGizmoMode(m){ tc.setMode(m); $('#tMove').classList.toggle('on',m==='translate'); $('#tRot').classList.toggle('on',m==='rotate'); }
+/* the manipulation gizmo only appears once a manipulation is chosen (hover icons, toolbar, M / R / T keys) */
+const GZ={mode:null};
+function setGizmoMode(m, toggle=false){
+  GZ.mode= (toggle && GZ.mode===m)? null : m; if(GZ.mode) tc.setMode(GZ.mode);
+  $('#tMove').classList.toggle('on',GZ.mode==='translate'); $('#tRot').classList.toggle('on',GZ.mode==='rotate'); updateGizmo(); }
+/* resizing with the gizmo changes the part's own dimensions (rounded to 0.1 mm) */
+const SCALE_MAP={box:{L:'x',l:'y',h:'z'}, pyramid:{L:'x',l:'y',h:'z'}, wedge:{L:'x',l:'y',h:'z'}, cylinder:{d:'xy',h:'z'}, cone:{d:'xy',d2:'xy',h:'z'},
+  tube:{d:'xy',di:'xy',h:'z'}, sphere:{d:'xyz'}, torus:{d:'xy',e:'z'}, text:{size:'xy',h:'z'}, gear:{m:'xy',dh:'xy',e:'z'}, rack:{m:'x',hb:'y',e:'z'}, sketch:{h:'z'}};
+function scaleParams(p, f){ const M=SCALE_MAP[p.kind]; if(!M) return; const F={x:f[0],y:f[1],z:f[2],xy:(f[0]+f[1])/2,xyz:(f[0]+f[1]+f[2])/3};
+  for(const [k,a] of Object.entries(M)) if(typeof p.params[k]==='number' && p.params[k]>0) p.params[k]=Math.max(0.1, Math.round(p.params[k]*F[a]*10)/10); }
 function applySnap(){ const v=+$('#snapSel').value; tc.setTranslationSnap(v>0?v:null); tc.setRotationSnap(v>0? 15*DEG : null); }
 
 /* =========================================================
@@ -223,8 +240,14 @@ function pickAt(ev){
   ndc.set(((ev.clientX-r.left)/r.width)*2-1, -((ev.clientY-r.top)/r.height)*2+1);
   ray.setFromCamera(ndc,camera);
   const hits=ray.intersectObjects([...meshes.entries()].filter(([id,r])=>{ const p=findPart(id); return r.mesh.visible && !isLocked(p); }).map(([,r])=>r.mesh), false);
-  // prefer solids over holes when a solid is in front
   return hits[0]||null;
+}
+/* every part under the cursor, front to back (one entry per part) */
+function pickAll(ev){
+  const r=renderer.domElement.getBoundingClientRect();
+  ndc.set(((ev.clientX-r.left)/r.width)*2-1, -((ev.clientY-r.top)/r.height)*2+1); ray.setFromCamera(ndc,camera);
+  const hits=ray.intersectObjects([...meshes.entries()].filter(([id,r])=>r.mesh.visible && !isLocked(findPart(id))).map(([,r])=>r.mesh), false);
+  const seen=new Set(); return hits.filter(h=>{ const id=h.object.userData.id; if(seen.has(id)) return false; seen.add(id); return true; });
 }
 function planeHit(ev, z){
   const r=renderer.domElement.getBoundingClientRect();
@@ -233,23 +256,29 @@ function planeHit(ev, z){
   const pt=new THREE.Vector3(); return ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,0,1), -z), pt) ? pt : null;
 }
 let down=null;
-renderer.domElement.addEventListener('pointerdown', ev=>{
+renderer.domElement.addEventListener('pointerdown', ev=>beginPointer(ev), true);
+/* also used when a drag starts on the hover buttons in the middle of a part (see hover.js) */
+function beginPointer(ev){
   if(ev.button!==0){ down=null; return; }
   const onGizmo = tc.axis!==null && tc.object;
   down={x:ev.clientX,y:ev.clientY,gizmo:onGizmo,drag:null,moved:false};
   if(onGizmo || pickMode) return;
-  const hit=pickAt(ev);
+  const all=pickAll(ev); const hit= all.find(h=>selection.includes(h.object.userData.id)) || all[0] || null;   // an already selected part, even behind another, is the one dragged
   if(hit && !simLocked() && ws==='model'){
     const id=hit.object.userData.id;
-    if(!selection.includes(id) && !ev.shiftKey){ selection=[id]; sync(); renderInspector(); }
+    down.pre=selection.slice();
+    if(!selection.includes(id) && !ev.shiftKey){ selection=[id]; GZ.mode=null; sync(); renderInspector(); }
     if(selection.includes(id)){
-      orbit.enabled=false;
+      orbit.enabled=false;   // drag on the floor plane (horizontal, at the height of the point grabbed)
       down.drag={z:hit.point.z, start:hit.point.clone(), items:selection.map(i=>({id:i, pos:[...findPart(i).pos]}))};
       renderer.domElement.setPointerCapture(ev.pointerId);
     }
+  } else if(!hit && ws==='model' && !simLocked() && (ev.shiftKey || prefs.lmb==='select')){
+    orbit.enabled=false; down.rect={x0:ev.clientX, y0:ev.clientY, add:ev.shiftKey}; renderer.domElement.setPointerCapture(ev.pointerId);
   }
-}, true);
+}
 renderer.domElement.addEventListener('pointermove', ev=>{
+  if(down?.rect){ drawSelRect(down.rect, ev); return; }
   if(!down||!down.drag) return;
   if(!down.moved && Math.hypot(ev.clientX-down.x, ev.clientY-down.y)<4) return;
   down.moved=true;
@@ -263,6 +292,7 @@ renderer.domElement.addEventListener('pointermove', ev=>{
 renderer.domElement.addEventListener('pointerup', ev=>{
   orbit.enabled=true;
   if(!down) return; const d=down; down=null;
+  if(d.rect){ finishSelRect(d.rect, ev); return; }
   if(d.drag && d.moved){ sync(); commit(); renderInspector(); return; }
   if(d.gizmo) return;
   if(Math.hypot(ev.clientX-d.x, ev.clientY-d.y)>4) return;
@@ -272,10 +302,13 @@ renderer.domElement.addEventListener('pointerup', ev=>{
   if(ws==='mech' && jf){ const L=pickLocator(ev); if(L){ setJointLoc(L.pid,L.lid); return; } }
   if(pickMode){ pickMode(hit?hit.point:null, hit); return; }
   if(ws==='mech' && !jf){ if(hit){ const id=hit.object.userData.id; selection=[id]; sync(); renderInspector(); openMechBubble(findPart(id), ev, {point:hit.point}); } else { closeBubble(); if(selection.length){ selection=[]; sync(); renderInspector(); } } return; }
-  if(!hit){ if(!ev.shiftKey && selection.length){ selection=[]; sync(); renderInspector(); } return; }
-  const id=hit.object.userData.id;
-  if(ev.shiftKey){ selection = selection.includes(id)? selection.filter(i=>i!==id) : [...selection,id]; }
-  else selection=[id];
+  if(!hit){ if(!ev.shiftKey && selection.length){ selection=[]; GZ.mode=null; sync(); renderInspector(); } return; }
+  // clicking again on the same spot picks the next part behind (a hole inside a solid, overlapping parts)
+  const ids=pickAll(ev).map(h=>h.object.userData.id); let id=ids[0];
+  if(ev.shiftKey){ id=ids.find(i=>!selection.includes(i)); if(id==null){ id=ids[0]; selection=selection.filter(i=>i!==id); } else selection=[...selection,id]; }
+  else { const pre=d.pre||selection; if(pre.length===1 && ids.length>1 && ids.includes(pre[0])) id=ids[(ids.indexOf(pre[0])+1)%ids.length];
+    if(selection.length!==1 || selection[0]!==id) GZ.mode=null; selection=[id];
+    if(ids.length>1 && id!==ids[0]) toast(`Pièce derrière : ${findPart(id)?.name} (cliquez encore pour la suivante)`); }
   sync(); renderInspector();
 });
 /* double-click: frame the object under the cursor (empty space: frame everything).

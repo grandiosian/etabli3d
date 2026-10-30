@@ -71,7 +71,7 @@ function sceneList(){
 function renderPart(body){
   const ps=selParts();
   if(!ps.length){
-    body.append(sec('Pour commencer', h('div',{class:'empty',html:'Cliquez une forme à gauche pour la poser sur le tapis, ou ouvrez un <b>exemple</b>.<br><br>Cliquez une pièce pour la régler. <span class="kbd">Maj</span> + clic pour en sélectionner plusieurs.<br><br>Glissez dans le vide pour tourner la vue, molette pour zoomer.'})));
+    body.append(sec('Pour commencer', h('div',{class:'empty',html:`Cliquez une forme à gauche pour la poser sur le tapis, ou ouvrez un <b>exemple</b>.<br><br>Survolez une pièce : son nom et trois boutons apparaissent (<b>déplacer</b>, <b>tourner</b>, <b>taille</b>). Glissez la pièce pour la déplacer sur le sol.<br><br>Cliquez une pièce pour la régler. <span class="kbd">Maj</span> + clic ou <span class="kbd">Maj</span> + glisser dans le vide (cadre) pour en sélectionner plusieurs ; cliquez encore au même endroit pour prendre la pièce de derrière.<br><br>${(LMB.find(x=>x[0]===(prefs.lmb||'orbit'))||LMB[1])[3]} Molette : zoom. Clic droit : menu.`})));
     body.append(sceneList()); return;
   }
   let lock=simLocked();
