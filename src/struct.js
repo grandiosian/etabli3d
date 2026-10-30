@@ -246,9 +246,11 @@ function structBox(){
   return {minx,maxx,miny,maxy};
 }
 function stFit(){ const b=structBox(); const w=Math.max(40,b.maxx-b.minx), hh=Math.max(40,b.maxy-b.miny);
-  const d=$('#demo'); const left= (d && !d.hidden && stW>760 && !movedDemo())? d.offsetWidth+20 : 0;   // keep clear of the demo card
-  ST.view.s=Math.min((stW-left-110)/(w*1.12), (stH-190)/(hh*1.45)); if(!(ST.view.s>0)) ST.view.s=1;
-  ST.view.cx=(b.minx+b.maxx)/2 - left/2/ST.view.s; ST.view.cy=(b.miny+b.maxy)/2 - hh*0.05; ST.fitted=true; }
+  const d=$('#demo'); const left= OVR.l + ((d && !d.hidden && stW-OVR.l-OVR.r>760 && !movedDemo())? d.offsetWidth+20 : 0);   // keep clear of the demo card and of the settings panel
+  ST.view.s=Math.min((stW-left-OVR.r-110)/(w*1.12), (stH-190)/(hh*1.45)); if(!(ST.view.s>0)) ST.view.s=1;
+  ST.view.cx=(b.minx+b.maxx)/2 - (left-OVR.r)/2/ST.view.s; ST.view.cy=(b.miny+b.maxy)/2 - hh*0.05; ST.fitted=true; }
+/* canvas coordinates (the 2D canvas also extends under the settings panel) → stage coordinates */
+const stStage=(sx,sy)=>[sx-OVR.l, sy];
 function stGrid(){ const s=ST.view.s; for(const g of [1,2,5,10,20,50,100,200,500,1000]) if(g*s>=14) return g; return 2000; }
 /* Deformed-shape scale. « auto » picks a readable factor ONCE per model (ST.ampRef) and then keeps it:
    doubling a force doubles the visible deflection, instead of being renormalised away.
@@ -280,7 +282,7 @@ function stDraw(){
   for(let x=Math.ceil(x0/gs)*gs;x<=x1;x+=gs){ const [X]=sToS(x,0); g.moveTo(Math.round(X)+.5,0); g.lineTo(Math.round(X)+.5,stH); }
   for(let y=Math.ceil(y0/gs)*gs;y<=y1;y+=gs){ const [,Y]=sToS(0,y); g.moveTo(0,Math.round(Y)+.5); g.lineTo(stW,Math.round(Y)+.5); }
   g.stroke(); g.globalAlpha=1;
-  g.fillStyle=col.ink2; g.font='500 11px '+cssVar('--f-mono'); g.textAlign='right'; g.fillText(`carreau ${gs} mm`, stW-12, stH-12); g.textAlign='left';
+  g.fillStyle=col.ink2; g.font='500 11px '+cssVar('--f-mono'); g.textAlign='right'; g.fillText(`carreau ${gs} mm`, stW-OVR.r-12, stH-12); g.textAlign='left';
   if(S.mod==='treillis') drawTruss(g,S.truss,col); else drawMeshRes(g,S.mesh,col);
 }
 let stArrowHits=[];   // load arrows drawn on the canvas, clickable
@@ -357,7 +359,7 @@ function drawMeshRes(g, M, col){
     if(M.sup==='encastre'){ g.strokeStyle=col.ink; g.lineWidth=1.4; g.beginPath(); g.moveTo(X-3,Y); g.lineTo(X-12,Y+7); g.stroke(); g.beginPath(); g.moveTo(X-3,Y-6); g.lineTo(X-3,Y+6); g.stroke(); }
     else supGlyph(g,X,Y, f[0]? 'fixe':'glissant', col); });
   const loads=[...bc.loads]; const ls=Math.max(1,Math.ceil(loads.length/14)); const tot=loads.reduce((s,[,f])=>s+Math.hypot(f[0],f[1]),0);
-  loads.forEach(([i,f],k)=>{ if(k%ls) return; const [X,Y]=sToS(...P(i)); arrowS(g,X,Y,f[0],-f[1],col.acc, loads.length===1? `${fmt(tot,0)} N` : (k===0?`${fmt(tot,0)} N au total`:null), {t:'mesh'}); });
+  loads.forEach(([i,f],k)=>{ if(k%ls) return; const [X,Y]=sToS(...P(i)); arrowS(g,X,Y,f[0],-f[1],col.acc, loads.length===1? `${fmt(tot,0)} N` : (k===0?`${fmt(tot,0)} N au total`:null), {t:'mesh',i}); });
   if(R.ok && R.umax>0){ const [X,Y]=sToS(...P(R.uAt)); g.strokeStyle=col.ink; g.lineWidth=2; g.beginPath(); g.arc(X,Y,8,0,Math.PI*2); g.stroke(); g.font='600 12px '+cssVar('--f-mono'); g.fillStyle=col.ink; g.fillText(`${fmt(R.umax,2)} mm`, X+12, Y+18); }
   // legend
   if(R.ok){ const stops=view==='tc'? [-1,-.5,0,.5,1].map(k=>`rgb(${divergent(k*lim,lim).join(',')})`) : [0,.2,.4,.6,.8,1].map(k=>`rgb(${ramp(k).join(',')})`);
@@ -387,8 +389,8 @@ stCanvas.addEventListener('pointerdown',ev=>{
   if(ev.button===1||ev.button===2||S.mod!=='treillis'){ if(ev.button===2 && ST.chain!=null){ ST.chain=null; stDraw(); return; } panStart(); return; }
   const T=S.truss, t=ST.tool;
   if(t==='select'){ const n=hitNode(sx,sy); if(n){ ST.sel={t:'node',id:n.id}; ST.drag={kind:'node',id:n.id,moved:false}; renderInspector(); stDraw(); return; }
-    const b=hitBar(sx,sy); if(b){ ST.sel={t:'bar',id:b.id}; renderInspector(); stDraw(); openStructBubble({t:'bar',id:b.id}, sx, sy); return; }
-    const a=hitArrow(sx,sy); if(a){ ST.sel=a; renderInspector(); stDraw(); openStructBubble(a, sx, sy); return; }
+    const b=hitBar(sx,sy); if(b){ ST.sel={t:'bar',id:b.id}; renderInspector(); stDraw(); openStructBubble({t:'bar',id:b.id}, ...stStage(sx,sy)); return; }
+    const a=hitArrow(sx,sy); if(a){ if(a.t!=='mesh') ST.sel=a; renderInspector(); stDraw(); openStructBubble(a, ...stStage(sx,sy)); return; }
     ST.sel=null; renderInspector(); panStart(); stDraw(); return; }
   if(t==='bar'){ const s=stSnap(sx,sy); const n=s.node||newNode(s.x,s.y);
     if(ST.chain!=null && ST.chain!==n.id) newBar(ST.chain,n.id);
@@ -408,8 +410,8 @@ stCanvas.addEventListener('pointermove',ev=>{
   if(ST.tool==='bar' && ST.chain!=null) stDraw();
 });
 stCanvas.addEventListener('pointerup',ev=>{ const dr=ST.drag; ST.drag=null; const [sx,sy]=stEvt(ev); const click= ST.down && Math.hypot(sx-ST.down.sx, sy-ST.down.sy)<5;
-  if(dr?.kind==='node'){ if(dr.moved) structChanged(); else openStructBubble({t:'node',id:dr.id}, sx, sy); return; }
-  if(dr?.kind==='pan' && click && ev.button===0){ if(SD().mod==='maillage' && (hitArrow(sx,sy) || meshHitAt(sx,sy))) openStructBubble({t:'mesh'}, sx, sy); else closeBubble(); } });
+  if(dr?.kind==='node'){ if(dr.moved) structChanged(); else openStructBubble({t:'node',id:dr.id}, ...stStage(sx,sy)); return; }
+  if(dr?.kind==='pan' && click && ev.button===0){ if(SD().mod==='maillage' && (hitArrow(sx,sy) || meshHitAt(sx,sy))){ const [wx,wy]=sToW(sx,sy); openStructBubble({t:'mesh', i:meshNodeNear(wx,wy)}, ...stStage(sx,sy)); } else closeBubble(); } });
 /* double-click in 2D: zoom on a bar or a node, empty space = whole structure */
 stCanvas.addEventListener('dblclick',ev=>{
   const [sx,sy]=stEvt(ev); const S=SD(); let box=null;
@@ -417,33 +419,71 @@ stCanvas.addEventListener('dblclick',ev=>{
     if(n) box={minx:n.x-60,maxx:n.x+60,miny:n.y-60,maxy:n.y+60};
     else if(b){ const A=T.nodes.find(k=>k.id===b.a), B=T.nodes.find(k=>k.id===b.b); if(A&&B){ const m=Math.max(30,Math.hypot(B.x-A.x,B.y-A.y)*0.25); box={minx:Math.min(A.x,B.x)-m,maxx:Math.max(A.x,B.x)+m,miny:Math.min(A.y,B.y)-m,maxy:Math.max(A.y,B.y)+m}; } } }
   if(!box){ ST.fitted=false; stFit(); stDraw(); return; }
-  const w=box.maxx-box.minx, hh=box.maxy-box.miny; ST.view.s=clamp(Math.min(stW/(w*1.4), stH/(hh*1.6)),0.01,60); ST.view.cx=(box.minx+box.maxx)/2; ST.view.cy=(box.miny+box.maxy)/2; stDraw();
+  const w=box.maxx-box.minx, hh=box.maxy-box.miny; ST.view.s=clamp(Math.min((stW-OVR.l-OVR.r)/(w*1.4), stH/(hh*1.6)),0.01,60); ST.view.cx=(box.minx+box.maxx)/2-(OVR.l-OVR.r)/2/ST.view.s; ST.view.cy=(box.miny+box.maxy)/2; stDraw();
 });
 stCanvas.addEventListener('wheel',ev=>{ ev.preventDefault(); const [sx,sy]=stEvt(ev); const [wx,wy]=sToW(sx,sy); ST.view.s=clamp(ST.view.s*Math.exp(-ev.deltaY*0.0015),0.01,60); const [nx,ny]=sToW(sx,sy); ST.view.cx+=wx-nx; ST.view.cy+=wy-ny; stDraw(); },{passive:false});
 
-/* ---- 3D preview: bars become cylinders (tubes are hollow), plates become coloured slabs */
+/* ---- 3D preview: bars become cylinders (tubes are hollow), plates become coloured slabs.
+   Same symbols as the 2D drawing: load arrows with their value, supports, reactions,
+   dashed shape at rest and the maximum deflection marker. Texts are HTML labels (#st3d). */
 const structGroup=new THREE.Group(); structGroup.visible=false; scene.add(structGroup);
+const UP3=new THREE.Vector3(0,1,0);
+const toV3=(x,y,z=0)=>new THREE.Vector3(x,z,y);   // structure plane (x, y) → world (X, Z)
+function arrow3(dir, len, color, ud){   // arrow whose tip is at the group origin
+  const g=new THREE.Group(), hl=len*0.26, r=len*0.032, mat=new THREE.MeshStandardMaterial({color, roughness:.5});
+  const shaft=new THREE.Mesh(new THREE.CylinderGeometry(r,r,len-hl,10), mat); shaft.position.y=-hl-(len-hl)/2;
+  const head=new THREE.Mesh(new THREE.ConeGeometry(r*3.2,hl,16), mat); head.position.y=-hl/2;
+  g.add(shaft, head); g.quaternion.setFromUnitVectors(UP3, dir.clone().normalize()); if(ud) g.traverse(o=>{ o.userData=ud; }); return g;
+}
+function support3(type, s){   // triangle + ground (+ rollers when sliding); top of the triangle at the origin
+  const g=new THREE.Group(), ink=new THREE.Color(cssVar('--ink')||'#222');
+  const tri=new THREE.Mesh(new THREE.ConeGeometry(s, s*1.5, 3), new THREE.MeshStandardMaterial({color: type==='glissant'? 0xe6a23a : 0x6c7a89, roughness:.6}));
+  tri.rotation.x=Math.PI/2; tri.position.z=-s*0.75; g.add(tri);   // apex up (+Z)
+  let z=-s*1.5;
+  if(type==='glissant'){ for(const dx of [-s*0.5, s*0.5]){ const r=new THREE.Mesh(new THREE.CylinderGeometry(s*0.22,s*0.22,s*1.6,12), new THREE.MeshStandardMaterial({color:0x8a9590})); r.position.set(dx,0,z-s*0.22); g.add(r); } z-=s*0.44; }
+  const base=new THREE.Mesh(new THREE.BoxGeometry(s*2.4, s*1.8, s*0.18), new THREE.MeshStandardMaterial({color:ink, roughness:.8})); base.position.z=z-s*0.09; g.add(base);
+  return g;
+}
+function wall3(s, t){ const m=new THREE.Mesh(new THREE.BoxGeometry(s*0.5, t*1.6, s*1.6), new THREE.MeshStandardMaterial({color:0x4a5551, roughness:.8})); return m; }
+function dashed3(pairs, span){   // dashed segments [[A,B],…] (Vector3)
+  const pos=[]; for(const [a,b] of pairs) pos.push(a.x,a.y,a.z,b.x,b.y,b.z);
+  const g=new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
+  const l=new THREE.LineSegments(g, new THREE.LineDashedMaterial({color:new THREE.Color(cssVar('--ink-2')||'#888'), dashSize:span*0.012, gapSize:span*0.01, transparent:true, opacity:.6}));
+  l.computeLineDistances(); return l;
+}
+function st3Label(G, cls, html, at){ const el=h('div',{class:'st3l '+cls, html}); $('#st3d').append(el); G.labels.push({el, at}); return el; }
 function buildStruct3D(){
   for(const c of [...structGroup.children]){ structGroup.remove(c); c.traverse(m=>{ m.geometry?.dispose(); m.material?.dispose?.(); }); }
-  ST.g3=null; const S=SD(); const toV=(x,y,z=0)=>new THREE.Vector3(x,z,y);
-  if(S.mod==='treillis'){ const T=S.truss, R=ST.res, N=new Map(T.nodes.map(n=>[n.id,n])); const b=structBox(); const ampF=R?.ok? ampFactor(Math.max(b.maxx-b.minx,b.maxy-b.miny),R.umax,0.035):1;
-    const P0=new Map(), D=new Map(); for(const n of T.nodes){ P0.set(n.id,toV(n.x,n.y)); const d=R?.ok? R.disp.get(n.id) : null; D.set(n.id, d? toV(d[0]*ampF,d[1]*ampF) : new THREE.Vector3()); }
-    const info=new Map((R?.ok?R.bars:[]).map(e=>[e.b.id,e])); const G={kind:'truss', P0, D, bars:[], nodes:[], arrows:[]};
+  $('#st3d').innerHTML='';
+  ST.g3=null; const S=SD(); const acc=new THREE.Color(cssVar('--accent')||'#1d7656');
+  const G={kind:S.mod==='treillis'?'truss':'mesh', bars:[], nodes:[], arrows:[], labels:[]};
+  if(S.mod==='treillis'){ const T=S.truss, R=ST.res, N=new Map(T.nodes.map(n=>[n.id,n])); const b=structBox(), span=Math.max(40,b.maxx-b.minx,b.maxy-b.miny); const ampF=R?.ok? ampFactor(span,R.umax,0.035):1;
+    const P0=new Map(), D=new Map(); for(const n of T.nodes){ P0.set(n.id,toV3(n.x,n.y)); const d=R?.ok? R.disp.get(n.id) : null; D.set(n.id, d? toV3(d[0]*ampF,d[1]*ampF) : new THREE.Vector3()); }
+    const P=(id,k)=>P0.get(id).clone().addScaledVector(D.get(id),k); G.P=P;
+    const info=new Map((R?.ok?R.bars:[]).map(e=>[e.b.id,e]));
+    if(R?.ok) structGroup.add(dashed3(T.bars.filter(k=>N.has(k.a)&&N.has(k.b)).map(k=>[P0.get(k.a),P0.get(k.b)]), span));
     for(const bar of T.bars){ if(!N.has(bar.a)||!N.has(bar.b)) continue; const sp=secProps(bar), e=info.get(bar.id);
       let color=new THREE.Color(MATERIALS[bar.mat]?.col||'#999'); if(e && e.mode!=='detendu'){ const lim=e.N>=0?e.m.st:Math.min(e.m.sc,e.Pcr/e.A||e.m.sc); color=new THREE.Color(colorTC(e.N/e.A,lim)); }
       const r=bar.sec==='cable'? Math.max(0.4,sp.D/2) : sp.D/2; const ud={t:'bar',id:bar.id};
       const grp=new THREE.Group(); grp.userData=ud;
       const outer=new THREE.Mesh(new THREE.CylinderGeometry(r,r,1,20,1,bar.sec==='tube'), new THREE.MeshStandardMaterial({color,roughness:.45,metalness:.1,side:THREE.DoubleSide})); outer.userData=ud; grp.add(outer);
       if(bar.sec==='tube'){ const inner=new THREE.Mesh(new THREE.CylinderGeometry(sp.d/2,sp.d/2,1,20,1,true), new THREE.MeshStandardMaterial({color:color.clone().multiplyScalar(.55),side:THREE.BackSide})); inner.userData=ud; grp.add(inner); }
-      structGroup.add(grp); G.bars.push({grp,a:bar.a,b:bar.b}); }
-    const nr=Math.max(1.5,Math.max(...T.bars.map(b=>secProps(b).D),4)*0.7);
+      structGroup.add(grp); G.bars.push({grp,a:bar.a,b:bar.b});
+      if(T.labels && e && e.mode!=='detendu') st3Label(G, e.N>=0?'st3-t':'st3-c', `${e.N>=0?'+':'−'}${fmt(Math.abs(e.N),0)} N`, k=>P(bar.a,k).add(P(bar.b,k)).multiplyScalar(0.5)); }
+    const nr=Math.max(1.5,Math.max(...T.bars.map(b=>secProps(b).D),4)*0.7), AL=Math.max(20,span*0.1), ss=Math.max(nr*2, span*0.022);
     for(const n of T.nodes){ const m=new THREE.Mesh(new THREE.SphereGeometry(nr,16,10), new THREE.MeshStandardMaterial({color:n.sup?0x2c3331:0xdddddd})); m.userData={t:'node',id:n.id}; structGroup.add(m); G.nodes.push({m,id:n.id});
-      if(n.sup){ const h=nr*3, c=new THREE.Mesh(new THREE.ConeGeometry(nr*2.2,h,4), new THREE.MeshStandardMaterial({color:n.sup==='fixe'?0x6c7a89:0xe6a23a})); c.rotation.x=Math.PI/2; c.position.copy(P0.get(n.id)).add(new THREE.Vector3(0,0,-h/2-nr*0.6)); structGroup.add(c); }
-      if(+n.fx||+n.fy){ const d=new THREE.Vector3(+n.fx||0,0,+n.fy||0).normalize(); const ar=new THREE.ArrowHelper(d, new THREE.Vector3(), nr*11, 0x2f6fd6, nr*3, nr*2); ar.traverse(o=>{ o.userData={t:'node',id:n.id}; }); structGroup.add(ar); G.arrows.push({ar,id:n.id,d,off:nr*12}); } }
+      if(n.sup){ const g=support3(n.sup, ss); g.position.copy(P0.get(n.id)).add(new THREE.Vector3(0,0,-nr)); g.traverse(o=>{ o.userData={t:'node',id:n.id}; }); structGroup.add(g);
+        const rc=R?.ok? R.reac.get(n.id) : null; if(rc && Math.hypot(rc[0],rc[1])>0.5) st3Label(G,'st3-r',`R = ${fmt(Math.hypot(rc[0],rc[1]),0)} N`, ()=>P0.get(n.id).clone().add(new THREE.Vector3(0,0,-nr-ss*2.2))); }
+      const fx=+n.fx||0, fy=+n.fy||0;
+      if(fx||fy){ const d=toV3(fx,fy).normalize(); const ar=arrow3(d, AL, acc, {t:'node',id:n.id}); structGroup.add(ar);
+        G.arrows.push({obj:ar, at:k=>P(n.id,k).addScaledVector(d,-nr*1.15)});
+        st3Label(G,'st3-f',`${fmt(Math.hypot(fx,fy),0)} N`, k=>P(n.id,k).addScaledVector(d,-nr*1.15-AL*1.08)); } }
+    if(R?.ok && R.umaxNode!=null && R.umax>1e-6) st3Label(G,'st3-u',`<span>flèche ${fmt(R.umax,2)} mm</span>`, k=>P(R.umaxNode,k));
     ST.g3=G;
-  } else { const R=ST.mres; if(!R?.mesh) return; const mesh=R.mesh, nodes=mesh.nodes, t=SD().mesh.t; const b=mesh.box; const ampF=R.ok? ampFactor(Math.max(b.maxx-b.minx,b.maxy-b.miny),R.umax):1;
-    const view=SD().mesh.view; const lim= !R.ok?1 : view==='u'? (R.umax||1) : view==='tc'? Math.max(Math.abs(R.s1max),Math.abs(R.s3min))||1 : R.vmMax||1;
+  } else { const R=ST.mres; if(!R?.mesh) return; const M=SD().mesh, mesh=R.mesh, nodes=mesh.nodes, t=M.t; const b=mesh.box, span=Math.max(40,b.maxx-b.minx,b.maxy-b.miny); const ampF=R.ok? ampFactor(span,R.umax):1;
+    const view=M.view; const lim= !R.ok?1 : view==='u'? (R.umax||1) : view==='tc'? Math.max(Math.abs(R.s1max),Math.abs(R.s3min))||1 : R.vmMax||1;
     const val= !R.ok? null : view==='u'? R.uN : view==='tc'? R.spN : R.vmN;
+    const Pm=(i,k,z=0)=>toV3(nodes[i][0]+(R.ok?R.u[2*i]*ampF*k:0), nodes[i][1]+(R.ok?R.u[2*i+1]*ampF*k:0), z); G.P=Pm;
     const base=[], disp=[], colr=[];
     const C=i=>{ const c= !val? [150,160,156] : view==='tc'? divergent(val[i],lim) : ramp(val[i]/lim); return c.map(v=>v/255); };
     const vtx=(i,z)=>{ base.push(nodes[i][0], z, nodes[i][1]); disp.push(R.ok?R.u[2*i]*ampF:0, 0, R.ok?R.u[2*i+1]*ampF:0); colr.push(...C(i)); };
@@ -453,22 +493,37 @@ function buildStruct3D(){
     for(const [a,b] of mesh.bnd){ tri(a,b,b,-h2,-h2,h2); tri(a,b,a,-h2,h2,h2); }
     const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(base.slice(),3)); g.setAttribute('color',new THREE.Float32BufferAttribute(colr,3)); g.computeVertexNormals();
     const m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({vertexColors:true,roughness:.6,side:THREE.DoubleSide})); m.userData={t:'mesh'}; structGroup.add(m);
-    ST.g3={kind:'mesh', geo:g, base:new Float32Array(base), disp:new Float32Array(disp)};
+    G.geo=g; G.base=new Float32Array(base); G.disp=new Float32Array(disp);
+    structGroup.add(dashed3(mesh.bnd.map(([a,c])=>[toV3(...nodes[a],-h2-0.5), toV3(...nodes[c],-h2-0.5)]), span));
+    const bc=R.ok? {fix:R.fix, loads:R.loads} : meshBC(mesh,M), ss=span*0.02, AL=Math.max(20,span*0.1);
+    const fixed=[...bc.fix.keys()]; const step=Math.max(1,Math.ceil(fixed.length/8));
+    fixed.forEach((i,k)=>{ if(k%step && k!==fixed.length-1) return; const f=bc.fix.get(i);
+      const o= M.sup==='encastre'? wall3(ss,t) : support3(f[0]?'fixe':'glissant', ss); o.position.copy(toV3(...nodes[i])); if(M.sup==='encastre') o.position.x+= (nodes[i][0]<(b.minx+b.maxx)/2? -1 : 1)*ss*0.25; o.traverse(q=>{ q.userData={t:'mesh',i}; }); structGroup.add(o); });
+    const loads=[...bc.loads]; const ls=Math.max(1,Math.ceil(loads.length/14)); const tot=loads.reduce((s,[,f])=>s+Math.hypot(f[0],f[1]),0);
+    loads.forEach(([i,f],k)=>{ if(k%ls) return; const d=toV3(f[0],f[1]).normalize(); if(!(d.lengthSq()>0)) return; const ar=arrow3(d, AL, acc, {t:'mesh',i}); structGroup.add(ar);
+      G.arrows.push({obj:ar, at:k=>Pm(i,k)});
+      const txt= loads.length===1? `${fmt(tot,0)} N` : (k===0? `${fmt(tot,0)} N au total` : null); if(txt) st3Label(G,'st3-f',txt, kk=>Pm(i,kk).addScaledVector(d,-AL*1.08)); });
+    if(R.ok && R.umax>0) st3Label(G,'st3-u',`<span>${fmt(R.umax,2)} mm</span>`, k=>Pm(R.uAt,k));
+    ST.g3=G;
   }
   applyStruct3DK(ST.k);
 }
-const UP3=new THREE.Vector3(0,1,0);
 function applyStruct3DK(k){
   const G=ST.g3; if(!G) return;
-  if(G.kind==='truss'){ const P=id=>G.P0.get(id).clone().addScaledVector(G.D.get(id),k);
-    for(const b of G.bars){ const A=P(b.a), B=P(b.b), L=Math.max(1e-6,A.distanceTo(B)); b.grp.position.copy(A).add(B).multiplyScalar(0.5); b.grp.quaternion.setFromUnitVectors(UP3, B.clone().sub(A).normalize()); b.grp.scale.set(1,L,1); }
-    for(const n of G.nodes) n.m.position.copy(P(n.id));
-    for(const a of G.arrows) a.ar.position.copy(P(a.id)).addScaledVector(a.d,-a.off);
+  if(G.kind==='truss'){ const P=G.P;
+    for(const b of G.bars){ const A=P(b.a,k), B=P(b.b,k), L=Math.max(1e-6,A.distanceTo(B)); b.grp.position.copy(A).add(B).multiplyScalar(0.5); b.grp.quaternion.setFromUnitVectors(UP3, B.clone().sub(A).normalize()); b.grp.scale.set(1,L,1); }
+    for(const n of G.nodes) n.m.position.copy(P(n.id,k));
   } else { const p=G.geo.attributes.position.array; for(let i=0;i<p.length;i++) p[i]=G.base[i]+k*G.disp[i]; G.geo.attributes.position.needsUpdate=true; G.geo.computeBoundingSphere(); }
+  for(const a of G.arrows) a.obj.position.copy(a.at(k));
+}
+function positionStruct3DLabels(){
+  const G=ST.g3; if(!G || !G.labels.length) return;
+  for(const L of G.labels){ const p=toStage(L.at(ST.k)); L.el.style.visibility=p.vis?'visible':'hidden'; L.el.style.transform=`translate(${Math.round(p.x)}px,${Math.round(p.y)}px) translate(-50%,-50%)`; }
 }
 /* deformation animation: 0 → full → 0, looping */
 function stAnimPlay(on=true){ ST.anim.on=on; ST.anim.t0=performance.now(); if(!on){ ST.k=1; if(ST.mode3d) applyStruct3DK(1); else stDraw(); } updateBubblePlay(); }
 function stAnimTick(now){ if(!ST.anim.on) return; const ph=((now-ST.anim.t0)/1000/ST.anim.T)%1; ST.k=0.5-0.5*Math.cos(ph*2*Math.PI); if(ST.mode3d) applyStruct3DK(ST.k); else stDraw(); }
+function meshNodeNear(x,y){ const R=ST.mres; if(!R?.mesh) return 0; let bi=0, bd=Infinity; R.mesh.nodes.forEach((n,i)=>{ const d=(n[0]-x)**2+(n[1]-y)**2; if(d<bd){ bd=d; bi=i; } }); return bi; }
 function meshHitAt(sx,sy){
   const R=ST.mres; if(!R?.mesh) return false; const nodes=R.mesh.nodes, b=R.mesh.box; const amp= R.ok? ampFactor(Math.max(b.maxx-b.minx,b.maxy-b.miny),R.umax)*ST.k : 0;
   const S=i=>sToS(nodes[i][0]+(R.ok?R.u[2*i]*amp:0), nodes[i][1]+(R.ok?R.u[2*i+1]*amp:0));
@@ -480,7 +535,7 @@ function meshHitAt(sx,sy){
 function setStructView3D(v){
   // the 2D layer (#stWrap) sits above the WebGL canvas: it must be removed in 3D or it swallows every click and drag
   if(ST.mode3d!==v) closeBubble();
-  ST.mode3d=v; $('#stCanvas').hidden=v; $('#stWrap').hidden= v && ws==='struct'; if(!v) requestAnimationFrame(()=>stResize());
+  ST.mode3d=v; $('#stCanvas').hidden=v; $('#stWrap').hidden= v && ws==='struct'; $('#st3d').hidden=!v; if(!v) requestAnimationFrame(()=>stResize());
   if(v) $('#stHint').textContent=ST3D_HINT; else stSetTool(ST.tool); $$('#stTools [data-v3]').forEach(b=>b.classList.toggle('on', (b.dataset.v3==='1')===v));
   structGroup.visible=v; if(v){ buildStruct3D(); const bx=new THREE.Box3().setFromObject(structGroup); const c=new THREE.Vector3(); bx.getCenter(c); const s=new THREE.Vector3(); bx.getSize(s); const R=Math.max(40,s.length()*0.6), dist=R/Math.sin(camera.fov*DEG/2);
     animateCam(c, c.clone().add(new THREE.Vector3(0.35,-1,0.35).normalize().multiplyScalar(dist))); }
@@ -535,8 +590,8 @@ function renderTrussPanel(body,T){
   body.append(sec('Affichage et calcul', h('label',{class:'chk'}, lab, 'Afficher les efforts (N) sur les barres'), h('label',{class:'chk'}, gr, 'Compter le poids des barres'), ampRow()));
 }
 function ampRow(){ const s=h('select',{class:'field','aria-label':'Échelle de la déformée'}, [['auto','Amplifiée (échelle fixe)'],['reel','Réelle (×1)'],['10','×10'],['100','×100']].map(([v,l])=>h('option',{value:v,selected:ST.amp===v||null},l))); s.onchange=()=>{ ST.amp=s.value; resetAmpRef(); stDraw(); if(ST.mode3d) buildStruct3D(); renderInspector(); };
-  const re=h('button',{class:'btn',title:'Recalculer l’échelle pour que la déformée actuelle soit bien lisible',onclick:()=>{ resetAmpRef(); stDraw(); if(ST.mode3d) buildStruct3D(); toast('Échelle de la déformée recalée.'); }}, svgIcon('reset'), 'Recaler');
-  return h('div',{}, row('Déformée', h('div',{style:'display:flex;gap:6px'}, s, ST.amp==='auto'? re : null)),
+  const re=h('button',{class:'btn',title:'Recalculer l’échelle pour que la déformée actuelle soit bien lisible',onclick:()=>{ resetAmpRef(); stDraw(); if(ST.mode3d) buildStruct3D(); toast('Échelle de la déformée recalée.'); },'aria-label':'Recaler l’échelle'}, svgIcon('reset'));
+  return h('div',{}, h('div',{class:'row',style:'grid-template-columns:auto 1fr'}, h('label',{},'Déformée'), h('div',{style:'display:flex;gap:6px;min-width:0'}, s, ST.amp==='auto'? re : null)),
     ST.amp==='auto'? h('div',{class:'hint'},'L’échelle reste la même pendant vos essais : si la force double, la déformée dessinée double aussi.') : null); }
 function renderMeshPanel(body,M){
   const R=ST.mres;

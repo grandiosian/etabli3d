@@ -20,7 +20,7 @@ function setWs(k){
   const struct=k==='struct';
   mat.visible=!struct; matEdge.visible=!struct; axes.visible=!struct;
   structGroup.visible= struct && ST.mode3d;
-  $('#stWrap').hidden= struct && ST.mode3d;
+  $('#stWrap').hidden= struct && ST.mode3d; $('#st3d').hidden= !(struct && ST.mode3d);
   if(struct){ computeStruct(); ST.fitted=false; ST.sel=null; stSetTool(ST.tool); $('#stTools').dataset.mod=SD().mod; requestAnimationFrame(()=>{ stResize(); if(ST.mode3d) setStructView3D(true); }); }
   sync(); renderInspector(); updateSteps(); applyViewOffset(); updateMarkers();
   if(prev!==k && k==='mech' && !mechReady()) toast('Validez d’abord vos pièces : la Mécanique utilise leurs repères.');

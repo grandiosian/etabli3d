@@ -10,7 +10,8 @@ const prefs=(()=>{ let p={}; try{ p=JSON.parse(localStorage.getItem(PREFS_KEY)||
   return { level:[1,2,3].includes(p.level)? p.level : 1, firstVisit:!p.level,
     theme:['auto','light','dark'].includes(p.theme)? p.theme : 'auto',
     accent:p.accent||'vert', mat:p.mat||'vert', tree:p.tree!==false, axes:p.axes||'classique', labels:p.labels!==false,
-    glass:['transparent','leger','opaque'].includes(p.glass)? p.glass : 'transparent' }; })();
+    glass:['transparent','leger','opaque'].includes(p.glass)? p.glass : 'transparent',
+    jl:['libre','ligne','colonne','carre','rect','cercle'].includes(p.jl)? p.jl : 'ligne' }; })();
 function savePrefs(){ try{ const {firstVisit,...keep}=prefs; localStorage.setItem(PREFS_KEY, JSON.stringify(keep)); }catch(e){} }
 const lv=n=>prefs.level>=n;
 

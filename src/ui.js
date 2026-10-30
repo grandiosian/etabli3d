@@ -227,7 +227,8 @@ function renderJoints(body){
   if(lock && !jf) body.append(h('div',{class:'info'},'Réinitialisez la simulation (⟲) pour ajouter ou modifier des liaisons.'));
   const lab=h('input',{type:'checkbox',checked:prefs.labels||null}); lab.onchange=()=>{ prefs.labels=lab.checked; savePrefs(); buildJointLabels(); };
   const lm=h('select',{class:'field','aria-label':'Repères affichés'}, [['auto','Utilisés par les liaisons'],['tous','Tous'],['aucun','Aucun']].map(([v,l])=>h('option',{value:v,selected:LOCV.mode===v||null},l))); lm.onchange=()=>{ LOCV.mode=lm.value; rebuildLocators(); };
-  body.append(sec('Affichage', h('label',{class:'chk'}, lab, 'Étiquettes des liaisons'), minLvl(row('Repères', lm),2), minLvl(locLegend(),2),
+  const jl=h('select',{class:'field','aria-label':'Disposition des étiquettes'}, JL_LAYOUTS.map(([v,l])=>h('option',{value:v,selected:prefs.jl===v||null},l))); jl.onchange=()=>setJlLayout(jl.value);
+  body.append(sec('Affichage', h('label',{class:'chk'}, lab, 'Étiquettes des liaisons'), prefs.labels? row('Disposition', jl) : null, minLvl(row('Repères', lm),2), minLvl(locLegend(),2),
     h('div',{class:'jsub'},'Cliquez une pièce dans la vue pour ouvrir sa bulle : moteur, vitesse, relancer.')));
 }
 function jointForm(){

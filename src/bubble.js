@@ -103,19 +103,57 @@ function struct3DHit(ev){
 /* the whole bar (group) or load arrow rather than one of its sub-meshes */
 function struct3DTarget(o){ while(o.parent && o.parent!==structGroup && o.parent.userData?.t===o.userData.t) o=o.parent; return o; }
 function struct3DClick(ev){
-  const r=renderer.domElement.getBoundingClientRect(); const hit=struct3DHit(ev);
+  const hit=struct3DHit(ev);
   if(!hit) return closeBubble();
   const t=hit.object.userData; if(t.t!=='mesh') ST.sel={t:t.t,id:t.id};
-  openStructBubble(t.t==='mesh'? {t:'mesh'} : {t:t.t,id:t.id}, ev.clientX-r.left, ev.clientY-r.top); renderInspector();
+  openStructBubble(t.t==='mesh'? {t:'mesh', i: t.i ?? meshNodeNear(hit.point.x, hit.point.z)} : {t:t.t,id:t.id}, ...evStage(ev)); renderInspector();
+}
+
+/* ---- the line that ties the bubble to what was clicked (follows the camera, the animation and the bubble) */
+const _bv=new THREE.Vector3();
+function structAnchor(t){   // point of the structure plane, deformed like the drawing
+  const S=SD();
+  if(S.mod==='treillis'){ const R=ST.res, T=S.truss, b=structBox(); const amp=R?.ok? ampFactor(Math.max(40,b.maxx-b.minx,b.maxy-b.miny),R.umax,0.035)*ST.k : 0;
+    const P=id=>{ const n=T.nodes.find(k=>k.id===id); if(!n) return null; const d=R?.ok? R.disp.get(id) : null; return d? [n.x+d[0]*amp, n.y+d[1]*amp] : [n.x,n.y]; };
+    if(t.t==='node') return P(t.id);
+    if(t.t==='bar'){ const bar=T.bars.find(k=>k.id===t.id); const A=bar&&P(bar.a), B=bar&&P(bar.b); return A&&B? [(A[0]+B[0])/2,(A[1]+B[1])/2] : null; }
+    return null; }
+  const R=ST.mres; if(!R?.mesh) return null; const n=R.mesh.nodes; let i=t.i; if(!(i>=0 && i<n.length)) i=R.uAt ?? 0;
+  const b=R.mesh.box, amp=R.ok? ampFactor(Math.max(40,b.maxx-b.minx,b.maxy-b.miny),R.umax)*ST.k : 0;
+  return [n[i][0]+(R.ok?R.u[2*i]*amp:0), n[i][1]+(R.ok?R.u[2*i+1]*amp:0)];
+}
+function bubbleAnchor(){   // stage coordinates {x,y,vis}
+  const t=BUB.target; if(!t) return null;
+  if(BUB.kind==='struct'){ const w=structAnchor(t); if(!w) return null; if(ST.mode3d) return toStage(_bv.set(w[0],0,w[1])); const [x,y]=sToS(w[0],w[1]); return {x:x-OVR.l, y, vis:true}; }
+  if(BUB.kind==='mech'){
+    if(t.j!=null){ const j=state.joints.find(k=>k.id===t.j); if(j) return toStage(jointWorld(j, simActive()).o); }
+    const r=meshes.get(t.pid); if(!r) return null; r.mesh.updateWorldMatrix(true,false);
+    if(!t.lp){ const g=r.mesh.geometry; if(!g.boundingBox) g.computeBoundingBox(); t.lp=g.boundingBox.getCenter(new THREE.Vector3()); }
+    return toStage(r.mesh.localToWorld(_bv.copy(t.lp))); }
+  return null;
+}
+function updateBubbleLink(){
+  const svg=$('#bubLink'), b=$('#bubble'); if(!svg) return;
+  const a= (!b.hidden && BUB.kind)? bubbleAnchor() : null;
+  if(!a || !a.vis){ svg.style.display='none'; return; }
+  const bx=b.offsetLeft, by=b.offsetTop, bw=b.offsetWidth, bh=b.offsetHeight;
+  const ex=clamp(a.x,bx+6,bx+bw-6), ey=clamp(a.y,by+6,by+bh-6); const inside= a.x>bx && a.x<bx+bw && a.y>by && a.y<by+bh;
+  svg.style.display='block'; const [line,dot]=svg.children;
+  line.setAttribute('x1',a.x); line.setAttribute('y1',a.y); line.setAttribute('x2',ex); line.setAttribute('y2',ey); line.style.display= inside?'none':'';
+  dot.setAttribute('cx',a.x); dot.setAttribute('cy',a.y);
 }
 
 /* ---- Mécanique */
 const VERB={pivot:'tourne sur', glissiere:'glisse sur', fixe:'est fixée sur'};
 function jointSentence(j){ return `${partName(j.child)} ${VERB[j.type]} ${partName(j.parent)}`; }
-function openMechBubble(p, ev){
+function openMechBubble(p, ev, anchor){
   if(!p) return closeBubble();
-  const r=renderer.domElement.getBoundingClientRect(); const x=ev.clientX-r.left, y=ev.clientY-r.top;
-  openBubble('mech', {pid:p.id}, x, y, b=>{
+  const [x,y]=evStage(ev);
+  // anchor: the clicked point (kept in the part's own frame so it follows the motion) or a joint
+  const prev= BUB.kind==='mech' && BUB.target?.pid===p.id ? BUB.target : null; const tg={pid:p.id, lp:prev?.lp||null, j:prev?.j??null};
+  if(anchor?.point){ const r=meshes.get(p.id); if(r){ r.mesh.updateWorldMatrix(true,false); tg.lp=r.mesh.worldToLocal(anchor.point.clone()); tg.j=null; } }
+  if(anchor?.j!=null){ tg.j=anchor.j; }
+  openBubble('mech', tg, x, y, b=>{
     const own=state.joints.find(j=>j.child===p.id), carried=state.joints.filter(j=>j.parent===p.id);
     b.append(bubHead(p.kind, p.name, own? `${jointLabel(own.type)} · ${jointSentence(own)}` : 'Pièce fixe (bâti)', null));
     b.append(h('div',{class:'bub-actions'},
@@ -146,42 +184,84 @@ function openMechBubble(p, ev){
 function tickBubble(){ if(BUB.kind==='mech'){ const p=findPart(BUB.target?.pid); const j=p&&state.joints.find(k=>k.child===p.id); const el=$('#bubVal'); if(j&&el) el.textContent=`${fmt(jointValue(j),1)} ${unitOf(j)}`; } }
 
 /* ---- Étiquettes de liaison : « L1 · Pivot — Roue menante tourne sur Platine » */
+/* Labels are gathered in a movable group (#jlGroup) laid out in a row, a column, a square, a rectangle
+   or a circle — or left next to their joint (« libre »). They shrink (full → compact → mini) to fit the view.
+   A numbered dot at each joint matches the number on its label. */
+const JL_LAYOUTS=[['libre','Près des liaisons'],['ligne','En ligne'],['colonne','En colonne'],['carre','En carré'],['rect','En rectangle'],['cercle','En cercle']];
+const JL_ICON={
+  libre:'<circle cx="4" cy="5" r="2"/><circle cx="12" cy="4" r="2"/><circle cx="8" cy="12" r="2"/>',
+  ligne:'<rect x="1" y="6" width="4" height="4" rx="1"/><rect x="6" y="6" width="4" height="4" rx="1"/><rect x="11" y="6" width="4" height="4" rx="1"/>',
+  colonne:'<rect x="6" y="1" width="4" height="4" rx="1"/><rect x="6" y="6" width="4" height="4" rx="1"/><rect x="6" y="11" width="4" height="4" rx="1"/>',
+  carre:'<rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/>',
+  rect:'<rect x="0.5" y="4" width="4" height="3.5" rx="1"/><rect x="6" y="4" width="4" height="3.5" rx="1"/><rect x="11.5" y="4" width="4" height="3.5" rx="1"/><rect x="0.5" y="9" width="4" height="3.5" rx="1"/><rect x="6" y="9" width="4" height="3.5" rx="1"/>',
+  cercle:'<circle cx="8" cy="2.5" r="2"/><circle cx="13.2" cy="6.3" r="2"/><circle cx="11.2" cy="12.5" r="2"/><circle cx="4.8" cy="12.5" r="2"/><circle cx="2.8" cy="6.3" r="2"/>'};
+const JT_ICON={pivot:'pivot', glissiere:'slide', fixe:'lock'};
+function jlIcon(k){ return h('span',{class:'jl-li',html:`<svg viewBox="0 0 16 16" fill="currentColor">${JL_ICON[k]}</svg>`}); }
+function setJlLayout(k){ prefs.jl=k; savePrefs(); buildJointLabels(); renderInspector(); }
 function buildJointLabels(){
   const host=$('#jlabels'); if(!host) return; host.innerHTML='';
   const show = ws==='mech' && prefs.labels && state.joints.length;
   host.hidden=!show; if(!show) return;
-  const C=axisColors();
+  const C=axisColors(), lay=prefs.jl||'ligne';
+  host.dataset.lay=lay;
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('class','jl-lines'); host.append(svg);
+  const grp=h('div',{class:'float jl-group pfloat',id:'jlGroup','data-lay':lay});
+  const tools=h('div',{class:'jl-tools',role:'group','aria-label':'Disposition des étiquettes'}, ...JL_LAYOUTS.map(([k,l])=>{ const b=h('button',{class:'jl-lay'+(k===lay?' on':''),title:l,'aria-label':l,'aria-pressed':String(k===lay),onclick:()=>setJlLayout(k)}); b.append(jlIcon(k)); return b; }));
+  const body=h('div',{class:'jl-body'});
+  grp.append(gripFor('jlGroup','Étiquettes des liaisons'), tools, body); host.append(grp);
   state.joints.forEach((j,i)=>{
     const ax=nearestAxis(jointWorld(j).a); const col= j.type==='fixe'? 'var(--ink-2)' : C[ax];
     const motor= j.motor? `<i class="jl-m">moteur ${j.motor.mode==='continu'?'continu':'aller-retour'}</i>` : j.driver? `<i class="jl-m">entraînée</i>` : '';
-    const el=h('button',{class:'jl'+(selJoint===j.id?' sel':''), 'data-j':j.id, style:`--jc:${col}`, onclick:()=>{ const r=el.getBoundingClientRect(); const at={clientX:r.left+r.width/2, clientY:r.bottom}; selJoint=j.id; renderInspector(); updateMarkers(); openMechBubble(findPart(j.child), at); },
-      html:`<b>${j.name}</b><span>${jointSentence(j)}${j.type!=='fixe'?` · axe ${ax.toUpperCase()}`:''}</span>${motor}`});
-    host.append(el);
-    const line=document.createElementNS('http://www.w3.org/2000/svg','line'); line.setAttribute('data-j',j.id); svg.append(line);
-    const dot=document.createElementNS('http://www.w3.org/2000/svg','circle'); dot.setAttribute('r','4'); dot.setAttribute('data-j',j.id); svg.append(dot);
+    const el=h('button',{class:'jl'+(selJoint===j.id?' sel':''), 'data-j':j.id, 'data-n':i+1, style:`--jc:${col}`, title:`${j.name} — ${jointSentence(j)}`, onclick:()=>{ const r=el.getBoundingClientRect(); const at={clientX:r.left+r.width/2, clientY:r.bottom}; selJoint=j.id; renderInspector(); updateMarkers(); openMechBubble(findPart(j.child), at, {j:j.id}); }});
+    el.append(h('span',{class:'jl-n'},String(i+1)), svgIcon(JT_ICON[j.type]||'link'), h('span',{class:'jl-tx',html:`<b>${j.name}</b><span>${jointSentence(j)}${j.type!=='fixe'?` · axe ${ax.toUpperCase()}`:''}</span>${motor}`}));
+    (lay==='libre'? host : body).append(el);
+    const g=document.createElementNS('http://www.w3.org/2000/svg','g'); g.setAttribute('data-j',j.id);
+    g.innerHTML=`<line></line><circle r="8"></circle><text text-anchor="middle" dominant-baseline="central">${i+1}</text>`; svg.append(g);
   });
-  positionJointLabels();
+  hydrateIcons(host); applyLayout('jlGroup'); layoutJointGroup(); positionJointLabels();
 }
-const _v3=new THREE.Vector3();
+/* arrange the labels of the group, then shrink them until the group fits in the view */
+function layoutJointGroup(){
+  const host=$('#jlabels'), grp=$('#jlGroup'); if(!grp || host.hidden) return;
+  const lay=prefs.jl||'ligne', body=grp.querySelector('.jl-body'), items=[...body.children], n=items.length;
+  const W=STG.w||$('#stage').clientWidth, H=STG.h||$('#stage').clientHeight;
+  if(lay==='libre'){ host.dataset.sz= W<700? 'mini' : W<1000? 'compact' : 'full'; return; }
+  const arrange=()=>{
+    body.style.cssText=''; items.forEach(el=>{ el.style.cssText=el.style.cssText.replace(/(position|left|top):[^;]*;?/g,''); });
+    if(lay==='ligne') body.style.cssText='display:flex;flex-direction:row;flex-wrap:nowrap';
+    else if(lay==='colonne') body.style.cssText='display:flex;flex-direction:column';
+    else if(lay==='carre'||lay==='rect'){ const c= lay==='carre'? Math.ceil(Math.sqrt(n)) : Math.min(n, Math.ceil(Math.sqrt(n))+1); body.style.cssText=`display:grid;grid-template-columns:repeat(${c},auto)`; }
+    else { // circle
+      items.forEach(el=>{ el.style.position='absolute'; el.style.left='0px'; el.style.top='0px'; });
+      const w=Math.max(...items.map(e=>e.offsetWidth)), hh=Math.max(...items.map(e=>e.offsetHeight));
+      const R= n<=1? 0 : (Math.hypot(w,hh)*0.62+6)/(2*Math.sin(Math.PI/n));
+      const cw=2*R+w, ch=2*R+hh; body.style.cssText=`position:relative;width:${Math.ceil(cw)}px;height:${Math.ceil(ch)}px`;
+      items.forEach((el,i)=>{ const a=-Math.PI/2+i*2*Math.PI/n; el.style.left=Math.round(cw/2+R*Math.cos(a)-el.offsetWidth/2)+'px'; el.style.top=Math.round(ch/2+R*Math.sin(a)-el.offsetHeight/2)+'px'; });
+    } };
+  for(const sz of ['full','compact','mini']){ host.dataset.sz=sz; arrange(); if(grp.offsetWidth<=W-20 && grp.offsetHeight<=H-100) break; }
+  applyLayout('jlGroup');
+}
 function positionJointLabels(){
   const host=$('#jlabels'); if(!host || host.hidden) return;
-  const st=$('#stage').getBoundingClientRect(); const placed=[];
+  const st=$('#stage').getBoundingClientRect(); const placed=[]; const lay=host.dataset.lay;
+  const grp=$('#jlGroup'), folded= lay!=='libre' && grp?.classList.contains('collapsed');
   curCache=simActive()? new Map() : null;
   for(const el of host.querySelectorAll('.jl')){
     const j=state.joints.find(k=>k.id===+el.dataset.j); if(!j) continue;
-    const {o}=jointWorld(j, simActive()); _v3.copy(o).project(camera);
-    const vis=_v3.z<1 && Math.abs(_v3.x)<1.1 && Math.abs(_v3.y)<1.1;
-    const ax=(_v3.x+1)/2*st.width, ay=(1-_v3.y)/2*st.height;
-    const w=el.offsetWidth, hh=el.offsetHeight;
-    let lx=ax+26, ly=ay-hh-30; // default: above right; nudge down if it overlaps another label
-    for(let k=0;k<8;k++){ const hit=placed.find(p=>lx<p.x+p.w+6 && lx+w+6>p.x && ly<p.y+p.h+4 && ly+hh+4>p.y); if(!hit) break; ly=hit.y-hh-6; if(ly<4){ ly=hit.y+hit.h+6; } }
-    lx=clamp(lx,4,st.width-w-4); ly=clamp(ly,4,st.height-hh-4); placed.push({x:lx,y:ly,w,h:hh});
-    el.style.transform=`translate(${lx}px,${ly}px)`; el.style.visibility=vis?'visible':'hidden';
-    const line=host.querySelector(`line[data-j="${j.id}"]`), dot=host.querySelector(`circle[data-j="${j.id}"]`);
-    const ex=clamp(ax, lx, lx+w), ey= ay<ly? ly : ly+hh;
-    line.setAttribute('x1',ax); line.setAttribute('y1',ay); line.setAttribute('x2',ex); line.setAttribute('y2',ey); line.style.visibility=vis?'visible':'hidden'; line.style.stroke=getComputedStyle(el).getPropertyValue('--jc');
-    dot.setAttribute('cx',ax); dot.setAttribute('cy',ay); dot.style.visibility=vis?'visible':'hidden'; dot.style.fill=getComputedStyle(el).getPropertyValue('--jc');
+    const {o}=jointWorld(j, simActive()); const a=toStage(o); const vis=a.vis;
+    let lx, ly, w=el.offsetWidth, hh=el.offsetHeight;
+    if(lay==='libre'){
+      lx=a.x+26; ly=a.y-hh-30; // default: above right; nudge if it overlaps another label
+      for(let k=0;k<8;k++){ const hit=placed.find(p=>lx<p.x+p.w+6 && lx+w+6>p.x && ly<p.y+p.h+4 && ly+hh+4>p.y); if(!hit) break; ly=hit.y-hh-6; if(ly<4){ ly=hit.y+hit.h+6; } }
+      lx=clamp(lx,4,st.width-w-4); ly=clamp(ly,4,st.height-hh-4); placed.push({x:lx,y:ly,w,h:hh});
+      el.style.transform=`translate(${lx}px,${ly}px)`; el.style.visibility=vis?'visible':'hidden';
+    } else { const r=el.getBoundingClientRect(); lx=r.left-st.left; ly=r.top-st.top; w=r.width; hh=r.height; }
+    const g=host.querySelector(`g[data-j="${j.id}"]`); if(!g) continue; const [line,dot,txt]=g.children;
+    const col=getComputedStyle(el).getPropertyValue('--jc');
+    const ex=clamp(a.x, lx, lx+w), ey=clamp(a.y, ly, ly+hh);
+    line.setAttribute('x1',a.x); line.setAttribute('y1',a.y); line.setAttribute('x2',ex); line.setAttribute('y2',ey);
+    dot.setAttribute('cx',a.x); dot.setAttribute('cy',a.y); txt.setAttribute('x',a.x); txt.setAttribute('y',a.y);
+    g.style.visibility= vis? 'visible':'hidden'; line.style.visibility= folded? 'hidden' : ''; line.style.stroke=col; dot.style.stroke=col; txt.style.fill=col;
   }
   curCache=null;
 }

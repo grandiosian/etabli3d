@@ -54,12 +54,21 @@ sceneBg();
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{ sceneBg(); sync(); });
 new MutationObserver(()=>{ sceneBg(); sync(); }).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 
-function resize(){ const r=stage.getBoundingClientRect(); if(r.width<2||r.height<2) return; renderer.setSize(r.width,r.height,false); camera.aspect=r.width/r.height; camera.updateProjectionMatrix(); applyViewOffset(); }
+/* The settings panel floats over the 3D view (see-through): the WebGL canvas extends under it by OVR.l / OVR.r px.
+   STG is the visible stage size; toStage() projects a world point to stage coordinates. */
+const OVR={l:0,r:0}, STG={w:0,h:0}; const _pv=new THREE.Vector3();
+function resize(){ const r=stage.getBoundingClientRect(); if(r.width<2||r.height<2) return; STG.w=r.width; STG.h=r.height; const W=r.width+OVR.l+OVR.r;
+  renderer.setSize(W,r.height,false); camera.aspect=W/r.height; camera.updateProjectionMatrix(); applyViewOffset(); }
+function toStage(v){ _pv.copy(v).project(camera); const W=STG.w+OVR.l+OVR.r;
+  return {x:(_pv.x+1)/2*W-OVR.l, y:(1-_pv.y)/2*STG.h, vis:_pv.z<1 && _pv.z>-1 && Math.abs(_pv.x)<1.2 && Math.abs(_pv.y)<1.2}; }
+/* stage coordinates of a pointer event */
+function evStage(ev){ const r=stage.getBoundingClientRect(); return [ev.clientX-r.left, ev.clientY-r.top]; }
 /* On wide screens the demo card covers the left of the scene: shift the picture right by half its width. */
 function applyViewOffset(){
   const r=stage.getBoundingClientRect(); if(r.width<2||r.height<2) return; const d=document.getElementById('demo');
   const shift = (d && !d.hidden && r.width>760 && !movedDemo()) ? Math.round((d.offsetWidth+10)/2) : 0;
-  if(shift) camera.setViewOffset(r.width,r.height,-shift,0,r.width,r.height); else camera.clearViewOffset();
+  const W=r.width+OVR.l+OVR.r, x=(OVR.r-OVR.l)/2-shift;   // centre the picture in the part of the view left free
+  if(x) camera.setViewOffset(W,r.height,x,0,W,r.height); else camera.clearViewOffset();
 }
 new ResizeObserver(resize).observe(stage);
 
@@ -262,7 +271,7 @@ renderer.domElement.addEventListener('pointerup', ev=>{
   if(locPick!=null){ finishLocPick(hit); return; }
   if(ws==='mech' && jf){ const L=pickLocator(ev); if(L){ setJointLoc(L.pid,L.lid); return; } }
   if(pickMode){ pickMode(hit?hit.point:null, hit); return; }
-  if(ws==='mech' && !jf){ if(hit){ const id=hit.object.userData.id; selection=[id]; sync(); renderInspector(); openMechBubble(findPart(id), ev); } else { closeBubble(); if(selection.length){ selection=[]; sync(); renderInspector(); } } return; }
+  if(ws==='mech' && !jf){ if(hit){ const id=hit.object.userData.id; selection=[id]; sync(); renderInspector(); openMechBubble(findPart(id), ev, {point:hit.point}); } else { closeBubble(); if(selection.length){ selection=[]; sync(); renderInspector(); } } return; }
   if(!hit){ if(!ev.shiftKey && selection.length){ selection=[]; sync(); renderInspector(); } return; }
   const id=hit.object.userData.id;
   if(ev.shiftKey){ selection = selection.includes(id)? selection.filter(i=>i!==id) : [...selection,id]; }

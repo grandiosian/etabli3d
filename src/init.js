@@ -148,9 +148,12 @@ function loop(now){
   if(sim.playing){ simStep(dt*(+$('#sSpeed').value||1)); applyPoses(); if(ws==='mech') updateMarkerPoses(); if(frame%4===0){ refreshJointValues(); tickBubble(); $('#sTime').textContent=fmt(sim.t,1)+' s'; } }
   if(ws==='struct') stAnimTick(now);
   if(ws==='check') locTestTick(now);
+  if(!$('#sk').hidden) return;
+  if(!(ws==='struct' && !ST.mode3d)){ stepCam(now); orbit.update(); renderer.render(scene,camera); }
+  // overlays projected with this frame's camera
   if(ws==='mech') positionJointLabels();
-  if(!$('#sk').hidden || (ws==='struct' && !ST.mode3d)) return;
-  stepCam(now); orbit.update(); renderer.render(scene,camera);
+  if(ws==='struct' && ST.mode3d) positionStruct3DLabels();
+  updateBubbleLink();
 }
 requestAnimationFrame(loop);
 window.__etabli={state, SAMPLES, LAYOUT:()=>LAYOUT, resetLayout, togglePanel, CHK, startLocTest, stopLocTest, openStructBubble, openMechBubble, closeBubble, BUB, stAnimPlay, locEdit, locFrame, LOCV, applyStruct3DK, camera, orbit, structGroup, struct3DHit, renderer, ampFactor, structBox, stDraw, arrowHits:()=>stArrowHits, setWs, ws:()=>ws, validateAll, validatePart, vState, mechReady, setJointLoc, ST, SD, computeStruct, solveTruss, buildMesh, solvePlane, beamTheory, makeProxy, getProxyGeo, locGroup, loadExample, openGallery, addPart, groupSel, openSketch, closeSketch, SK, skSolve, sim, simToggle, simReset, exportStl, stlBinary, zipStore, meshes, selection:()=>selection, setSel:(ids)=>{selection=ids; sync(); renderInspector();}, setTab, openJointForm, saveJoint, jf:()=>jf, skProfiles, getGeometry};

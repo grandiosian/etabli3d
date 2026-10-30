@@ -400,6 +400,18 @@ button.vrow:hover{background:var(--panel-2)}
 .bub-pin:hover{background:var(--panel-2)} .bub-pin svg{width:15px;height:15px}
 #bubble[data-side=""] .bub-pin{display:grid}
 #bubble[data-side=""]::after{display:none}
+#bubble::after{display:none}   /* replaced by the link line */
+#bubLink{position:absolute;inset:0;width:100%;height:100%;z-index:21;pointer-events:none;overflow:visible;display:none}
+#bubLink line{stroke:var(--accent);stroke-width:2;stroke-linecap:round}
+#bubLink circle{fill:var(--panel);stroke:var(--accent);stroke-width:2.5}
+/* 3D structure labels (same texts as the 2D drawing) */
+#st3d{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden}
+.st3l{position:absolute;left:0;top:0;white-space:nowrap;font:600 12px var(--f-mono);padding:1px 5px;border-radius:5px;background:color-mix(in srgb,var(--panel) 78%,transparent)}
+.st3-f{color:var(--accent)}
+.st3-r{color:var(--ink-2);font-weight:500;font-size:11px}
+.st3-t{color:#2f6fd6;font-size:11px} .st3-c{color:#d64035;font-size:11px}
+.st3-u{width:24px;height:24px;padding:0;border:2px solid var(--mark);border-radius:50%;background:transparent}
+.st3-u span{position:absolute;left:30px;top:-16px;color:var(--ink);padding:1px 5px;border-radius:5px;background:color-mix(in srgb,var(--panel) 78%,transparent)}
 /* see-through panels (Apparence → Panneaux). The 3D view stays visible behind them. */
 :root{--glass-a:74%}
 html[data-glass="leger"]{--glass-a:90%}
@@ -430,13 +442,35 @@ html:not([data-glass="opaque"]) #bubble .bub-row input[type=range]{background:tr
 #jlabels{position:absolute;inset:0;z-index:4;pointer-events:none}
 .jl-lines{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .jl-lines line{stroke-width:1.6;stroke-dasharray:3 3}
-.jl{position:absolute;left:0;top:0;pointer-events:auto;display:flex;flex-direction:column;align-items:flex-start;gap:1px;max-width:230px;text-align:left;
-  background:color-mix(in srgb,var(--panel) 94%,transparent);border:1px solid var(--line);border-left:4px solid var(--jc);border-radius:9px;padding:4px 9px 5px;box-shadow:var(--shadow);font-size:11.5px;line-height:1.3;color:var(--ink);will-change:transform}
+.jl-lines circle{fill:var(--panel);stroke-width:2}
+.jl-lines text{font:700 10px var(--f-mono)}
+/* the label group: grip + layout buttons on top, labels below */
+.jl-group{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:max-content;max-width:none;pointer-events:auto;display:grid;grid-template-columns:auto 1fr;align-items:center;gap:4px 6px;padding:4px 6px 6px;z-index:6}
+.jl-group .pgrip{grid-column:1}
+.jl-tools{grid-column:2;display:flex;gap:2px;justify-content:flex-start}
+.jl-lay{border:1px solid transparent;background:transparent;border-radius:6px;padding:3px;display:grid;place-items:center;color:var(--ink-2)}
+.jl-lay:hover{background:var(--panel-2)} .jl-lay.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.jl-li svg{width:14px;height:14px;display:block}
+.jl-body{grid-column:1 / -1;gap:6px}
+#jlabels[data-lay="libre"] .jl-body{display:none}
+.jl{pointer-events:auto;display:flex;flex-direction:row;align-items:center;gap:7px;max-width:240px;text-align:left;
+  background:color-mix(in srgb,var(--panel) 94%,transparent);border:1px solid var(--line);border-left:4px solid var(--jc);border-radius:9px;padding:4px 9px 5px 6px;font-size:11.5px;line-height:1.3;color:var(--ink)}
+#jlabels[data-lay="libre"] > .jl{position:absolute;left:0;top:0;box-shadow:var(--shadow);will-change:transform}
+.jl-body .jl{max-width:none} .jl-body .jl-tx > *{white-space:nowrap}
+.jl > svg{width:18px;height:18px;flex:none;color:var(--jc)}
+.jl-n{flex:none;display:grid;place-items:center;width:18px;height:18px;border-radius:50%;border:2px solid var(--jc);font:700 10px var(--f-mono);color:var(--jc)}
+.jl-tx{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0}
 .jl b{font-family:var(--f-display);font-weight:600;font-size:13px}
-.jl span{color:var(--ink-2)}
+.jl-tx > span{color:var(--ink-2)}
 .jl .jl-m{font-style:normal;font-size:10.5px;background:var(--panel-2);border-radius:5px;padding:0 5px;margin-top:2px}
 .jl.sel{box-shadow:0 0 0 2px var(--mark)}
 .jl:hover{border-color:var(--jc)}
+/* automatic shrinking */
+#jlabels[data-sz="compact"] .jl-tx > span,#jlabels[data-sz="compact"] .jl-m{display:none}
+#jlabels[data-sz="compact"] .jl b{font-size:12px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#jlabels[data-sz="mini"] .jl-tx{display:none}
+#jlabels[data-sz="mini"] .jl{padding:3px 5px 3px 4px;gap:4px;border-left-width:3px}
+#jlabels[data-sz="mini"] .jl > svg{width:15px;height:15px}
 
 /* axis legend and locator rows */
 .axleg{display:flex;gap:12px;font-size:11.5px;font-family:var(--f-mono)}
@@ -489,6 +523,19 @@ html:not([data-glass="opaque"]) #bubble .bub-row input[type=range]{background:tr
 #app.rack-min .shape svg{width:32px;height:32px}
 #app.rack-min .rack-title{display:none}
 #app.rack-min .rackmin-btn svg{transform:rotate(90deg)}
+
+/* ---------- see-through settings panel: on wide screens the 3D view continues under it */
+:root{--insp-a:84%}
+html[data-glass="leger"]{--insp-a:93%}
+html[data-glass="opaque"]{--insp-a:100%}
+@media (min-width: 861px){
+  #app.insp-left{grid-template-columns:auto auto auto 1fr;grid-template-areas:"top top top top" "rack tree insp stage"}
+  #stage{overflow:visible;clip-path:inset(0 calc(-1 * var(--ovr-r,0px)) 0 calc(-1 * var(--ovr-l,0px)))}
+  #stage canvas.gl{position:absolute;top:0;left:calc(-1 * var(--ovr-l,0px));width:calc(100% + var(--ovr-l,0px) + var(--ovr-r,0px))}
+  #stWrap{left:calc(-1 * var(--ovr-l,0px));right:calc(-1 * var(--ovr-r,0px))}
+  #insp{position:relative;z-index:30;background:color-mix(in srgb,var(--panel) var(--insp-a),transparent);-webkit-backdrop-filter:blur(8px) saturate(1.15);backdrop-filter:blur(8px) saturate(1.15)}
+  html[data-glass="opaque"] #insp{-webkit-backdrop-filter:none;backdrop-filter:none}
+}
 
 /* ---------- narrow screens */
 @media (max-width: 860px){

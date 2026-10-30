@@ -14,3 +14,7 @@
 - Structures : `state.struct` (treillis + maillage), unités mm / N / MPa, plan vertical (x, y) affiché en (X, Z) dans la vue 3D.
 - Le push sur `main` déploie automatiquement sur GitHub Pages.
 - Déformée « auto » : l'échelle est figée par modèle (`ST.ampRef`, remise à zéro par `resetAmpRef()` au chargement d'un exemple ou au changement de module/portée) pour qu'une force plus grande se voie ; plafond à 30 % de la portée.
+- Le panneau de réglages (`#insp`) est semi-transparent et passe au-dessus de la vue : sur grand écran, les canevas 3D et 2D s'étendent dessous (`OVR.l` / `OVR.r`, variables CSS `--ovr-l` / `--ovr-r`, mis à jour par `updateOverlay()`). Pour placer quelque chose sur la vue, utilisez `toStage(v)` (monde → coordonnées de `#stage`) et `evStage(ev)`, pas le rectangle du canevas.
+- Structures 3D : mêmes symboles qu'en 2D (flèches de charge, appuis, réactions, forme au repos, flèche max) ; les textes sont des étiquettes HTML dans `#st3d`, placées chaque image par `positionStruct3DLabels()`.
+- Bulle : `#bubLink` relie la bulle à l'élément ciblé (`bubbleAnchor()`), mis à jour chaque image.
+- Étiquettes de liaison : groupe déplaçable `#jlGroup`, disposition `prefs.jl` (libre, ligne, colonne, carre, rect, cercle), réduction automatique `data-sz` (full → compact → mini) par `layoutJointGroup()`.

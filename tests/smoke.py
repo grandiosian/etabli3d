@@ -165,6 +165,19 @@ with sync_playwright() as p:
     r = pg.evaluate(f"""()=>{{const E={E}; const p=E.state.parts[1]; const l=p.locs.find(k=>k.id==='axe'); const j=E.state.joints[0];
         j.loc={{pid:p.id,lid:'axe'}}; const before=j.axis.slice(); E.locEdit(p,l,'flip'); return [before[2], j.axis[2]];}}""")
     check('inverser un repère inverse l’axe de la liaison', r[0] > 0.99 and r[1] < -0.99, r)
+    # Étiquettes regroupées : dispositions et réduction automatique
+    pg.click('#jlGroup .jl-lay[aria-label="En cercle"]'); pg.wait_for_timeout(200)
+    r = pg.evaluate("()=>[document.querySelector('#jlabels').dataset.lay, document.querySelectorAll('#jlGroup .jl-body .jl').length, getComputedStyle(document.querySelector('#jlGroup .jl')).position]")
+    check('étiquettes groupées en cercle', r == ['cercle', 4, 'absolute'], r)
+    pg.click('#jlGroup .jl-lay[aria-label="En ligne"]'); pg.wait_for_timeout(200)
+    big = pg.evaluate("()=>document.querySelector('#jlabels').dataset.sz")
+    pg.set_viewport_size({'width': 760, 'height': 560}); pg.wait_for_timeout(500)
+    small = pg.evaluate("()=>[document.querySelector('#jlabels').dataset.sz, document.querySelector('#jlGroup').offsetWidth <= document.querySelector('#stage').clientWidth]")
+    rank = {'full':0, 'compact':1, 'mini':2}
+    check('étiquettes réduites quand la vue est petite', rank[small[0]] >= rank[big] and small[0] != 'full' and small[1], [big, small])
+    pg.set_viewport_size({'width': 1400, 'height': 860}); pg.wait_for_timeout(400)
+    r = pg.evaluate(f"()=>{{const s=document.querySelector('#stage').getBoundingClientRect().width, c=document.querySelector('#stage canvas.gl').getBoundingClientRect().width, i=document.querySelector('#insp').getBoundingClientRect().width; return [Math.round(c-s), Math.round(i), getComputedStyle(document.querySelector('#insp')).backgroundColor]}}")
+    check('panneau de réglages transparent, la vue 3D passe dessous', abs(r[0]-r[1]) <= 1 and r[0] > 40 and ('/ 0.' in r[2] or 'rgba' in r[2]), r)
 
     # Bulle et animation (Structures)
     pg.evaluate(f"()=>{E}.loadExample('pontWarren')"); pg.wait_for_timeout(400)
@@ -178,6 +191,8 @@ with sync_playwright() as p:
     pg.click('#stTools [data-v3="1"]'); pg.wait_for_timeout(500)
     k3 = pg.evaluate(f"()=>{E}.ST.k"); pg.wait_for_timeout(300)
     check('animation aussi en 3D', pg.evaluate(f"()=>{E}.ST.g3 && {E}.ST.g3.kind==='truss'") and pg.evaluate(f"()=>{E}.ST.k") != k3)
+    r = pg.evaluate(f"()=>[{E}.SD().truss.nodes.filter(n=>+n.fx||+n.fy).length, {E}.ST.g3.arrows.length, document.querySelectorAll('#st3d .st3-f').length, document.querySelectorAll('#st3d .st3-r').length, document.querySelectorAll('#st3d .st3-u').length, !document.querySelector('#st3d').hidden]")
+    check('vue 3D : mêmes flèches, réactions et flèche max qu’en 2D', r[0] > 0 and r[1] == r[0] and r[2] == r[0] and r[3] == 2 and r[4] == 1 and r[5], r)
     # Vue 3D des Structures : navigation, sélection et double-clic (cadrage)
     pg.evaluate(f"()=>{E}.stAnimPlay(false)"); pg.keyboard.press('Escape'); pg.wait_for_timeout(500)
     check('vue 3D : le calque 2D ne bloque plus la souris', pg.is_hidden('#stWrap'))
@@ -224,6 +239,9 @@ with sync_playwright() as p:
     pg.evaluate(f"()=>{{const E={E}; const n=E.SD().truss.nodes[1]; E.openStructBubble({{t:'node',id:n.id}}, 50, 50);}}")
     pos = pg.evaluate("()=>{const s=document.querySelector('#stage').getBoundingClientRect(), b=document.querySelector('#bubble').getBoundingClientRect(); return [Math.round(b.left-s.left), Math.round(b.top-s.top)]}")
     check('la bulle rouverte reste à sa place', [pos[0], pos[1]] == [r[0]['x'], r[0]['y']], [pos, r[0]])
+    pg.evaluate("()=>{const b=document.querySelector('#bubble'); b.style.left='0px'; b.style.top='0px';}"); pg.wait_for_timeout(100)
+    r = pg.evaluate("()=>{const s=document.querySelector('#bubLink'), l=s.querySelector('line'); return [getComputedStyle(s).display, Math.hypot(l.x1.baseVal.value-l.x2.baseVal.value, l.y1.baseVal.value-l.y2.baseVal.value)]}")
+    check('trait entre la bulle et l’élément ciblé', r[0] == 'block' and r[1] > 10, r)
     alpha = pg.evaluate("()=>getComputedStyle(document.querySelector('#bubble')).backgroundColor")
     check('bulle et panneaux semi-transparents', ('/ 0.7' in alpha or 'rgba' in alpha) and pg.evaluate("()=>getComputedStyle(document.querySelector('#stLegendBox')).backgroundColor") != pg.evaluate("()=>getComputedStyle(document.querySelector('#insp')).backgroundColor"), alpha)
     pg.click('#bubble .bub-pin'); pg.wait_for_timeout(100)

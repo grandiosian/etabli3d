@@ -44,17 +44,27 @@ function initPanels(){
   $('#inspMin').onclick=()=>{ LAYOUT.inspMin=!LAYOUT.inspMin; saveLayout(); applyDock(); };
   $('#rackMin').onclick=()=>{ LAYOUT.rackMin=!LAYOUT.rackMin; saveLayout(); applyDock(); };
   applyDock();
-  new ResizeObserver(()=>{ for(const [id] of FLOATS) if(LAYOUT[id]?.x!=null) applyLayout(id); if(movedDemo()) applyLayout('demo'); }).observe($('#stage'));
+  new ResizeObserver(()=>updateOverlay()).observe($('#insp')); WIDE.addEventListener('change', updateOverlay);
+  new ResizeObserver(()=>{ for(const [id] of FLOATS) if(LAYOUT[id]?.x!=null) applyLayout(id); if(movedDemo()) applyLayout('demo'); if(ws==='mech') layoutJointGroup(); }).observe($('#stage'));
 }
 function applyDock(){
   const app=$('#app'); app.classList.toggle('insp-left', !!LAYOUT.inspLeft); app.classList.toggle('insp-min', !!LAYOUT.inspMin); app.classList.toggle('rack-min', !!LAYOUT.rackMin);
+  updateOverlay();
   $('#inspMin').title= LAYOUT.inspMin? 'Agrandir le panneau' : 'Réduire le panneau';
   $('#inspSide').title= LAYOUT.inspLeft? 'Placer le panneau à droite' : 'Placer le panneau à gauche';
   $('#rackMin').title= LAYOUT.rackMin? 'Agrandir la barre des formes' : 'Réduire la barre des formes';
 }
+/* the settings panel overlaps the 3D view on wide screens: tell the canvas how far to extend under it */
+const WIDE=matchMedia('(min-width: 861px)');
+function updateOverlay(){
+  const w= WIDE.matches? Math.round($('#insp').getBoundingClientRect().width) : 0;
+  const l= LAYOUT.inspLeft? w : 0, r= LAYOUT.inspLeft? 0 : w; if(l===OVR.l && r===OVR.r) return;
+  OVR.l=l; OVR.r=r; const st=$('#stage'); st.style.setProperty('--ovr-l', l+'px'); st.style.setProperty('--ovr-r', r+'px');
+  resize(); if(ws==='struct'){ ST.fitted=false; stResize(); }
+}
 function resetLayout(){
   LAYOUT={}; saveLayout();
   for(const [id] of FLOATS){ const el=$('#'+id); if(el){ clearPos(el); el.classList.remove('collapsed'); } }
-  clearPos($('#demo')); if(!$('#bubble').hidden) placeBubble(BUB.x,BUB.y); applyDock(); applyViewOffset(); if(ws==='struct'){ ST.fitted=false; stResize(); }
+  clearPos($('#demo')); if(ws==='mech') buildJointLabels(); if(!$('#bubble').hidden) placeBubble(BUB.x,BUB.y); applyDock(); applyViewOffset(); if(ws==='struct'){ ST.fitted=false; stResize(); }
   toast('Disposition des panneaux réinitialisée.');
 }
