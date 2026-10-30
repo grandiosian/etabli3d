@@ -13,6 +13,7 @@ const WS=[
 function setWs(k){
   const W=WS.find(w=>w.k===k)||WS[0]; if(!lv(W.lvl)) k='model';
   if(k!=='model' && state.edit) finishGroupEdit();
+  closePlanePicker();
   const prev=ws; closeBubble(); if(CHK.test.on){ CHK.test.on=false; }
   if(prev==='struct' && k!=='struct' && ST.anim.on) stAnimPlay(false);
   if(prev==='mech' && k!=='mech'){ if(simActive()) simReset(true); jf=null; cancelPick(); }

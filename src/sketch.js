@@ -2,7 +2,7 @@
 /* =========================================================
    Sketch editor: lines, rectangles, circles, dimensions, constraints
    ========================================================= */
-const SK={part:null,d:null,tool:'rect',view:{cx:0,cy:0,s:5},hist:[],hidx:-1,sel:null,chain:null,pend:null,mouse:null,drag:null,mode:'extrude',h:10,labels:[],badges:[],err:0,editing:null,snapPt:null};
+const SK={part:null,plane:'xy',d:null,tool:'rect',view:{cx:0,cy:0,s:5},hist:[],hidx:-1,sel:null,chain:null,pend:null,mouse:null,drag:null,mode:'extrude',h:10,labels:[],badges:[],err:0,editing:null,snapPt:null};
 const skCanvas=$('#skCanvas'), skCtx=skCanvas.getContext('2d');
 let skW=0, skH=0;
 const toS=(x,y)=>[skW/2+(x-SK.view.cx)*SK.view.s, skH/2-(y-SK.view.cy)*SK.view.s];
@@ -12,15 +12,18 @@ const skL=id=>SK.d.lines.find(l=>l.id===id);
 const skC=id=>SK.d.circles.find(c=>c.id===id);
 const skB=id=>SK.d.beziers.find(z=>z.id===id);
 
-function openSketch(part=null){
+/* opts.plane : 'xy' | 'xz' | 'yz' (nouvelle esquisse) ; opts.tool : outil choisi à l'ouverture */
+function openSketch(part=null, opts={}){
+  closePlanePicker();
   SK.part=part?part.id:null;
-  if(part){ SK.d=clone(part.params.sk); SK.mode=part.params.mode||'extrude'; SK.h=part.params.h||10; }
-  else { SK.d={nid:2,pts:[{id:1,x:0,y:0,fixed:true,origin:true}],lines:[],circles:[],beziers:[],cons:[]}; SK.mode='extrude'; SK.h=10; }
+  if(part){ SK.d=clone(part.params.sk); SK.mode=part.params.mode||'extrude'; SK.h=part.params.h||10; SK.plane=part.params.plane||null; }
+  else { SK.d={nid:2,pts:[{id:1,x:0,y:0,fixed:true,origin:true}],lines:[],circles:[],beziers:[],cons:[]}; SK.mode='extrude'; SK.h=10; SK.plane=SKPLANES[opts.plane]? opts.plane : 'xy'; }
   SK.d.beziers ||= [];
   if(!lv(3) && SK.mode==='revolve') toast('Cette esquisse utilise la révolution, réservée au niveau Avancé.');
   SK.hist=[]; SK.hidx=-1; SK.sel=null; SK.chain=null; SK.pend=null; SK.editing=null;
+  const pl=SKPLANES[SK.plane||'xy']; $('#skPlane').textContent= SK.plane? pl.label : 'Plan XY · dessus';
   $('#sk').hidden=false; $('#skH').value=fmtIn(SK.h); setSkMode(SK.mode,false);
-  skResize(); skFit(); skPush(); setSkTool(part?'select':'rect');
+  skResize(); skFit(); skPush(); setSkTool(part?'select':(opts.tool||'rect'));
 }
 function closeSketch(apply){
   hideDimEdit(false);
@@ -28,9 +31,13 @@ function closeSketch(apply){
     skSolve();
     const pr=skProfiles(SK.d);
     if(!pr.shapes.length){ toast('Aucun contour fermé : reliez le dernier point au premier.'); return; }
-    const params={sk:SK.d, mode:SK.mode, h:SK.h};
-    if(SK.part!=null){ const p=findPart(SK.part); if(p){ p.params=params; selection=[p.id]; } }
-    else { const p=newPart('sketch',{params}); state.parts.push(p); selection=[p.id]; }
+    bzRefresh(SK.d);
+    const params={sk:SK.d, mode:SK.mode, h:SK.h}; if(SK.plane) params.plane=SK.plane;
+    if(SK.part!=null){ const p=findPart(SK.part); if(p){
+        // a sketch drawn on a plane keeps that plane: switching extrusion / revolution turns the part if it was still at its place
+        if(SK.plane && p.params.mode!==SK.mode && sameRot(p.rot, planeRot(SK.plane, p.params.mode||'extrude'))) p.rot=planeRot(SK.plane, SK.mode);
+        p.params=params; selection=[p.id]; } }
+    else { const p=newPart('sketch',{params, rot:planeRot(SK.plane, SK.mode)}); if(state.edit) p.inGroup=state.edit.gid; state.parts.push(p); selection=[p.id]; }
     sync(); commit(); setTab('part');
   }
   $('#sk').hidden=true;
@@ -40,7 +47,10 @@ function skUndo(){ if(SK.hidx>0){ SK.hidx--; SK.d=JSON.parse(SK.hist[SK.hidx]); 
 function skRedo(){ if(SK.hidx<SK.hist.length-1){ SK.hidx++; SK.d=JSON.parse(SK.hist[SK.hidx]); SK.sel=null; skSolve(); skDraw(); } }
 function setSkMode(m, draw=true){
   SK.mode=m; $('#skModeExt').classList.toggle('on',m==='extrude'); $('#skModeRev').classList.toggle('on',m==='revolve'); $('#skHRow').hidden= m!=='extrude';
-  $('#skModeInfo').innerHTML = m==='extrude' ? 'Le profil monte en <b>Z</b> sur la hauteur choisie. Un contour dessiné à l’intérieur d’un autre devient un <b>trou</b>.' : 'Le profil tourne autour de l’<b>axe vertical</b> de l’esquisse (pointillés), qui devient l’axe Z de la pièce. Dessinez le <b>demi-profil</b> à droite de l’axe.';
+  const pl=SKPLANES[SK.plane||'xy'];
+  $('#skModeInfo').innerHTML = m==='extrude' ? `Le profil ${pl.ext} sur la hauteur choisie. Un contour dessiné à l’intérieur d’un autre devient un <b>trou</b>.`
+    : 'Le profil tourne autour de l’<b>axe vertical</b> de l’esquisse (pointillés). Dessinez le <b>demi-profil</b> à droite de l’axe.'
+      + (SK.plane==='xy'? '<br>Sur le plan du <b>dessus</b>, cet axe est <b>Y</b> : la pièce sera couchée. Pour une pièce debout, choisissez le plan de <b>face</b> (XZ).' : SK.plane? ' Cet axe est l’axe <b>Z</b> : la pièce sera debout.' : ' Il devient l’axe Z de la pièce.');
   if(draw) skDraw();
 }
 const HINTS={
@@ -48,7 +58,7 @@ const HINTS={
   line:'Cliquez pour poser les points. Revenez sur le <b>premier point</b> pour fermer le contour. <b>Échap</b> ou double-clic pour arrêter. Les lignes presque horizontales ou verticales sont redressées.',
   rect:'Cliquez un premier coin, puis le coin opposé. Le rectangle reçoit des contraintes horizontales et verticales.',
   circle:'Cliquez le centre, puis un point du cercle.',
-  bezier:'Courbe de Bézier en 3 clics : <b>départ</b>, <b>arrivée</b>, puis un point par lequel la courbe doit passer. Les courbes s’enchaînent ; revenez au premier point pour fermer. Glissez ensuite les <b>poignées</b> (ronds) avec l’outil Sélection.',
+  bezier:'Point par point : un <b>clic</b> pose un point anguleux, <b>cliquer-glisser</b> pose un point et tire sa courbe (Alt : tangente cassée). Revenez au <b>premier point</b> pour fermer ; <b>Échap</b> ou double-clic pour arrêter. Les boutons en haut règlent le point en cours.',
   dim:'Cliquez une <b>ligne</b> (longueur), un <b>cercle</b> (diamètre) ou <b>deux points</b> (distance), puis tapez la valeur et <b>Entrée</b>.',
   dimh:'Cliquez une ligne ou deux points pour coter l’écart <b>horizontal</b>.',
   dimv:'Cliquez une ligne ou deux points pour coter l’écart <b>vertical</b>.',
@@ -164,10 +174,8 @@ function hitCircle(sx,sy,r=7){ let best=null,bd=r; for(const c of SK.d.circles){
 function bezScreen(z){ return bezCtrl(SK.d,z).map(q=>toS(q[0],q[1])); }
 function hitBez(sx,sy,r=7){ let best=null,bd=r; for(const z of SK.d.beziers){ const c=bezScreen(z); let prev=c[0];
     for(let i=1;i<=40;i++){ const q=bezAt(c,i/40); const vx=q[0]-prev[0], vy=q[1]-prev[1], L2=vx*vx+vy*vy||1; const t=clamp(((sx-prev[0])*vx+(sy-prev[1])*vy)/L2,0,1); const dd=Math.hypot(prev[0]+vx*t-sx, prev[1]+vy*t-sy); if(dd<bd){bd=dd;best=z;} prev=q; } } return best; }
-function hitHandle(sx,sy,r=8){ for(const z of SK.d.beziers){ const c=bezScreen(z); if(Math.hypot(c[1][0]-sx,c[1][1]-sy)<r) return {id:z.id,which:1}; if(Math.hypot(c[2][0]-sx,c[2][1]-sy)<r) return {id:z.id,which:2}; } return null; }
-/* handles so that the curve passes through world point (px,py) at t = 0.5 */
-function bezThrough(A,B,px,py){ const mx=(A.x+B.x)/2, my=(A.y+B.y)/2; const vx=(px-mx)/0.75, vy=(py-my)/0.75;
-  return {t1:[(B.x-A.x)/3+vx,(B.y-A.y)/3+vy], t2:[(A.x-B.x)/3+vx,(A.y-B.y)/3+vy]}; }
+function hitHandle(sx,sy,r=8){ for(const z of SK.d.beziers){ const c=bezScreen(z);
+    for(const [which,i,e] of [[1,1,0],[2,2,3]]){ if(!bzShowHandle(skP(which===1?z.a:z.b))) continue; if(Math.hypot(c[i][0]-c[e][0],c[i][1]-c[e][1])<6) continue; if(Math.hypot(c[i][0]-sx,c[i][1]-sy)<r) return {id:z.id,which}; } } return null; }
 function hitLabel(sx,sy){ return SK.labels.find(b=>sx>=b.x-b.w/2-3&&sx<=b.x+b.w/2+3&&sy>=b.y-b.h/2-3&&sy<=b.y+b.h/2+3)||null; }
 function hitBadge(sx,sy){ return SK.badges.find(b=>Math.abs(sx-b.x)<=9&&Math.abs(sy-b.y)<=9)||null; }
 function snapW(sx,sy, exclude=null){
@@ -230,12 +238,12 @@ skCanvas.addEventListener('pointerdown', ev=>{
   ev.preventDefault();
   if(!$('#dimEdit').hidden) hideDimEdit(true);
   const [sx,sy]=skEvt(ev); skCanvas.setPointerCapture(ev.pointerId);
-  if(ev.button===1||ev.button===2){ if(ev.button===2 && SK.chain){ finishChain(); return; } SK.drag={kind:'pan',sx,sy,cx:SK.view.cx,cy:SK.view.cy}; return; }
+  if(ev.button===1||ev.button===2){ if(ev.button===2 && SK.chain){ finishChain(); return; } if(ev.button===2 && SK.pend?.pen){ bzEndChain(); return; } SK.drag={kind:'pan',sx,sy,cx:SK.view.cx,cy:SK.view.cy}; return; }
   const t=SK.tool, d=SK.d;
   if(t==='select'){
     const lb=hitLabel(sx,sy); if(lb){ SK.sel={type:'con',id:lb.id}; SK.drag={kind:'label',id:lb.id,moved:false}; skDraw(); return; }
     const bg=hitBadge(sx,sy); if(bg){ SK.sel={type:'con',id:bg.id}; skDraw(); return; }
-    const hd=hitHandle(sx,sy); if(hd){ SK.sel={type:'bez',id:hd.id}; SK.drag={kind:'handle',...hd,moved:false}; skDraw(); return; }
+    const hd=hitHandle(sx,sy); if(hd){ const z=skB(hd.id); SK.sel={type:'pt',id:hd.which===1?z.a:z.b}; SK.drag={kind:'handle',...hd,moved:false}; skDraw(); return; }
     const p=hitPoint(sx,sy); if(p){ SK.sel={type:'pt',id:p.id}; if(!p.fixed&&!p.origin) SK.drag={kind:'pt',id:p.id,moved:false}; skDraw(); return; }
     const l=hitLine(sx,sy); if(l){ SK.sel={type:'line',id:l.id}; const [wx,wy]=toW(sx,sy); SK.drag={kind:'line',id:l.id,wx,wy,a:{...skP(l.a)},b:{...skP(l.b)},moved:false}; skDraw(); return; }
     const z=hitBez(sx,sy); if(z){ SK.sel={type:'bez',id:z.id}; const [wx,wy]=toW(sx,sy); SK.drag={kind:'line',bez:true,id:z.id,wx,wy,a:{...skP(z.a)},b:{...skP(z.b)},moved:false}; skDraw(); return; }
@@ -254,18 +262,22 @@ skCanvas.addEventListener('pointerdown', ev=>{
     if(existed){ SK.chain=null; } else SK.chain.last=q.id;
     skCleanup(); skSolve(); skPush(); skDraw(); return;
   }
-  if(t==='bezier'){
+  if(t==='bezier'){   // pen: a click places a corner point, a click-drag places a point and pulls its tangent
     const s=snapW(sx,sy);
-    if(!SK.pend){ // stage 1: start point (or continue the chain)
-      const p=s.pt||skNewPoint(s.x,s.y); SK.pend={bz:1,a:p.id,first:p.id}; skDraw(); return; }
-    if(SK.pend.bz===1){ if(s.pt && s.pt.id===SK.pend.a) return; SK.pend={...SK.pend,bz:2,b:{x:s.x,y:s.y,pt:s.pt?.id??null}}; skDraw(); return; }
-    // stage 3: shape point
-    const A=skP(SK.pend.a), Bi=SK.pend.b; const [wx,wy]=toW(sx,sy);
-    const B=Bi.pt!=null? skP(Bi.pt) : skNewPoint(Bi.x,Bi.y);
-    const hh=bezThrough(A,B,wx,wy);
-    d.beziers.push({id:d.nid++, a:A.id, b:B.id, t1:hh.t1.map(v=>+v.toFixed(4)), t2:hh.t2.map(v=>+v.toFixed(4))});
-    SK.pend = Bi.pt!=null ? null : {bz:1, a:B.id, first:SK.pend.first};
-    skCleanup(); skPush(); skDraw(); return;
+    if(!SK.pend){ const p=s.pt||skNewPoint(s.x,s.y); if(!s.pt || (!p.it && !bzOnCurve(p.id))) p.it='lin';
+      SK.pend={pen:true, first:p.id, last:p.id, out:null}; SK.sel={type:'pt',id:p.id}; SK.drag={kind:'pen',id:p.id,sx,sy,moved:false,close:false}; skDraw(); return; }
+    const last=skP(SK.pend.last); if(!last){ SK.pend=null; skDraw(); return; }
+    if(s.pt && s.pt.id===last.id){ SK.drag={kind:'pen',id:last.id,sx,sy,moved:false,close:false,again:true}; return; }   // drag again on the current point: re-pull its tangent
+    if(s.pt && d.beziers.filter(z=>(z.a===last.id&&z.b===s.pt.id)||(z.b===last.id&&z.a===s.pt.id)).length>1) return;
+    const q=s.pt||skNewPoint(s.x,s.y); if(!s.pt || (!q.it && !bzOnCurve(q.id))) q.it='lin';
+    const out= SK.pend.out || (bzType(last).it==='bez' ? bzMirror(last) : null);
+    d.beziers.push({id:d.nid++, a:last.id, b:q.id, t1:out? out.map(v=>+v.toFixed(4)) : [0,0], t2:[0,0]});
+    if(s.pt){ const Q=bzType(q); const o=bzRefs(d,q.id).find(r=>r.key==='t1' && r.z!==d.beziers[d.beziers.length-1]);
+      if(Q.it==='bez' && Q.tm!=='free' && o){ const h=o.z.t1, n=Math.hypot(h[0],h[1]); const L= Q.tm==='sym'? n : Math.hypot(last.x-q.x,last.y-q.y)/3;
+        if(n>1e-9) d.beziers[d.beziers.length-1].t2=[-h[0]/n*L, -h[1]/n*L]; } }
+    SK.pend.last=q.id; SK.pend.out=null; SK.sel={type:'pt',id:q.id};
+    SK.drag={kind:'pen',id:q.id,sx,sy,moved:false,close:!!s.pt};
+    bzRefresh(d); skDraw(); return;
   }
   if(t==='rect'){
     const s=snapW(sx,sy);
@@ -337,9 +349,12 @@ skCanvas.addEventListener('pointermove', ev=>{
       const l=dr.bez? skB(dr.id) : skL(dr.id), a=skP(l.a), b=skP(l.b); if(!a.fixed&&!a.origin){ a.x=dr.a.x+dx; a.y=dr.a.y+dy; } if(!b.fixed&&!b.origin){ b.x=dr.b.x+dx; b.y=dr.b.y+dy; }
       skSolve(null,200); skDraw(); return; }
     if(dr.kind==='handle'){ const z=skB(dr.id); let [wx,wy]=toW(sx,sy); if($('#skSnap').checked){ const g=snapStep()/2; wx=Math.round(wx/g)*g; wy=Math.round(wy/g)*g; }
-      const E=skP(dr.which===1? z.a : z.b); const v=[+(wx-E.x).toFixed(4), +(wy-E.y).toFixed(4)];
-      if(dr.which===1) z.t1=v; else z.t2=v;
+      const E=skP(dr.which===1? z.a : z.b); bzDragHandle(E, z, dr.which===1?'t1':'t2', [wx-E.x, wy-E.y], ev.altKey);
       skDraw(); return; }
+    if(dr.kind==='pen'){ const E=skP(dr.id); if(!E) return; let [wx,wy]=toW(sx,sy);
+      if(Math.hypot(sx-dr.sx, sy-dr.sy)<5){ dr.moved=false; return; }
+      if($('#skSnap').checked){ const g=snapStep()/2; wx=Math.round(wx/g)*g; wy=Math.round(wy/g)*g; }
+      bzPenPull(E, [wx-E.x, wy-E.y], ev.altKey, dr); skDraw(); return; }
     if(dr.kind==='circle'){ const c=skC(dr.id); if(SK.d.cons.some(k=>k.type==='diam'&&k.c===c.id)) return; const p=skP(c.c); let [wx,wy]=toW(sx,sy); let r=Math.hypot(wx-p.x,wy-p.y); if($('#skSnap').checked){ const g=snapStep()/2; r=Math.max(g,Math.round(r/g)*g); } c.r=r; skSolve(null,200); skDraw(); return; }
     if(dr.kind==='label'){ const c=SK.d.cons.find(k=>k.id===dr.id); const [wx,wy]=toW(sx,sy);
       if(c.type==='dist'){ const a=skP(c.a), b=skP(c.b); const L=Math.hypot(b.x-a.x,b.y-a.y)||1; const nx=-(b.y-a.y)/L, ny=(b.x-a.x)/L; c.off=(wx-(a.x+b.x)/2)*nx+(wy-(a.y+b.y)/2)*ny; }
@@ -354,6 +369,7 @@ skCanvas.addEventListener('pointermove', ev=>{
 });
 skCanvas.addEventListener('pointerup', ()=>{
   const dr=SK.drag; SK.drag=null;
+  if(dr && dr.kind==='pen'){ if(dr.close) bzEndChain(); else { skCleanup(); skPush(); } skDraw(); return; }
   if(dr && dr.moved && dr.kind!=='pan'){ skSolve(); skPush(); }
   skDraw();
 });
@@ -361,7 +377,7 @@ skCanvas.addEventListener('dblclick', ev=>{
   const [sx,sy]=skEvt(ev);
   const lb=hitLabel(sx,sy); if(lb){ showDimEdit(SK.d.cons.find(k=>k.id===lb.id)); return; }
   if(SK.tool==='line') finishChain();
-  if(SK.tool==='bezier'){ SK.pend=null; skCleanup(); skPush(); skDraw(); }
+  if(SK.tool==='bezier') bzEndChain();
 });
 skCanvas.addEventListener('wheel', ev=>{ ev.preventDefault(); const [sx,sy]=skEvt(ev); const [wx,wy]=toW(sx,sy); SK.view.s=clamp(SK.view.s*Math.exp(-ev.deltaY*0.0015),0.3,80); const [nx,ny]=toW(sx,sy); SK.view.cx+=wx-nx; SK.view.cy+=wy-ny; skDraw(); },{passive:false});
 
@@ -369,6 +385,7 @@ skCanvas.addEventListener('wheel', ev=>{ ev.preventDefault(); const [sx,sy]=skEv
 function skDraw(){
   if($('#sk').hidden || !SK.d) return;
   const g=skCtx, d=SK.d, s=SK.view.s;
+  bzRefresh(d);
   const col={bg:cssVar('--bg'),panel:cssVar('--panel'),line:cssVar('--line'),ink:cssVar('--ink'),ink2:cssVar('--ink-2'),acc:cssVar('--accent'),soft:cssVar('--accent-soft'),mark:cssVar('--mark'),danger:cssVar('--danger')};
   g.clearRect(0,0,skW,skH); g.fillStyle=col.bg; g.fillRect(0,0,skW,skH);
   // grid
@@ -383,8 +400,10 @@ function skDraw(){
   }
   g.globalAlpha=1;
   const [ox,oy]=toS(0,0);
-  g.lineWidth=1.5; g.strokeStyle='#d2453a'; g.globalAlpha=.6; g.beginPath(); g.moveTo(0,oy); g.lineTo(skW,oy); g.stroke();
-  g.strokeStyle='#2f9a4a'; g.beginPath(); g.moveTo(ox,0); g.lineTo(ox,skH); g.stroke(); g.globalAlpha=1;
+  const AX=axisColors(), PL=SKPLANES[SK.plane||'xy'], [an,bn]=PL.axes, ca=AX[an.toLowerCase()], cb=AX[bn.toLowerCase()];
+  g.lineWidth=1.5; g.strokeStyle=ca; g.globalAlpha=.6; g.beginPath(); g.moveTo(0,oy); g.lineTo(skW,oy); g.stroke();
+  g.strokeStyle=cb; g.beginPath(); g.moveTo(ox,0); g.lineTo(ox,skH); g.stroke(); g.globalAlpha=1;
+  g.font='700 13px '+cssVar('--f-mono'); g.fillStyle=ca; g.textAlign='right'; g.fillText(an, skW-10, clamp(oy-6,16,skH-24)); g.textAlign='right'; g.fillStyle=cb; g.fillText(bn, clamp(ox-6,16,skW-4), 16); g.textAlign='left';
   if(SK.mode==='revolve'){ g.save(); g.setLineDash([10,5,2,5]); g.strokeStyle=col.mark; g.lineWidth=2.5; g.beginPath(); g.moveTo(ox,0); g.lineTo(ox,skH); g.stroke(); g.restore();
     g.fillStyle=col.mark; g.font='600 12px '+cssVar('--f-body'); g.fillText('axe de révolution', ox+6, 18); }
   // grid scale caption
@@ -399,21 +418,24 @@ function skDraw(){
   const showHandles = SK.tool==='select' || SK.tool==='bezier';
   for(const z of d.beziers){ const c=bezScreen(z); const sel=isSel('bez',z.id);
     g.strokeStyle=sel? col.mark : col.ink; g.lineWidth=sel?3.5:2; g.beginPath(); g.moveTo(c[0][0],c[0][1]); g.bezierCurveTo(c[1][0],c[1][1],c[2][0],c[2][1],c[3][0],c[3][1]); g.stroke();
-    if(showHandles){ g.save(); g.strokeStyle=sel?col.mark:col.acc; g.globalAlpha=sel?1:.6; g.lineWidth=1.2; g.setLineDash([4,3]);
-      g.beginPath(); g.moveTo(c[0][0],c[0][1]); g.lineTo(c[1][0],c[1][1]); g.moveTo(c[3][0],c[3][1]); g.lineTo(c[2][0],c[2][1]); g.stroke(); g.setLineDash([]);
-      for(const q of [c[1],c[2]]){ g.fillStyle=col.panel; g.beginPath(); g.arc(q[0],q[1],4.5,0,Math.PI*2); g.fill(); g.stroke(); } g.restore(); } }
+    if(showHandles){ g.save(); g.lineWidth=1.2;
+      for(const [i,e,pid] of [[1,0,z.a],[2,3,z.b]]){ const E=skP(pid); if(!bzShowHandle(E) || Math.hypot(c[i][0]-c[e][0],c[i][1]-c[e][1])<6) continue;
+        const cur= SK.sel?.type==='pt' && SK.sel.id===pid; const auto=bzType(E).it==='auto';
+        g.strokeStyle= cur||sel? col.mark : col.acc; g.globalAlpha= cur||sel? 1 : auto? .35 : .6; g.setLineDash([4,3]);
+        g.beginPath(); g.moveTo(c[e][0],c[e][1]); g.lineTo(c[i][0],c[i][1]); g.stroke(); g.setLineDash([]);
+        g.fillStyle= cur? col.mark : col.panel; g.beginPath(); g.arc(c[i][0],c[i][1],4.5,0,Math.PI*2); g.fill(); g.stroke(); }
+      g.restore(); } }
   for(const c of d.circles){ const p=skP(c.c); const [X,Y]=toS(p.x,p.y); g.strokeStyle=isSel('circle',c.id)?col.mark:col.ink; g.lineWidth=isSel('circle',c.id)?3.5:2; g.beginPath(); g.arc(X,Y,c.r*s,0,Math.PI*2); g.stroke(); }
   // previews
   g.save(); g.setLineDash([6,4]); g.strokeStyle=col.acc; g.lineWidth=1.8;
   const m=SK.mouse;
   if(m && SK.tool==='line' && SK.chain){ const last=skP(SK.chain.last); const s2=axisLock(last,m.sx,m.sy); const [ax,ay]=toS(last.x,last.y), [bx,by]=toS(s2.x,s2.y); g.beginPath(); g.moveTo(ax,ay); g.lineTo(bx,by); g.stroke(); tag(`${fmt(Math.hypot(s2.x-last.x,s2.y-last.y),1)} mm${s2.lock?' · '+s2.lock.toUpperCase():''}`, bx+12, by-12); }
-  if(m && SK.tool==='bezier' && SK.pend){ const A=skP(SK.pend.a); const [ax,ay]=toS(A.x,A.y);
-    if(SK.pend.bz===1){ const s2=snapW(m.sx,m.sy); const [bx,by]=toS(s2.x,s2.y); g.beginPath(); g.moveTo(ax,ay); g.lineTo(bx,by); g.stroke(); tag('Cliquez l’arrivée', bx+12, by-12); }
-    else { const B=SK.pend.b; const [wx,wy]=toW(m.sx,m.sy); const hh=bezThrough(A,B,wx,wy);
-      const c=[[A.x,A.y],[A.x+hh.t1[0],A.y+hh.t1[1]],[B.x+hh.t2[0],B.y+hh.t2[1]],[B.x,B.y]].map(q=>toS(q[0],q[1]));
-      g.setLineDash([]); g.lineWidth=2.4; g.beginPath(); g.moveTo(c[0][0],c[0][1]); g.bezierCurveTo(c[1][0],c[1][1],c[2][0],c[2][1],c[3][0],c[3][1]); g.stroke();
-      g.setLineDash([3,3]); g.lineWidth=1; g.beginPath(); g.moveTo(c[0][0],c[0][1]); g.lineTo(c[1][0],c[1][1]); g.moveTo(c[3][0],c[3][1]); g.lineTo(c[2][0],c[2][1]); g.stroke();
-      tag('Cliquez pour courber', m.sx+12, m.sy-12); } }
+  if(m && SK.tool==='bezier' && SK.pend?.pen && !SK.drag){ const A=skP(SK.pend.last); if(A){ const s2=snapW(m.sx,m.sy);
+    const out= SK.pend.out || (bzType(A).it==='bez'? bzMirror(A) : null) || [(s2.x-A.x)/3,(s2.y-A.y)/3];
+    const c=[[A.x,A.y],[A.x+out[0],A.y+out[1]],[s2.x,s2.y],[s2.x,s2.y]].map(q=>toS(q[0],q[1]));
+    g.beginPath(); g.moveTo(c[0][0],c[0][1]); g.bezierCurveTo(c[1][0],c[1][1],c[2][0],c[2][1],c[3][0],c[3][1]); g.stroke();
+    const closing= s2.pt && s2.pt.id===SK.pend.first && SK.pend.first!==SK.pend.last;
+    tag(closing? 'Cliquez pour fermer' : 'Clic : point anguleux · Glisser : courbe', m.sx+12, m.sy-12); } }
   if(m && SK.tool==='rect' && SK.pend){ const s2=snapW(m.sx,m.sy); const [ax,ay]=toS(SK.pend.x,SK.pend.y), [bx,by]=toS(s2.x,s2.y); g.strokeRect(Math.min(ax,bx),Math.min(ay,by),Math.abs(bx-ax),Math.abs(by-ay)); tag(`${fmt(Math.abs(s2.x-SK.pend.x),1)} × ${fmt(Math.abs(s2.y-SK.pend.y),1)} mm`, bx+12, by-12); }
   if(m && SK.tool==='circle' && SK.pend){ const s2=snapW(m.sx,m.sy); const [ax,ay]=toS(SK.pend.x,SK.pend.y); let r=Math.hypot(s2.x-SK.pend.x,s2.y-SK.pend.y); if($('#skSnap').checked){ const gg=snapStep()/2; r=Math.max(gg,Math.round(r/gg)*gg); } g.beginPath(); g.arc(ax,ay,r*s,0,Math.PI*2); g.stroke(); tag(`Ø ${fmt(2*r,1)} mm`, m.sx+12, m.sy-12); }
   g.restore();
@@ -439,14 +461,15 @@ function skDraw(){
   for(const c of d.cons) if(c.type==='eqr'){ for(const cid of [c.c1,c.c2]){ const ci=skC(cid), p=skP(ci.c); const [X,Y]=toS(p.x+ci.r*0.71,p.y+ci.r*0.71); const t='='+pairNo.get(c.id); const sel=SK.sel?.type==='con'&&SK.sel.id===c.id; g.fillStyle=sel?col.mark:col.panel; g.strokeStyle=col.acc; roundRect(g,X-6,Y-8,24,16,4); g.fill(); g.stroke(); g.fillStyle=sel?'#000':col.acc; g.fillText(t,X+6,Y+.5); SK.badges.push({id:c.id,x:X+6,y:Y}); } }
   g.textAlign='left'; g.textBaseline='alphabetic';
   // points
-  for(const p of d.pts){ const [X,Y]=toS(p.x,p.y); const sel=isSel('pt',p.id)||SK.pend?.pt===p.id||SK.pend?.a===p.id||SK.chain?.last===p.id;
+  for(const p of d.pts){ const [X,Y]=toS(p.x,p.y); const sel=isSel('pt',p.id)||SK.pend?.pt===p.id||SK.pend?.a===p.id||(SK.pend?.pen&&SK.pend.last===p.id)||SK.chain?.last===p.id;
     if(p.origin){ g.strokeStyle=col.ink; g.lineWidth=1.5; g.beginPath(); g.arc(X,Y,6,0,Math.PI*2); g.moveTo(X-10,Y); g.lineTo(X+10,Y); g.moveTo(X,Y-10); g.lineTo(X,Y+10); g.stroke(); continue; }
-    g.fillStyle= sel? col.mark : col.panel; g.strokeStyle= sel? col.mark : col.ink; g.lineWidth=1.5; g.fillRect(X-3.5,Y-3.5,7,7); g.strokeRect(X-3.5,Y-3.5,7,7);
+    g.fillStyle= sel? col.mark : col.panel; g.strokeStyle= sel? col.mark : col.ink; g.lineWidth=1.5;
+    if(bzSmooth(p)){ g.beginPath(); g.arc(X,Y,4.2,0,Math.PI*2); g.fill(); g.stroke(); } else { g.fillRect(X-3.5,Y-3.5,7,7); g.strokeRect(X-3.5,Y-3.5,7,7); }
     if(p.fixed){ g.strokeStyle=col.danger; g.lineWidth=1.5; g.beginPath(); g.moveTo(X,Y+5); g.lineTo(X-6,Y+13); g.lineTo(X+6,Y+13); g.closePath(); g.stroke(); for(let i=-6;i<=4;i+=4){ g.moveTo(X+i,Y+13); g.lineTo(X+i+3,Y+17); } g.stroke(); } }
   if(SK.snapPt!=null){ const p=skP(SK.snapPt); if(p){ const [X,Y]=toS(p.x,p.y); g.strokeStyle=col.mark; g.lineWidth=2; g.beginPath(); g.arc(X,Y,9,0,Math.PI*2); g.stroke(); } }
   // selection of the first element for 2-step tools
   if(SK.pend?.sel){ const e=SK.pend.sel; if(e.k==='line'){ const l=skL(e.id); const a=skP(l.a), b=skP(l.b); const [ax,ay]=toS(a.x,a.y),[bx,by]=toS(b.x,b.y); g.strokeStyle=col.mark; g.lineWidth=4; g.beginPath(); g.moveTo(ax,ay); g.lineTo(bx,by); g.stroke(); } }
-  skStatus(pr);
+  skStatus(pr); bzUpdateOpts();
   function tag(txt,x,y){ g.save(); g.setLineDash([]); g.font='500 12px '+cssVar('--f-mono'); const w=g.measureText(txt).width+10; g.fillStyle=col.panel; g.strokeStyle=col.line; roundRect(g,x,y-10,w,20,5); g.fill(); g.stroke(); g.fillStyle=col.ink; g.fillText(txt,x+5,y+4); g.restore(); }
 }
 function roundRect(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
@@ -486,3 +509,94 @@ function skStatus(pr){
   if(SK.mode==='revolve' && SK.d.pts.some(p=>p.x<-1e-3) && cls!=='err'){ cls='warn'; html+='<br><b>Révolution :</b> la partie à gauche de l’axe sera ignorée.'; }
   el.className='status '+cls; el.innerHTML=html; $('#skOk').disabled=!nC;
 }
+
+/* ---------- Bézier points: interpolation and tangents
+   Each point of a curve has an interpolation p.it — 'lin' (anguleux : poignée vers le voisin, à 1/3),
+   'auto' (lisse automatique, d'après les deux voisins) or 'bez' (poignées réglées à la main) — and, for 'bez',
+   a tangent mode p.tm : 'sym' (alignées, même longueur), 'align' (alignées, longueurs libres) or 'free' (cassées).
+   Handles are stored on the curves: t1 = handle at a (outgoing), t2 = handle at b (incoming).
+   Older sketches have neither field: they behave as 'bez' / 'free'. */
+const bzType=p=>({it:p?.it||'bez', tm:p?.tm||'free'});
+const bzRefs=(d,pid)=>{ const out=[]; for(const z of d.beziers||[]){ if(z.a===pid) out.push({z,key:'t1',other:z.b}); if(z.b===pid) out.push({z,key:'t2',other:z.a}); } return out; };
+const bzOnCurve=pid=> (SK.d.beziers||[]).some(z=>z.a===pid||z.b===pid);
+const bzShowHandle=p=> !!p && bzType(p).it!=='lin';
+const bzSmooth=p=>{ if(!p || !bzOnCurve(p.id)) return false; const T=bzType(p); return T.it==='auto' || (T.it==='bez' && T.tm!=='free'); };
+const vlen=v=>Math.hypot(v[0],v[1]);
+const r4=v=>[+v[0].toFixed(4), +v[1].toFixed(4)];
+function bzRefresh(d){
+  if(!d.beziers?.length) return;
+  const P=new Map(d.pts.map(p=>[p.id,p]));
+  for(const p of d.pts){
+    const it=p.it; if(it!=='lin' && it!=='auto') continue;
+    const refs=bzRefs(d,p.id); if(!refs.length) continue;
+    const nb=[...refs.map(r=>({q:P.get(r.other), r})), ...d.lines.filter(l=>l.a===p.id||l.b===p.id).map(l=>({q:P.get(l.a===p.id?l.b:l.a), line:true}))].filter(n=>n.q);
+    const toward=n=>[(n.q.x-p.x)/3, (n.q.y-p.y)/3];
+    let done=false;
+    if(it==='auto' && nb.length===2){ const [n1,n2]=nb; let dir=null;
+      if(n1.line && n2.line) dir=null;
+      else if(n1.line||n2.line){ const L=n1.line?n1:n2; const v=[p.x-L.q.x, p.y-L.q.y], n=vlen(v); if(n>1e-9) dir=[v[0]/n, v[1]/n];   // continue the straight line smoothly
+        const B=n1.line?n2:n1; if(dir){ const k=vlen([B.q.x-p.x,B.q.y-p.y])/3; B.r.z[B.r.key]=r4([dir[0]*k, dir[1]*k]); done=true; } }
+      else { const v=[n2.q.x-n1.q.x, n2.q.y-n1.q.y], n=vlen(v); if(n>1e-9){ dir=[v[0]/n, v[1]/n];
+          const k1=vlen([n1.q.x-p.x,n1.q.y-p.y])/3, k2=vlen([n2.q.x-p.x,n2.q.y-p.y])/3;
+          n1.r.z[n1.r.key]=r4([-dir[0]*k1, -dir[1]*k1]); n2.r.z[n2.r.key]=r4([dir[0]*k2, dir[1]*k2]); done=true; } } }
+    if(!done) for(const n of nb) if(n.r) n.r.z[n.r.key]=r4(toward(n));
+  }
+}
+/* outgoing tangent continuing the incoming one (pen tool: the next curve starts smoothly) */
+function bzMirror(p){ const T=bzType(p); if(T.it!=='bez' || T.tm==='free') return null; const i=bzRefs(SK.d,p.id).find(r=>r.key==='t2'); if(!i) return null; const h=i.z.t2; return vlen(h)>1e-9? [-h[0],-h[1]] : null; }
+/* a handle dragged with the Selection tool; the other handle of the point follows its tangent mode (Alt: break) */
+function bzDragHandle(E, z, key, v, alt){
+  const T=bzType(E); if(T.it!=='bez'){ E.tm= T.it==='auto'? 'align' : 'free'; E.it='bez'; }
+  if(alt) E.tm='free';
+  z[key]=r4(v);
+  const opp=bzRefs(SK.d,E.id).filter(r=>!(r.z===z && r.key===key)); if(opp.length!==1) return;
+  const o=opp[0], n=vlen(v); if(n<1e-9) return; const tm=bzType(E).tm;
+  if(tm==='sym') o.z[o.key]=r4([-v[0],-v[1]]);
+  else if(tm==='align'){ const L=vlen(o.z[o.key])||n; o.z[o.key]=r4([-v[0]/n*L, -v[1]/n*L]); }
+}
+/* pen tool: dragging from the point just placed pulls its tangent (symmetric; Alt: only the outgoing handle) */
+function bzPenPull(E, v, alt, dr){
+  dr.moved=true; E.it='bez'; E.tm= alt? 'free' : 'sym';
+  const refs=bzRefs(SK.d,E.id), outs=refs.filter(r=>r.key==='t1'), ins=refs.filter(r=>r.key==='t2');
+  for(const r of outs) r.z.t1=r4(v);
+  if(!alt) for(const r of ins) r.z.t2=r4([-v[0],-v[1]]);
+  if(SK.pend?.pen && SK.pend.last===E.id && !outs.length) SK.pend.out=r4(v);
+}
+function bzEndChain(){ SK.pend=null; skCleanup(); skPush(); skDraw(); }
+/* the point the option buttons act on: the point being drawn, or the selected point of a curve */
+function bzTarget(){
+  if(SK.tool==='bezier' && SK.pend?.pen) return SK.pend.last;
+  if(SK.sel?.type==='pt' && bzOnCurve(SK.sel.id)) return SK.sel.id;
+  return null;
+}
+function bzSetInterp(pid, it){
+  const E=skP(pid); if(!E) return; const prev=bzType(E).it;
+  if(it==='bez'){ if(prev==='lin'){ E.it='auto'; bzRefresh(SK.d); } if(prev!=='bez'){ E.it='bez'; E.tm='align'; } }
+  else { E.it=it; if(SK.pend?.pen && SK.pend.last===pid) SK.pend.out=null; }
+  bzRefresh(SK.d); skPush(); skDraw();
+}
+function bzSetType(pid, tm){
+  const E=skP(pid); if(!E) return; const d=SK.d;
+  if(bzType(E).it==='lin'){ E.it='auto'; bzRefresh(d); }
+  E.it='bez'; E.tm=tm;
+  const refs=bzRefs(d,pid);
+  if(tm!=='free' && refs.length===2){
+    const [r1,r2]=refs, h1=r1.z[r1.key], h2=r2.z[r2.key], O1=skP(r1.other), O2=skP(r2.other);
+    let v=[h1[0]-h2[0], h1[1]-h2[1]]; if(vlen(v)<1e-9) v=[O1.x-O2.x, O1.y-O2.y]; const n=vlen(v);
+    if(n>1e-9){ const u=[v[0]/n, v[1]/n];
+      let L1=vlen(h1)||vlen([O1.x-E.x,O1.y-E.y])/3, L2=vlen(h2)||vlen([O2.x-E.x,O2.y-E.y])/3;
+      if(tm==='sym'){ L1=L2=(L1+L2)/2; }
+      r1.z[r1.key]=r4([u[0]*L1, u[1]*L1]); r2.z[r2.key]=r4([-u[0]*L2, -u[1]*L2]); } }
+  if(tm!=='free' && refs.length===1 && SK.pend?.pen && SK.pend.last===pid && SK.pend.out==null){ const h=refs[0].z[refs[0].key]; if(refs[0].key==='t2' && vlen(h)>1e-9) SK.pend.out=r4([-h[0],-h[1]]); }
+  skPush(); skDraw();
+}
+function bzUpdateOpts(){
+  const bar=$('#bzOpts'); if(!bar) return; const id=bzTarget(); const E= id!=null? skP(id) : null;
+  bar.hidden=!E; if(!E) return;
+  const T=bzType(E);
+  $('#bzTitle').textContent= SK.tool==='bezier' && SK.pend?.pen ? 'Point en cours' : 'Point de la courbe';
+  $$('#bzOpts [data-it]').forEach(b=>{ const on=b.dataset.it===T.it; b.classList.toggle('on',on); b.setAttribute('aria-pressed',String(on)); });
+  $$('#bzOpts [data-tm]').forEach(b=>{ const on=T.it==='bez' && b.dataset.tm===T.tm; b.classList.toggle('on',on); b.setAttribute('aria-pressed',String(on)); });
+}
+$$('#bzOpts [data-it]').forEach(b=>b.addEventListener('click',()=>{ const id=bzTarget(); if(id!=null) bzSetInterp(id, b.dataset.it); }));
+$$('#bzOpts [data-tm]').forEach(b=>b.addEventListener('click',()=>{ const id=bzTarget(); if(id!=null) bzSetType(id, b.dataset.tm); }));

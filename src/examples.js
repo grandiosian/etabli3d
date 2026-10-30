@@ -143,18 +143,19 @@ const SAMPLES={
     note:{observe:['Le profil est dessiné à droite de l’<b>axe vertical</b> : la révolution le fait tourner sur un tour complet.','La cote 12 est un <b>rayon</b> : le pion mesure 24 mm de diamètre à la base.'],
       try:['Ouvrez l’esquisse et déplacez un point de la tête pour changer sa forme.','Passez en <b>Extrusion</b> pour voir la différence avec le même profil.']}},
 
-  coeur:{level:3, cat:'sketch', title:'Pendentif cœur', icon:'ex_heart', tags:['Bézier','Extrusion','Cotes'],
+  coeur:{level:2, cat:'sketch', title:'Pendentif cœur', icon:'ex_heart', tags:['Bézier','Extrusion','Cotes'],
     desc:'Quatre courbes de Bézier symétriques forment un cœur.',
     build(){
       resetFor('Pendentif cœur');
       const s=SKB(); const D=s.pt(0,8), R=s.pt(17,6), T=s.pt(0,-16), L=s.pt(-17,6);
       s.bez(D,R,[0,9],[0,10]); s.bez(R,T,[0,-9],[8,8]); s.bez(T,L,[-8,8],[0,-9]); s.bez(L,D,[0,10],[0,9]);
+      for(const [id,tm] of [[D,'free'],[R,'align'],[T,'free'],[L,'align']]) Object.assign(s.d.pts.find(p=>p.id===id),{it:'bez',tm});   // pointes en haut et en bas, côtés arrondis
       const h=s.circle(-9,9,3.5); s.diam(h,2.6,3);
       s.dx(L,R,-26); s.dy(T,D,-24);
       state.parts.push(P_('sketch',{name:'Cœur (esquisse)',params:{sk:s.d,mode:'extrude',h:3},color:'#c45b8e',pos:[0,0,0]}));
     },
-    note:{observe:['Le contour est fait de <b>4 courbes de Bézier</b> : chacune va d’un point à un autre et se règle avec deux <b>poignées</b>.','Le trou d’accroche est un cercle dessiné à l’intérieur du contour.'],
-      try:['Ouvrez l’esquisse, prenez l’outil Sélection et tirez une poignée (petit rond) pour changer la forme.','Tapez 40 dans la cote 34 : le cœur s’élargit en gardant ses courbes.']}},
+    note:{observe:['Le contour est fait de <b>4 courbes de Bézier</b> : chacune va d’un point à un autre et se règle avec deux <b>poignées</b>.','Les points du haut et du bas ont des tangentes <b>cassées</b> (pointes) ; ceux des côtés sont <b>alignés</b> (rond).','Le trou d’accroche est un cercle dessiné à l’intérieur du contour.'],
+      try:['Ouvrez l’esquisse, cliquez le point de droite et tirez une poignée : l’autre suit dans l’alignement.','Avec ce point choisi, essayez <b>Symétriser</b>, <b>Anguleux</b> puis <b>Lisse auto</b> dans la barre des options.','Tapez 40 dans la cote 34 : le cœur s’élargit en gardant ses courbes.']}},
 
   vase:{level:3, cat:'sketch', title:'Vase', icon:'ex_vase', tags:['Bézier','Révolution','Creux'],
     desc:'Un profil courbe avec une paroi de 2 mm, tourné sur 360°.',

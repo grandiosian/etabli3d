@@ -4,7 +4,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Saira+Semi+Condensed:wght@500;600;700&display=swap">
 <style>
-/* Layout: workshop bench — tool rack on the left, green cutting mat in the centre, inspector card on the right. */
+/* Layout: workshop bench — creation bar on top (shapes on the left, sketch tools on the right), tree on the left,
+   green cutting mat in the centre, properties card floating on the right under the view cube. */
 :root{
   --bg:#e9eeeb;
   --panel:#f8faf8;
@@ -42,8 +43,8 @@ button{cursor:pointer}
 :focus-visible{outline:2px solid var(--mark);outline-offset:2px}
 .mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 
-#app{position:relative;height:100%;display:grid;grid-template-rows:auto auto auto 1fr;grid-template-columns:1fr auto;
-  grid-template-areas:"top top" "rack rack" "tools tools" "stage tree";}
+#app{position:relative;height:100%;display:grid;grid-template-rows:auto auto auto 1fr;grid-template-columns:auto 1fr;
+  grid-template-areas:"top top" "rack rack" "tools tools" "tree stage";}
 #insp{width:312px}
 #outliner{width:260px}
 
@@ -116,6 +117,22 @@ button{cursor:pointer}
 .seg .btn{border:0;border-radius:0}
 .vsep{width:1px;align-self:stretch;background:var(--line);margin:2px 2px}
 #banner{position:absolute;bottom:62px;left:50%;transform:translateX(-50%);z-index:6;background:var(--mark-soft);border:1px solid var(--mark);color:var(--ink);border-radius:8px;padding:6px 12px;font-size:13px;box-shadow:var(--shadow);white-space:nowrap;max-width:calc(100% - 20px);overflow:hidden;text-overflow:ellipsis}
+/* sketch plane picker */
+.plane-pick{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:12;display:flex;flex-direction:column;align-items:stretch;gap:8px;
+  background:color-mix(in srgb,var(--panel) 94%,transparent);border:2px solid var(--accent);border-radius:14px;box-shadow:var(--shadow);padding:10px 12px;max-width:calc(100% - 20px);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.pp-head{display:flex;flex-direction:column;gap:2px;text-align:center}
+.pp-head b{font-family:var(--f-display);font-size:16px} .pp-head small{color:var(--ink-2);font-size:12px}
+.pp-list{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.pp-b{display:flex;flex-direction:column;align-items:center;gap:1px;width:118px;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:6px 6px 8px;font-size:13px}
+.pp-b small{color:var(--ink-2);font-size:11px;text-align:center}
+.pp-b svg{width:64px;height:48px;margin-bottom:2px}
+.pp-b .pp-box{fill:none;stroke:var(--line);stroke-width:1.5}
+.pp-b .pp-pl{fill:color-mix(in srgb,var(--pp-c,var(--accent)) 30%,transparent);stroke:var(--pp-c,var(--accent));stroke-width:2;stroke-linejoin:round}
+.pp-b .pp-ax{stroke:var(--pp-c);stroke-width:1.5;stroke-dasharray:3 2}
+.pp-b:hover,.pp-b.hot{border-color:var(--pp-c,var(--accent));background:color-mix(in srgb,var(--pp-c,var(--accent)) 12%,var(--panel))}
+.pp-lab{position:absolute;z-index:8;transform:translate(-50%,-50%);pointer-events:none;font:500 12px var(--f-body);white-space:nowrap;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--panel) 85%,transparent);border:1.5px solid var(--pp-c,var(--accent));color:var(--ink)}
+.pp-lab.hot{background:var(--pp-c,var(--accent));color:#fff}
+.pp-cancel{align-self:center;padding:4px 12px;font-size:12.5px}
 #pickHint{position:absolute;top:58px;left:50%;transform:translateX(-50%);z-index:7;background:var(--accent);color:var(--accent-ink);border-radius:8px;padding:6px 12px;font-size:13px;box-shadow:var(--shadow)}
 #toast{position:absolute;left:50%;bottom:104px;transform:translateX(-50%);z-index:30;background:var(--ink);color:var(--bg);border-radius:8px;padding:8px 14px;font-size:13px;box-shadow:var(--shadow);max-width:min(520px,calc(100% - 24px));text-align:center;pointer-events:none;transition:opacity .2s}
 #dropGhost{position:absolute;pointer-events:none;z-index:50;width:44px;height:44px;opacity:.75;transform:translate(-50%,-50%);color:var(--accent)}
@@ -198,7 +215,7 @@ html[data-level="2"] [data-max="1"], html[data-level="3"] [data-max="1"], html[d
 .look-sw i{width:18px;height:18px;border-radius:5px;display:block}
 
 /* outliner */
-#outliner{grid-area:tree;display:none;flex-direction:column;min-height:0;background:var(--panel);border-left:1px solid var(--line)}
+#outliner{grid-area:tree;display:none;flex-direction:column;min-height:0;background:var(--panel);border-right:1px solid var(--line)}
 #outliner > #demo{position:static;width:auto;max-height:46%;margin:8px;flex:none;transform:none!important}
 html[data-level="3"] #app.with-tree #outliner{display:flex}
 .tree-head{display:flex;align-items:center;gap:8px;padding:10px 8px 6px 12px}
@@ -264,6 +281,20 @@ html[data-level="3"] #app.with-tree #outliner{display:flex}
 .status.ok{background:var(--accent-soft)}
 .status.warn{background:var(--mark-soft)}
 .status.err{background:color-mix(in srgb,var(--danger) 18%,var(--panel))}
+#skbar .sk-plane{font:600 11.5px var(--f-mono);color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent);border-radius:999px;padding:3px 9px;margin-right:6px;white-space:nowrap}
+/* options of the Bézier point under edit (pen tool or selection) */
+.bz-opts{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:6;display:flex;flex-wrap:wrap;justify-content:center;gap:6px;align-items:center;max-width:calc(100% - 20px);
+  background:color-mix(in srgb,var(--panel) 92%,transparent);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:5px 6px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.bz-ttl{font-family:var(--f-display);font-weight:600;font-size:13px;padding:0 4px 0 6px;white-space:nowrap}
+.bz-grp{display:flex;gap:2px;align-items:center;border:1px solid var(--line);border-radius:9px;padding:2px;background:var(--bg)}
+.bz-grp .lbl{font-family:var(--f-display);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);padding:0 4px}
+.bz-b{display:inline-flex;align-items:center;gap:4px;border:1px solid transparent;background:transparent;border-radius:6px;padding:4px 7px;font-size:12px;white-space:nowrap}
+.bz-b:hover:not(:disabled){background:var(--panel-2)}
+.bz-b.on,.bz-b.on:hover:not(:disabled){background:var(--accent);color:var(--accent-ink)}
+.bz-b:disabled{opacity:.4;cursor:default}
+.bz-b svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.bz-b svg rect{fill:currentColor;stroke:none} .bz-b svg circle{fill:var(--panel)}
+.bz-b.on svg circle{fill:var(--accent)}
 #dimEdit{position:absolute;z-index:5;width:92px;border:2px solid var(--mark);border-radius:6px;padding:4px 6px;font-family:var(--f-mono);font-size:13px;background:var(--panel);text-align:center;transform:translate(-50%,-50%)}
 
 /* ---------- help */
@@ -541,7 +572,10 @@ html:not([data-glass="opaque"]) #bubble .bub-row input[type=range]{background:tr
 #app.rack-min #tools .tool span{display:none}
 #app.rack-min .shape svg{width:26px;height:26px}
 #app.rack-min .rackmin-btn svg{transform:rotate(180deg)}
-.rackmin-btn{margin-top:0!important;margin-left:auto}
+.rackmin-btn{margin-top:0!important;margin-left:6px}
+.rack-sk{margin-left:auto!important}
+html[data-level="1"] .rackmin-btn{margin-left:auto}
+.shape.sk-tool svg{color:var(--accent)}
 
 /* ---------- hover: name, manipulation buttons, selection frame, right-click menu */
 #hovName{position:absolute;left:0;top:0;z-index:7;pointer-events:none;font:600 12.5px var(--f-display);color:var(--ink);background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--accent);border-radius:7px;padding:2px 9px;white-space:nowrap;box-shadow:var(--shadow)}

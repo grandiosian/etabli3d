@@ -18,8 +18,8 @@ const lv=n=>prefs.level>=n;
 
 const LEVELS=[
   {n:1, name:'Débutant', short:'Déb.', desc:'Volumes simples, perçages, groupes, couleurs.'},
-  {n:2, name:'Intermédiaire', short:'Inter.', desc:'+ esquisses cotées, tube et tore, liaisons et moteurs.'},
-  {n:3, name:'Avancé', short:'Av.', desc:'+ engrenages, transmissions, Bézier, révolution, arborescence.'},
+  {n:2, name:'Intermédiaire', short:'Inter.', desc:'+ esquisses cotées, courbes de Bézier, tube et tore, liaisons et moteurs.'},
+  {n:3, name:'Avancé', short:'Av.', desc:'+ engrenages, transmissions, révolution, arborescence.'},
 ];
 
 /* ---- appearance */

@@ -169,7 +169,7 @@ function startPick(){
   pickMode=(pt)=>{ if(pt){ const s=+$('#snapSel').value; const r=v=> s>0? Math.round(v/s)*s : +v.toFixed(2); jf.origin=[r(pt.x),r(pt.y),r(pt.z)]; } cancelPick(); renderInspector(); updateMarkers(); };
   updateGizmo();
 }
-function cancelPick(){ pickMode=null; $('#pickHint').hidden=true; updateGizmo(); }
+function cancelPick(){ pickMode=null; $('#pickHint').hidden=true; if(PP.open) closePlanePicker(); updateGizmo(); }
 
 function driverChainHas(startId, target){ let id=startId, guard=0; while(id!=null && guard++<50){ if(id===target) return true; const k=state.joints.find(x=>x.id===id); id=k?.driver?.joint??null; } return false; }
 function saveJoint(){

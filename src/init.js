@@ -9,7 +9,7 @@ for(const [host,list] of [['#rackBasic',BASIC],['#rackMeca',MECA]]){
     b.addEventListener('click',e=>{ if(e.detail===0) addPart(k); });
     $(host).append(b); }
 }
-$('#bSketch').addEventListener('click',()=>{ if(simLocked()){ toast('Réinitialisez la simulation (bouton ⟲) pour modifier les pièces.'); return; } openSketch(null); });
+initPlanes();
 
 /* ---- level */
 function setLevel(n, quiet=false){
@@ -17,7 +17,7 @@ function setLevel(n, quiet=false){
   $$('#lvl [data-lvl]').forEach(b=>b.setAttribute('aria-checked', String(+b.dataset.lvl===n)));
   if(!lv(2)){ if(simActive()) simReset(true); if(!$('#sk').hidden) closeSketch(false); jf=null; }
   if((WS.find(w=>w.k===ws)?.lvl||1)>n) setWs('model');
-  if(!lv(3) && SK.tool==='bezier') setSkTool('select');
+  if(!lv(2)) closePlanePicker();
   if(lv(3) && prefs.tree && !$('#app').classList.contains('with-tree') && !matchMedia('(max-width: 860px)').matches) setTreeOpen(true);
   sync(); renderInspector(); applyViewOffset(); updateSteps();
   if(!quiet && n!==prev) toast(`Niveau ${LEVELS[n-1].name} : ${LEVELS[n-1].desc}`, 3400);
@@ -88,7 +88,7 @@ document.addEventListener('keydown', e=>{
     if(mod) return;
     if(k==='escape'){ if(SK.chain) finishChain(); else if(SK.pend){ SK.pend=null; SK.sel=null; skCleanup(); skPush(); skDraw(); } else if(SK.tool!=='select') setSkTool('select'); return; }
     if(k==='delete'||k==='backspace'){ e.preventDefault(); skDelete(); return; }
-    const map={v:'select',l:'line',r:'rect',c:'circle',d:'dim',b:'bezier'}; if(map[k] && (k!=='b'||lv(3))) setSkTool(map[k]);
+    const map={v:'select',l:'line',r:'rect',c:'circle',d:'dim',b:'bezier'}; if(map[k]) setSkTool(map[k]);
     return;
   }
   if(!$('#help').hidden){ if(k==='escape') $('#help').hidden=true; return; }
@@ -149,9 +149,9 @@ function loop(now){
   if(!(ws==='struct' && !ST.mode3d)){ stepCam(now); orbit.update(); hoverTick(); renderer.render(scene,camera); vcTick(); }
   // overlays projected with this frame's camera
   if(ws==='mech') positionJointLabels();
-  tgTick();
+  tgTick(); ppTick();
   if(ws==='struct' && ST.mode3d) positionStruct3DLabels();
   updateBubbleLink();
 }
 requestAnimationFrame(loop);
-window.__etabli={state, pivot, TG, guides, enterGroupEdit, finishGroupEdit, pickAll, setLmb, openCtxMenu, HOV, groupSel, prefs, orbit_:()=>orbit, SAMPLES, LAYOUT:()=>LAYOUT, resetLayout, togglePanel, CHK, startLocTest, stopLocTest, openStructBubble, openMechBubble, closeBubble, BUB, stAnimPlay, locEdit, locFrame, LOCV, applyStruct3DK, camera, orbit, structGroup, struct3DHit, renderer, ampFactor, structBox, stDraw, arrowHits:()=>stArrowHits, setWs, ws:()=>ws, validateAll, validatePart, vState, mechReady, setJointLoc, ST, SD, computeStruct, solveTruss, buildMesh, solvePlane, beamTheory, makeProxy, getProxyGeo, locGroup, loadExample, openGallery, addPart, groupSel, openSketch, closeSketch, SK, skSolve, sim, simToggle, simReset, exportStl, stlBinary, zipStore, meshes, selection:()=>selection, setSel:(ids)=>{selection=ids; sync(); renderInspector();}, setTab, openJointForm, saveJoint, jf:()=>jf, skProfiles, getGeometry};
+window.__etabli={state, pivot, TG, guides, enterGroupEdit, finishGroupEdit, pickAll, setLmb, openCtxMenu, HOV, groupSel, prefs, orbit_:()=>orbit, SAMPLES, LAYOUT:()=>LAYOUT, resetLayout, togglePanel, CHK, startLocTest, stopLocTest, openStructBubble, openMechBubble, closeBubble, BUB, stAnimPlay, locEdit, locFrame, LOCV, applyStruct3DK, camera, orbit, structGroup, struct3DHit, renderer, ampFactor, structBox, stDraw, arrowHits:()=>stArrowHits, setWs, ws:()=>ws, validateAll, validatePart, vState, mechReady, setJointLoc, ST, SD, computeStruct, solveTruss, buildMesh, solvePlane, beamTheory, makeProxy, getProxyGeo, locGroup, loadExample, openGallery, addPart, groupSel, openSketch, closeSketch, SK, skSolve, openPlanePicker, closePlanePicker, choosePlane, PP, planeRot, bzSetType, bzSetInterp, sim, simToggle, simReset, exportStl, stlBinary, zipStore, meshes, selection:()=>selection, setSel:(ids)=>{selection=ids; sync(); renderInspector();}, setTab, openJointForm, saveJoint, jf:()=>jf, skProfiles, getGeometry};

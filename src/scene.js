@@ -350,7 +350,7 @@ renderer.domElement.addEventListener('pointerup', ev=>{
   const hit=pickAt(ev);
   if(locPick!=null){ finishLocPick(hit); return; }
   if(ws==='mech' && jf){ const L=pickLocator(ev); if(L){ setJointLoc(L.pid,L.lid); return; } }
-  if(pickMode){ pickMode(hit?hit.point:null, hit); return; }
+  if(pickMode){ pickMode(hit?hit.point:null, hit, ev); return; }
   if(ws==='mech' && !jf){ if(hit){ const id=hit.object.userData.id; selection=[id]; sync(); renderInspector(); openMechBubble(findPart(id), ev, {point:hit.point}); } else { closeBubble(); if(selection.length){ selection=[]; sync(); renderInspector(); } } return; }
   if(!hit){ if(!ev.shiftKey && selection.length){ selection=[]; GZ.mode=null; sync(); renderInspector(); } return; }
   // clicking again on the same spot picks the next part behind (a hole inside a solid, overlapping parts)

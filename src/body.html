@@ -36,12 +36,16 @@
 
 
   <nav id="rack" data-ws="model" aria-label="Formes">
-    <div class="rack-title" data-min="2">Créer</div>
-    <button class="shape sketch" data-min="2" id="bSketch" title="Dessiner une esquisse cotée puis l'extruder"><svg data-i="k_sketch"></svg>Esquisse</button>
     <div class="rack-title">Volumes</div>
     <div id="rackBasic" style="display:contents"></div>
     <div class="rack-title" data-min="3">Mécanique</div>
     <div id="rackMeca" style="display:contents"></div>
+    <div class="rack-title rack-sk" data-min="2">Esquisse</div>
+    <button class="shape sketch" data-min="2" id="bSketch" data-sktool="rect" title="Nouvelle esquisse : choisir le plan, puis dessiner et coter"><svg data-i="k_sketch"></svg>Esquisse</button>
+    <button class="shape sk-tool" data-min="2" data-sktool="line" title="Esquisse en lignes : choisir le plan, puis tracer"><svg data-i="k_line"></svg>Ligne</button>
+    <button class="shape sk-tool" data-min="2" data-sktool="rect" title="Esquisse en rectangle : choisir le plan, puis tracer"><svg data-i="k_rect"></svg>Rectangle</button>
+    <button class="shape sk-tool" data-min="2" data-sktool="circle" title="Esquisse en cercle : choisir le plan, puis tracer"><svg data-i="k_circle"></svg>Cercle</button>
+    <button class="shape sk-tool" data-min="2" data-sktool="bezier" title="Esquisse en courbe de Bézier : choisir le plan, puis tracer point par point"><svg data-i="k_bez"></svg>Bézier</button>
     <button class="rackmin-btn" id="rackMin" title="Réduire la barre des formes" aria-label="Réduire la barre des formes"><svg data-i="chevUp"></svg></button>
   </nav>
   <nav id="toolbar" data-ws="model" aria-label="Outils de modification">
@@ -112,6 +116,15 @@
     <div id="demo" hidden></div>
     <div id="banner" hidden></div>
     <div id="pickHint" hidden></div>
+    <div id="planePick" class="plane-pick" hidden role="dialog" aria-label="Choisir le plan de l’esquisse">
+      <div class="pp-head"><b>Sur quel plan dessiner ?</b><small>Cliquez un plan dans la vue ou ci-dessous.</small></div>
+      <div class="pp-list">
+        <button class="pp-b" data-plane="xy"><svg viewBox="0 0 64 48"><path class="pp-box" d="M8 30 32 18l24 12-24 12z"/><path class="pp-pl" d="M8 30 32 18l24 12-24 12z"/><path class="pp-ax" d="M32 30v-24"/></svg><b>Dessus</b><small>Plan XY · au sol</small></button>
+        <button class="pp-b" data-plane="xz"><svg viewBox="0 0 64 48"><path class="pp-box" d="M8 34 32 46l24-12-24-12z"/><path class="pp-pl" d="M8 34V8l24 12v26z"/></svg><b>Face</b><small>Plan XZ · debout, devant</small></button>
+        <button class="pp-b" data-plane="yz"><svg viewBox="0 0 64 48"><path class="pp-box" d="M8 34 32 46l24-12-24-12z"/><path class="pp-pl" d="M32 46V20l24-12v26z"/></svg><b>Côté</b><small>Plan YZ · debout, à droite</small></button>
+      </div>
+      <button class="btn ghost pp-cancel" id="planeCancel">Annuler</button>
+    </div>
     <div id="toast" style="opacity:0"></div>
   </main>
 
@@ -128,13 +141,13 @@
 <!-- sketch editor -->
 <section id="sk" hidden aria-label="Éditeur d'esquisse">
   <div id="skbar">
-    <span class="ttl">Esquisse</span>
+    <span class="ttl">Esquisse</span><span class="sk-plane" id="skPlane" title="Plan de l’esquisse"></span>
     <div class="tgroup"><span class="lbl">Tracer</span>
       <button class="tbtn" data-tool="select" title="Sélectionner / déplacer (V)"><svg data-i="cursor"></svg>Sélection</button>
       <button class="tbtn" data-tool="line" title="Ligne (L)"><svg data-i="k_line"></svg>Ligne</button>
       <button class="tbtn" data-tool="rect" title="Rectangle (R)"><svg data-i="k_rect"></svg>Rectangle</button>
       <button class="tbtn" data-tool="circle" title="Cercle (C)"><svg data-i="k_circle"></svg>Cercle</button>
-      <button class="tbtn" data-tool="bezier" data-min="3" title="Courbe de Bézier (B)"><svg data-i="k_bez"></svg>Bézier</button>
+      <button class="tbtn" data-tool="bezier" data-min="2" title="Courbe de Bézier, point par point (B)"><svg data-i="k_bez"></svg>Bézier</button>
     </div>
     <div class="tgroup"><span class="lbl">Coter</span>
       <button class="tbtn" data-tool="dim" title="Cote (D)"><svg data-i="k_dim"></svg>Cote</button>
@@ -158,7 +171,21 @@
       <label class="tbtn" title="Accrocher à la grille"><input type="checkbox" id="skSnap" checked> Grille</label>
     </div>
   </div>
-  <div id="skCanvasWrap"><canvas id="skCanvas"></canvas><input id="dimEdit" hidden inputmode="decimal" aria-label="Valeur de la cote"></div>
+  <div id="skCanvasWrap"><canvas id="skCanvas"></canvas><input id="dimEdit" hidden inputmode="decimal" aria-label="Valeur de la cote">
+    <div id="bzOpts" class="bz-opts" hidden role="toolbar" aria-label="Options du point de la courbe">
+      <span class="bz-ttl" id="bzTitle">Point</span>
+      <div class="bz-grp"><span class="lbl">Interpolation</span>
+        <button class="bz-b" data-it="lin" title="Anguleux : la courbe arrive en ligne droite sur le point"><svg viewBox="0 0 24 24"><path d="M3 19 12 6l9 13"/><rect x="10" y="4" width="4" height="4"/></svg>Anguleux</button>
+        <button class="bz-b" data-it="auto" title="Lisse automatique : les tangentes se règlent seules d’après les points voisins"><svg viewBox="0 0 24 24"><path d="M3 18C7 4 17 4 21 18"/><rect x="10" y="5" width="4" height="4"/></svg>Lisse auto</button>
+        <button class="bz-b" data-it="bez" title="Courbe : tangentes réglées à la main avec les poignées"><svg viewBox="0 0 24 24"><path d="M3 18C6 6 18 6 21 18"/><path d="M4 7h16" stroke-dasharray="2 2"/><circle cx="4" cy="7" r="2"/><circle cx="20" cy="7" r="2"/><rect x="10" y="5" width="4" height="4"/></svg>Courbe</button>
+      </div>
+      <div class="bz-grp"><span class="lbl">Tangentes</span>
+        <button class="bz-b" data-tm="free" title="Casser : les deux poignées bougent séparément (pointe)"><svg viewBox="0 0 24 24"><path d="M3 8 12 14l9-10"/><circle cx="3" cy="8" r="2"/><circle cx="21" cy="4" r="2"/><rect x="10" y="12" width="4" height="4"/></svg>Casser</button>
+        <button class="bz-b" data-tm="sym" title="Symétriser : poignées alignées et de même longueur"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><circle cx="3" cy="12" r="2"/><circle cx="21" cy="12" r="2"/><rect x="10" y="10" width="4" height="4"/></svg>Symétriser</button>
+        <button class="bz-b" data-tm="align" title="Dessymétriser : poignées alignées, longueurs différentes"><svg viewBox="0 0 24 24"><path d="M2 12h20"/><circle cx="7" cy="12" r="2"/><circle cx="22" cy="12" r="2"/><rect x="10" y="10" width="4" height="4"/></svg>Dessymétriser</button>
+      </div>
+    </div>
+  </div>
   <div id="skHint"></div>
   <div id="skSide">
     <div class="sec"><h3>État de l'esquisse</h3><div id="skStatus" class="status ok"></div></div>
@@ -202,7 +229,9 @@
         <li><b>Clic droit</b> dans la vue : choisir ce que fait le clic gauche dans le vide (cadre de sélection, tourner ou décaler la vue). Molette : zoomer. <b>Double-clic</b> sur un objet : zoomer dessus (dans le vide : tout voir).</li>
       </ul></div>
       <div><h4>Esquisser</h4><ul>
-        <li>Tracez avec Ligne, Rectangle ou Cercle. Un contour doit être fermé.</li>
+        <li>Les boutons d’esquisse sont à droite de la barre du haut. Choisissez d’abord le <b>plan</b> : dessus (XY), face (XZ) ou côté (YZ).</li>
+        <li>Tracez avec Ligne, Rectangle, Cercle ou <b>Bézier</b>. Un contour doit être fermé.</li>
+        <li><b>Bézier</b> : un clic pose un point anguleux ; cliquer-glisser pose un point et tire sa courbe. Les boutons du point changent l’interpolation et cassent ou symétrisent les tangentes (Alt + glisser : casser).</li>
         <li><b>Cote</b> : cliquez une ligne, un cercle ou deux points, puis tapez la valeur.</li>
         <li>Les contraintes (H, V, ∥, ⊥, =, fixe) imposent la forme.</li>
         <li>Validez pour extruder ou faire une révolution autour de l'axe vertical.</li>
@@ -219,8 +248,8 @@
       </ul></div>
       <div><h4>Niveaux</h4><ul>
         <li><b>Débutant</b> : volumes simples, perçages, groupes, couleurs, export STL.</li>
-        <li><b>Intermédiaire</b> : + esquisses cotées, tube et tore, aligner, liaisons et moteurs.</li>
-        <li><b>Avancé</b> : + engrenages, transmissions, Bézier, révolution, contraintes avancées et arborescence.</li>
+        <li><b>Intermédiaire</b> : + esquisses cotées et courbes de Bézier, tube et tore, aligner, liaisons et moteurs.</li>
+        <li><b>Avancé</b> : + engrenages, transmissions, révolution, contraintes avancées et arborescence (à gauche).</li>
         <li>Le niveau se choisit en haut à droite ; il est mémorisé dans ce navigateur.</li>
       </ul></div>
       <div><h4>Raccourcis</h4><ul>
