@@ -42,14 +42,21 @@ function tgBuild(){
   // the protractor shown while turning
   const ring=new THREE.Mesh(new THREE.RingGeometry(0.82,1,96), new THREE.MeshBasicMaterial({color:0x3d8bd0, transparent:true, opacity:.28, side:THREE.DoubleSide, depthTest:false}));
   // graduations sombres par-dessus : petites tous les 5°, moyennes tous les 15°, grandes tous les 45° (quadrilatères fins, plus épais quand ils sont grands)
-  const tk=[]; for(let i=0;i<72;i++){ const a=i/72*Math.PI*2, big=i%9===0, mid=i%3===0, r0= big? 0.66 : mid? 0.78 : 0.88, w= big? 0.016 : mid? 0.009 : 0.005;
-    const c=Math.cos(a), s=Math.sin(a), px=-s*w, py=c*w; const A=[c*r0+px,s*r0+py], B=[c*r0-px,s*r0-py], C=[c*1.02-px,s*1.02-py], D=[c*1.02+px,s*1.02+py];
-    tk.push(...A,0, ...B,0, ...C,0, ...A,0, ...C,0, ...D,0); }
-  const tg=new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.Float32BufferAttribute(tk,3));
-  const ticks=new THREE.Mesh(tg, new THREE.MeshBasicMaterial({color:0x1b2421, transparent:true, opacity:.88, side:THREE.DoubleSide, depthTest:false})); ticks.renderOrder=22;
+  // noires avec un liseré blanc (dessous, plus large) pour se voir sur toutes les couleurs
+  const tick=(lvl, a, grow)=>{ const r0=[0.88,0.78,0.66][lvl]-grow, r1=1.02+grow, w=[0.005,0.009,0.016][lvl]+grow; const c=Math.cos(a), s=Math.sin(a), px=-s*w, py=c*w;
+    const A=[c*r0+px,s*r0+py], B=[c*r0-px,s*r0-py], C=[c*r1-px,s*r1-py], D=[c*r1+px,s*r1+py]; return [...A,0, ...B,0, ...C,0, ...A,0, ...C,0, ...D,0]; };
+  const lvlOf=i=> i%9===0? 2 : i%3===0? 1 : 0;
+  const geo=arr=>{ const g=new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(arr,3)); return g; };
+  const mat=(c,o)=>new THREE.MeshBasicMaterial({color:c, transparent:true, opacity:o, side:THREE.DoubleSide, depthTest:false});
+  const all=g=>{ const t=[]; for(let i=0;i<72;i++) t.push(...tick(lvlOf(i), i/72*Math.PI*2, g)); return t; };
+  const halo=new THREE.Mesh(geo(all(0.008)), mat(0xffffff,.95)); halo.renderOrder=22;
+  const ticks=new THREE.Mesh(geo(all(0)), mat(0x000000,1)); ticks.renderOrder=23;
+  // graduation sous le pointeur (ou attrapée) : liseré plus épais
+  TG.hi=new THREE.Group(); TG.hiL=[0,1,2].map(l=>{ const g=new THREE.Group(); const w=new THREE.Mesh(geo(tick(l,0,0.03)), mat(0xffffff,1)); w.renderOrder=24; const k=new THREE.Mesh(geo(tick(l,0,0.004)), mat(0x000000,1)); k.renderOrder=25; g.add(w,k); g.visible=false; TG.hi.add(g); return g; });
   const needle=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(1.05,0,0)]), new THREE.LineBasicMaterial({color:0xd64035, depthTest:false}));
-  needle.renderOrder=23; ring.renderOrder=21;
-  TG.ring=new THREE.Group(); TG.ring.add(ring, ticks, needle); TG.needle=needle; TG.ring.visible=false; TG.ring.renderOrder=20; scene.add(TG.ring);
+  needle.renderOrder=26; ring.renderOrder=21;
+  window.addEventListener('pointermove', e=>{ TG.ptr={clientX:e.clientX, clientY:e.clientY}; }, {passive:true});
+  TG.ring=new THREE.Group(); TG.ring.add(ring, halo, ticks, needle, TG.hi); TG.needle=needle; TG.ring.visible=false; TG.ring.renderOrder=20; scene.add(TG.ring);
   TG.marks=[0,45,90,135,180,-135,-90,-45].map(a=>{ const e=h('span',{class:'tg-mark',hidden:true},`${a}°`); e.dataset.a=a; root.append(e); return e; });
   for(const k of ['x','y','z']){ for(const e of [TG.rot[k], svg.querySelector(`.tg-arch[data-k="r${k}"]`)]){ e.addEventListener('pointerenter',()=>{ TG.hover=k; }); e.addEventListener('pointerleave',()=>{ if(TG.hover===k) TG.hover=null; }); } }
 }
@@ -97,9 +104,9 @@ function tgTick(){
   TG.svg.querySelector('.tg-dim').setAttribute('d', dpath);
   TG.svg.querySelector('.tg-snap').setAttribute('d', SNAPSEG.map(([a,c])=>{ const p=toStage(a), q=toStage(c); return `M${p.x},${p.y}L${q.x},${q.y}`; }).join(''));   // smart-snap guides
   if(TG.drag?.kind==='rot'){ const d=TG.drag, a=d.as||0; const tip=toStage(d.c.clone().add(d.u.clone().multiplyScalar(Math.cos(a)*d.R*0.5)).add(d.v.clone().multiplyScalar(Math.sin(a)*d.R*0.5)));   // the angle sits on the needle, inside the protractor
-    TG.ang.hidden=false; TG.ang.textContent=`${Math.round(a/DEG)}°`; TG.ang.classList.toggle('snap', !!d.lvl); TG.ang.style.transform=`translate(${Math.round(tip.x)}px,${Math.round(tip.y)}px) translate(-50%,-50%)`; tgMarks(d, a); }
+    TG.ang.hidden=false; TG.ang.textContent=`${Math.round(a/DEG)}°`; TG.ang.classList.toggle('snap', !!d.lvl); tgHi(a, d.lvl||0); TG.ang.style.transform=`translate(${Math.round(tip.x)}px,${Math.round(tip.y)}px) translate(-50%,-50%)`; tgMarks(d, a); }
   else { TG.ang.hidden=true;
-    if(TG.hover && !TG.drag){ tgMarks(tgRingSetup(F, TG.hover), null); }   // survol d'une flèche : le rapporteur et ses graduations apparaissent
+    if(TG.hover && !TG.drag){ const g=tgRingSetup(F, TG.hover); tgMarks(g, null); tgHoverTick(g); }   // survol d'une flèche : le rapporteur et ses graduations apparaissent
     else { TG.ring.visible=false; for(const e of TG.marks) e.hidden=true; } }
 }
 
@@ -141,6 +148,13 @@ function tgSnapAngle(a, ppr, free=false){
   if(!free) for(const [st,px,lvl] of TG_SNAP){ const t=Math.round(a/(st*DEG))*st*DEG; if(Math.abs(a-t)*ppr<=px) return {a:t, lvl}; }
   return {a:Math.round(a/DEG)*DEG, lvl:0};
 }
+/* thicker outline on graduation lvl (1 small, 2 medium, 3 big) at angle a, none when lvl is 0 */
+function tgHi(a, lvl){ TG.hiL.forEach((g,i)=>{ g.visible= lvl===i+1; if(g.visible) g.rotation.z=a; }); }
+/* the graduation nearest the pointer on the protractor g (hover preview) */
+function tgHoverTick(g){ if(!TG.ptr) return tgHi(0,0); const hp=tgHit(TG.ptr, new THREE.Plane().setFromNormalAndCoplanarPoint(g.axis,g.c)); if(!hp) return tgHi(0,0);
+  const v=hp.sub(g.c), a=Math.atan2(v.dot(g.v), v.dot(g.u)); let best=null;
+  for(const [st,px,lvl] of TG_SNAP){ const t=Math.round(a/(st*DEG))*st*DEG; if(Math.abs(a-t)*g.ppr<=px*1.6){ best={t,lvl}; break; } }
+  if(best) tgHi(best.t, best.lvl); else tgHi(0,0); }
 /* degree labels at the big marks of the visible protractor */
 function tgMarks(g, as){
   for(const e of TG.marks){ const t=+e.dataset.a*DEG, r=g.R*1.12; const p=toStage(g.c.clone().addScaledVector(g.u,Math.cos(t)*r).addScaledVector(g.v,Math.sin(t)*r));
@@ -189,6 +203,13 @@ function tgMove(ev){
   if(s[1]) f[1]=sn(s[1]>0? q.y-b.min.y : b.max.y-q.y)/size0.y;
   if(s[2]) f[2]=sn(q.z-b.min.z)/size0.z;
   if(ev.shiftKey){ const m=s[2]? f[2] : Math.max(s[0]?f[0]:0, s[1]?f[1]:0); f[0]=f[1]=f[2]=m; }   // keep the proportions
+  if(p.kind==='group'){   // aperçu : le maillage est étiré ; les pièces du groupe ne sont recalculées qu'au relâchement
+    d.f=f; const nb={min:b.min.clone().multiply(new THREE.Vector3(...f)), max:b.max.clone().multiply(new THREE.Vector3(...f))};
+    const off=new THREE.Vector3(s[0]>0? b.min.x-nb.min.x : s[0]<0? b.max.x-nb.max.x : (b.min.x+b.max.x-nb.min.x-nb.max.x)/2,
+      s[1]>0? b.min.y-nb.min.y : s[1]<0? b.max.y-nb.max.y : (b.min.y+b.max.y-nb.min.y-nb.max.y)/2, b.min.z-nb.min.z).applyMatrix4(d.R);
+    p.pos=[+(it.pos[0]+off.x).toFixed(3), +(it.pos[1]+off.y).toFixed(3), +(it.pos[2]+off.z).toFixed(3)];
+    const r=meshes.get(p.id); if(r){ r.mesh.position.set(...p.pos); r.mesh.scale.set(...f); r.mesh.updateMatrix(); }
+    liveInspector(); return; }
   p.params=clone(it.params); scaleParams(p,f);
   const g=getGeometry(p); if(!g.boundingBox) g.computeBoundingBox(); const nb=g.boundingBox;
   const off=new THREE.Vector3(
@@ -202,6 +223,7 @@ function tgEnd(ev){
   const d=TG.drag; TG.drag=null; orbit.enabled=true; TG.ring.visible=false; for(const e of TG.marks) e.hidden=true; if(!d) return;
   if(d.kind==='rot' && d.as){ const R=new THREE.Matrix4().makeTranslation(d.c.x,d.c.y,d.c.z).multiply(new THREE.Matrix4().makeRotationAxis(d.axis,d.as)).multiply(new THREE.Matrix4().makeTranslation(-d.c.x,-d.c.y,-d.c.z));
     for(const it of d.items) setPartFromMatrix(it.p, R.clone().multiply(it.M)); toast(`Tourné de ${Math.round(d.as/DEG)}°`); }
+  if(d.kind==='scale' && d.f && d.items[0].p.kind==='group'){ scaleParams(d.items[0].p, d.f); const r=meshes.get(d.items[0].p.id); if(r) r.mesh.scale.set(1,1,1); }
   if(d.kind==='scale') TG.dimUntil=performance.now()+2500;
   if(d.moved){ sync(); commit(); renderInspector(); }
 }

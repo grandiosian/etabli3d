@@ -246,8 +246,16 @@ const GZ={mode:null};   // the three.js TransformControls are no longer shown: s
 function setGizmoMode(m){ GZ.mode=null; updateGizmo(); }
 /* resizing with the gizmo changes the part's own dimensions (rounded to 0.1 mm) */
 const SCALE_MAP={box:{L:'x',l:'y',h:'z'}, pyramid:{L:'x',l:'y',h:'z'}, wedge:{L:'x',l:'y',h:'z'}, cylinder:{d:'xy',h:'z'}, cone:{d:'xy',d2:'xy',h:'z'},
-  tube:{d:'xy',di:'xy',h:'z'}, sphere:{d:'xyz'}, torus:{d:'xy',e:'z'}, text:{size:'xy',h:'z'}, gear:{m:'xy',dh:'xy',e:'z'}, rack:{m:'x',hb:'y',e:'z'}, sketch:{h:'z'}};
-function scaleParams(p, f){ const M=SCALE_MAP[p.kind]; if(!M) return;
+  tube:{d:'xy',di:'xy',h:'z'}, sphere:{d:'xyz'}, torus:{d:'xy',e:'z'}, text:{size:'xy',h:'z'}, gear:{m:'xy',dh:'xy',e:'z'}, rack:{m:'x',hb:'y',e:'z'}, sketch:{h:'z'}, group:{}};
+/* f : facteurs selon les axes propres de la pièce. Un groupe transmet l'étirement à ses pièces : leurs positions
+   (dans le repère du groupe) sont multipliées, et chacune reçoit le facteur de ses propres axes (exact quand elle
+   est tournée d'un multiple de 90°, approché sinon). */
+function scaleParams(p, f){
+  if(p.kind==='group'){ for(const c of p.children||[]){ c.pos=c.pos.map((v,i)=>+(v*f[i]).toFixed(3));
+      const R=new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(...c.rot.map(a=>a*DEG),'XYZ'));
+      scaleParams(c, [0,1,2].map(i=>{ const u=new THREE.Vector3().setFromMatrixColumn(R,i); return Math.hypot(u.x*f[0],u.y*f[1],u.z*f[2]); })); }
+    return; }
+  const M=SCALE_MAP[p.kind]; if(!M) return;
   const one=v=>Math.abs(v-1)<1e-9, xy= one(f[0])? f[1] : one(f[1])? f[0] : (f[0]+f[1])/2;   // a round part dragged on one side follows that side
   const F={x:f[0],y:f[1],z:f[2],xy,xyz: one(f[0])&&one(f[1])? f[2] : one(f[2])? xy : (f[0]+f[1]+f[2])/3};
   for(const [k,a] of Object.entries(M)) if(typeof p.params[k]==='number' && p.params[k]>0) p.params[k]=Math.max(0.1, Math.round(p.params[k]*F[a]*10)/10);
