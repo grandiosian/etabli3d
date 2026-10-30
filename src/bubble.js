@@ -8,6 +8,8 @@
 const BUB={target:null, kind:null, x:0, y:0};
 function placeBubble(x, y){
   const b=$('#bubble'), st=$('#stage').getBoundingClientRect(); const w=b.offsetWidth, hh=b.offsetHeight;
+  const L=LAYOUT.bubble; if(L && L.x!=null){   // moved by the user: it stays where it was put
+    setPos(b, clamp(L.x,0,Math.max(0,st.width-w)), clamp(L.y,0,Math.max(0,st.height-hh))); b.dataset.side=''; return; }
   let left=x+16, top=y-hh-14, side='bl';
   if(top<8){ top=y+16; side='tl'; }
   if(left+w>st.width-8){ left=x-w-16; side= side==='bl'? 'br' : 'tr'; }
@@ -20,9 +22,13 @@ function openBubble(kind, target, x, y, build){
 }
 function closeBubble(){ const b=$('#bubble'); if(b){ b.hidden=true; } BUB.kind=null; BUB.target=null; }
 function bubHead(icon, title, sub, chip){
-  return h('div',{class:'bub-head'}, icon? svgIcon(icon) : null, h('div',{class:'bub-t'}, h('b',{},title), sub? h('small',{html:sub}) : null), chip||null,
+  const head=h('div',{class:'bub-head',title:'Glisser pour déplacer la bulle'}, h('span',{class:'bub-grip','aria-hidden':'true'}, svgIcon('dots')), icon? svgIcon(icon) : null, h('div',{class:'bub-t'}, h('b',{},title), sub? h('small',{html:sub}) : null), chip||null,
+    h('button',{class:'bub-pin',title:'Raccrocher la bulle à l’objet cliqué','aria-label':'Raccrocher la bulle à l’objet cliqué',onclick:unpinBubble}, svgIcon('pin')),
     h('button',{class:'bub-x',title:'Fermer','aria-label':'Fermer la bulle',onclick:closeBubble}, svgIcon('close')));
+  head.addEventListener('pointerdown',e=>startPanelDrag(e, $('#bubble'), 'bubble'));
+  return head;
 }
+function unpinBubble(){ delete LAYOUT.bubble; saveLayout(); const b=$('#bubble'); clearPos(b); placeBubble(BUB.x,BUB.y); }
 /* slider row: label, range, value; onInput runs live, onChange once at the end */
 function bubSlider(label, val, min, max, step, unit, onInput, onChange){
   const out=h('span',{class:'bub-v mono'}, `${fmt(val,step<1?1:0)} ${unit}`);

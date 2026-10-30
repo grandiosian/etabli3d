@@ -9,7 +9,8 @@
 - Les exemples de démonstration sont dans `src/examples.js` (objet `SAMPLES`) : chaque exemple a une fiche « À observer / À essayer » ; les positions sont en coordonnées monde.
 - Niveaux : `<html data-level="1|2|3">`. Marquez un élément `data-min="2"` ou `data-min="3"` pour le réserver à un niveau, `data-max="2"` pour le masquer au-dessus ; en JS, testez `lv(n)`. Les formes ont leur niveau dans `KIND_LVL`, chaque exemple dans `level`.
 - Ateliers : `<html data-ws="model|check|mech|struct">` ; un élément `data-ws="model mech"` n'apparaît que dans ces ateliers. Changez d'atelier avec `setWs(k)`, testez `ws`. Pas de bandeau : la navigation est dans `#flow` (barre du haut), rendue par `updateSteps()`.
-- Panneaux flottants : listés dans `FLOATS` (`src/panels.js`) ; position et réduction dans `LAYOUT` (localStorage), réinitialisées par `resetLayout()`. La Mécanique exige `mechReady()` (toutes les pièces validées).
+- Panneaux flottants : listés dans `FLOATS` (`src/panels.js`) ; position et réduction dans `LAYOUT` (localStorage), réinitialisées par `resetLayout()`. La bulle (`#bubble`) se déplace par son en-tête (`LAYOUT.bubble`) ; transparence des panneaux : `prefs.glass` → `<html data-glass>`. La Mécanique exige `mechReady()` (toutes les pièces validées).
 - Validation : `p.valid` (statut, triangles, proxy) et `p.locs` (repères, en coordonnées locales de la pièce). `vState(p)` renvoie `stale` si la géométrie a changé depuis la validation.
 - Structures : `state.struct` (treillis + maillage), unités mm / N / MPa, plan vertical (x, y) affiché en (X, Z) dans la vue 3D.
 - Le push sur `main` déploie automatiquement sur GitHub Pages.
+- Déformée « auto » : l'échelle est figée par modèle (`ST.ampRef`, remise à zéro par `resetAmpRef()` au chargement d'un exemple ou au changement de module/portée) pour qu'une force plus grande se voie ; plafond à 30 % de la portée.

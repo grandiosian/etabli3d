@@ -9,7 +9,8 @@ const PREFS_KEY='etabli3d.prefs';
 const prefs=(()=>{ let p={}; try{ p=JSON.parse(localStorage.getItem(PREFS_KEY)||'{}')||{}; }catch(e){}
   return { level:[1,2,3].includes(p.level)? p.level : 1, firstVisit:!p.level,
     theme:['auto','light','dark'].includes(p.theme)? p.theme : 'auto',
-    accent:p.accent||'vert', mat:p.mat||'vert', tree:p.tree!==false, axes:p.axes||'classique', labels:p.labels!==false }; })();
+    accent:p.accent||'vert', mat:p.mat||'vert', tree:p.tree!==false, axes:p.axes||'classique', labels:p.labels!==false,
+    glass:['transparent','leger','opaque'].includes(p.glass)? p.glass : 'transparent' }; })();
 function savePrefs(){ try{ const {firstVisit,...keep}=prefs; localStorage.setItem(PREFS_KEY, JSON.stringify(keep)); }catch(e){} }
 const lv=n=>prefs.level>=n;
 
@@ -43,5 +44,7 @@ function applyTheme(){
   const L=`--accent:${A.light[0]};--accent-soft:${A.light[1]};--accent-ink:#ffffff`, D=`--accent:${A.dark[0]};--accent-soft:${A.dark[1]};--accent-ink:#0b1512`;
   st.textContent=`:root{${L}} @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){${D}}} :root[data-theme="dark"]{${D}}`;
 }
+function applyGlass(){ document.documentElement.dataset.glass=prefs.glass; }
+applyGlass();
 function applyLevelAttr(){ document.documentElement.dataset.level=prefs.level; }
 applyTheme(); applyLevelAttr();

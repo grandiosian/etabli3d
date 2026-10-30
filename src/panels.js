@@ -27,6 +27,7 @@ function startPanelDrag(e, el, id){
   const move=ev=>{ setPos(el, clamp(ev.clientX-st.left-ox,0,Math.max(0,st.width-r.width)), clamp(ev.clientY-st.top-oy,0,Math.max(0,st.height-r.height))); };
   const up=()=>{ window.removeEventListener('pointermove',move); window.removeEventListener('pointerup',up); el.classList.remove('dragging');
     const rr=el.getBoundingClientRect(); LAYOUT[id]={...LAYOUT[id], x:Math.round(rr.left-st.left), y:Math.round(rr.top-st.top)}; saveLayout();
+    if(id==='bubble') el.dataset.side='';
     if(id==='demo'){ applyViewOffset(); if(ws==='struct'){ ST.fitted=false; stFit(); stDraw(); } } };
   window.addEventListener('pointermove',move); window.addEventListener('pointerup',up);
 }
@@ -54,6 +55,6 @@ function applyDock(){
 function resetLayout(){
   LAYOUT={}; saveLayout();
   for(const [id] of FLOATS){ const el=$('#'+id); if(el){ clearPos(el); el.classList.remove('collapsed'); } }
-  clearPos($('#demo')); applyDock(); applyViewOffset(); if(ws==='struct'){ ST.fitted=false; stResize(); }
+  clearPos($('#demo')); if(!$('#bubble').hidden) placeBubble(BUB.x,BUB.y); applyDock(); applyViewOffset(); if(ws==='struct'){ ST.fitted=false; stResize(); }
   toast('Disposition des panneaux réinitialisée.');
 }

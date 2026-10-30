@@ -180,6 +180,34 @@ with sync_playwright() as p:
     check('animation aussi en 3D', pg.evaluate(f"()=>{E}.ST.g3 && {E}.ST.g3.kind==='truss'") and pg.evaluate(f"()=>{E}.ST.k") != k3)
     pg.click('#stTools [data-v3="0"]'); pg.evaluate(f"()=>{E}.stAnimPlay(false)"); pg.keyboard.press('Escape')
 
+    # Échelle de déformée fixe : une force double donne une déformée dessinée double
+    pg.evaluate(f"()=>{E}.loadExample('pontWarren')"); pg.wait_for_timeout(300)
+    r = pg.evaluate(f"""()=>{{const E={E}; const shown=()=>{{const b=E.structBox(), R=E.ST.res; return E.ampFactor(Math.max(b.maxx-b.minx,b.maxy-b.miny), R.umax, 0.035)*R.umax;}};
+      const a=shown(); for(const n of E.SD().truss.nodes){{ n.fy=2*(+n.fy||0); n.fx=2*(+n.fx||0); }} E.computeStruct(); const c=shown(); return [a, c];}}""")
+    check('force ×2 → déformée affichée ×2', abs(r[1]/r[0] - 2) < 0.05, r)
+
+    # Flèche de charge cliquable (vue 2D) → bulle du nœud
+    pg.click('#stTools [data-st="select"]')
+    pg.evaluate(f"()=>{E}.stDraw()")
+    pt = pg.evaluate(f"""()=>{{const E={E}; E.closeBubble(); const c=document.querySelector('#stCanvas').getBoundingClientRect();
+      for(const a of E.arrowHits()){{ const x=c.left+(a.x0*0.4+a.x1*0.6), y=c.top+(a.y0*0.4+a.y1*0.6); if(document.elementFromPoint(x,y)?.id==='stCanvas') return [x,y]; }} return null;}}""")
+    if pt: pg.mouse.click(pt[0], pt[1]); pg.wait_for_timeout(150)
+    r = pg.evaluate(f"()=>[{E}.BUB.kind, {E}.BUB.target && {E}.BUB.target.t]")
+    check('clic sur une flèche de charge → bulle', r == ['struct', 'node'], r)
+
+    # Bulle déplaçable et transparente
+    bb = pg.locator('#bubble .bub-head').bounding_box(); pg.mouse.move(bb['x']+60, bb['y']+10); pg.mouse.down(); pg.mouse.move(bb['x']-120, bb['y']+90, steps=6); pg.mouse.up()
+    r = pg.evaluate(f"()=>[{E}.LAYOUT().bubble, document.querySelector('#bubble').dataset.side]")
+    check('bulle déplacée et mémorisée', r[0] and r[0].get('x') is not None and r[1] == '', r)
+    pg.evaluate(f"()=>{{const E={E}; const n=E.SD().truss.nodes[1]; E.openStructBubble({{t:'node',id:n.id}}, 50, 50);}}")
+    pos = pg.evaluate("()=>{const s=document.querySelector('#stage').getBoundingClientRect(), b=document.querySelector('#bubble').getBoundingClientRect(); return [Math.round(b.left-s.left), Math.round(b.top-s.top)]}")
+    check('la bulle rouverte reste à sa place', [pos[0], pos[1]] == [r[0]['x'], r[0]['y']], [pos, r[0]])
+    alpha = pg.evaluate("()=>getComputedStyle(document.querySelector('#bubble')).backgroundColor")
+    check('bulle et panneaux semi-transparents', ('/ 0.7' in alpha or 'rgba' in alpha) and pg.evaluate("()=>getComputedStyle(document.querySelector('#stLegendBox')).backgroundColor") != pg.evaluate("()=>getComputedStyle(document.querySelector('#insp')).backgroundColor"), alpha)
+    pg.click('#bubble .bub-pin'); pg.wait_for_timeout(100)
+    check('bulle raccrochée à l’objet', pg.evaluate(f"()=>!{E}.LAYOUT().bubble && document.querySelector('#bubble').dataset.side!==''"))
+    pg.keyboard.press('Escape')
+
     # Démarche : Modéliser -> Valider -> simulations, sans bandeau
     pg.evaluate(f"()=>{E}.loadExample('maison')"); pg.wait_for_timeout(300)
     pg.click('#flow [data-go="check"]'); pg.wait_for_timeout(300)

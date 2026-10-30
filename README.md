@@ -10,7 +10,7 @@ Il n'y a plus de bandeau d'étapes : la navigation suit la démarche.
 
 1. **Modéliser** : créer les pièces. En haut, le bouton **Valider pour simulation** (ou **Vérifier pour l'impression** au niveau Débutant) mène à la validation.
 2. **Valider** : une interface réduite aux panneaux utiles. On contrôle chaque pièce (forme vide ou plate, surface non fermée, contour d'esquisse qui se croise, épaisseur < 1 mm, pièce sous le plan ou en l'air, perçage isolé), on mesure sa complexité, on crée un **proxy basse résolution** pour les pièces lourdes, on règle et ajoute des **repères**, et le **mode test** fait tourner ou glisser la pièce autour d'un repère pour vérifier son axe et son sens. Les boutons **Mouvement** et **Déformation** mènent aux simulations (Mouvement se débloque quand toutes les pièces sont validées).
-3. **Mécanique** (mouvement) et **Structures** (déformation) : seulement un bouton de retour et le passage de l'une à l'autre. Chaque liaison a une **étiquette** ; un clic sur une pièce ou sur la structure ouvre une **bulle** pour animer, régler et relancer.
+3. **Mécanique** (mouvement) et **Structures** (déformation) : seulement un bouton de retour et le passage de l'une à l'autre. Chaque liaison a une **étiquette** ; un clic sur une pièce, sur la structure ou sur une flèche de charge ouvre une **bulle** pour animer, régler et relancer. La bulle se déplace par son en-tête (l'épingle la raccroche à l'objet). Les panneaux sont semi-transparents (Apparence → Panneaux). En Structures, l'échelle « Amplifiée » reste fixe pendant les essais : une force deux fois plus grande donne une déformée deux fois plus grande (bouton « Recaler » pour la réajuster).
 
 | Simulation | Contenu |
 |---|---|
