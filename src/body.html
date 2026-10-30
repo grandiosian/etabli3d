@@ -5,15 +5,7 @@
     <input id="projName" aria-label="Nom du projet" value="Mon projet">
     <div class="tb-group">
       <button class="btn ghost" id="bNew" title="Nouveau projet"><svg data-i="new"></svg><span class="hide-narrow">Nouveau</span></button>
-      <div class="menu-wrap">
-        <button class="btn ghost" id="bExamples" aria-haspopup="true"><svg data-i="book"></svg><span class="hide-narrow">Exemples</span></button>
-        <div class="menu" id="menuExamples" hidden>
-          <button data-ex="gears"><b>Engrenages et crémaillère</b><small>Transmission : 1 moteur, rapport −2, translation</small></button>
-          <button data-ex="arm"><b>Bras articulé</b><small>Pivots en chaîne : base, épaule, coude</small></button>
-          <button data-ex="crank"><b>Poulies et courroie + perçages</b><small>Groupes, perçages et poulies de diamètres différents</small></button>
-          <button data-ex="keyring"><b>Porte-clés</b><small>Texte, perçage, esquisse cotée</small></button>
-        </div>
-      </div>
+      <button class="btn ghost" id="bExamples" title="Exemples de démonstration"><svg data-i="book"></svg><span class="hide-narrow">Exemples</span></button>
       <button class="btn ghost" id="bOpen" title="Ouvrir un projet (.json)"><svg data-i="open"></svg><span class="hide-narrow">Ouvrir</span></button>
       <button class="btn ghost" id="bSave" title="Enregistrer le projet (.json)"><svg data-i="save"></svg><span class="hide-narrow">Enregistrer</span></button>
       <button class="btn" id="bStl" title="Exporter en STL pour l'impression 3D"><svg data-i="print"></svg><span>STL</span></button>
@@ -74,6 +66,7 @@
       <select id="sSpeed" aria-label="Vitesse de simulation"><option value="0.25">×0,25</option><option value="0.5">×0,5</option><option value="1" selected>×1</option><option value="2">×2</option></select>
       <span class="t" id="sTime">0,0 s</span>
     </div>
+    <div id="demo" hidden></div>
     <div id="banner" hidden></div>
     <div id="pickHint" hidden></div>
     <div id="toast" style="opacity:0"></div>
@@ -138,6 +131,13 @@
       <button class="btn primary" id="skOk" style="justify-content:center;padding:10px"><svg data-i="check"></svg>Valider l'esquisse</button>
       <button class="btn" id="skCancel" style="justify-content:center">Annuler</button>
     </div>
+  </div>
+</section>
+
+<section id="gallery" class="overlay" hidden>
+  <div class="card gal-card-wrap" role="dialog" aria-label="Exemples de démonstration">
+    <div class="gal-head"><div><h2>Exemples de démonstration</h2><p>Chaque exemple s'ouvre avec une fiche : ce qu'il faut observer, puis ce qu'il faut essayer.</p></div><button class="btn" id="galleryClose">Fermer</button></div>
+    <div id="galleryBody"></div>
   </div>
 </section>
 

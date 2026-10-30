@@ -12,6 +12,18 @@ Modeleur 3D pour les cours de technologie, dans l'esprit de Tinkercad, qui fonct
 - **Mouvements** : liaisons encastrement, pivot et glissière ; moteur continu ou aller-retour ; transmissions par rapport (engrenages, poulies, pignon-crémaillère, vis-écrou) ; simulation animée.
 - **Fichiers** : projet en `.json` (Enregistrer / Ouvrir), export `.stl` pour l'impression 3D. Sauvegarde automatique dans le navigateur.
 
+## Exemples de démonstration
+
+Le bouton **Exemples** ouvre une galerie de 13 projets prêts à l'emploi. Chacun s'ouvre avec une fiche « À observer / À essayer ».
+
+| Famille | Exemples |
+|---|---|
+| Modéliser avec des volumes | Maison (perçages, groupes, coins) · Pot à crayons gravé (texte en creux) · Dé à jouer (sphères en perçage) · Porte-clés |
+| Esquisser et coter | Plaque de fixation (esquisse totalement contrainte) · Pion d'échecs (révolution) |
+| Mettre en mouvement | Barrière de parking (pivot, butées) · Engrenages et crémaillère · Réducteur à deux étages (rapport 1/9) · Poulies et courroie · Étau (vis-écrou) · Bras articulé · Éolienne |
+
+Pour ajouter un exemple, complétez l'objet `SAMPLES` dans `src/examples.js`.
+
 ## Organisation du code
 
 ```
@@ -21,6 +33,7 @@ src/core.js      icônes, catalogue des formes, construction des géométries, g
 src/scene.js     scène 3D, sélection, déplacements, historique, opérations d'édition
 src/ui.js        panneau de réglages, liaisons, simulation, fichiers (.json, .stl)
 src/sketch.js    éditeur d'esquisse et solveur de contraintes
+src/examples.js  exemples de démonstration, galerie et fiche démo
 src/init.js      exemples, raccourcis clavier, démarrage
 build.py         assemble src/ en une seule page dans dist/
 ```

@@ -373,7 +373,7 @@ async function offerFile(filename, data){
   catch(e){ toast('Le téléchargement est bloqué dans cette fenêtre.'); }
 }
 const slug=s=>(s||'projet').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase()||'projet';
-function saveProject(){ offerFile(slug(state.name)+'.json', JSON.stringify({app:'etabli3d',version:1,name:state.name,parts:state.parts,joints:state.joints,nextId:state.nextId})); }
+function saveProject(){ offerFile(slug(state.name)+'.json', JSON.stringify({app:'etabli3d',version:1,name:state.name,parts:state.parts,joints:state.joints,nextId:state.nextId,note:state.note||null})); }
 function stlBinary(list){
   let tris=0; const geos=list.map(r=>{ const g=r.mesh.geometry; const n=g.index?g.index.count/3:g.attributes.position.count/3; tris+=n; return {g, m:r.mesh.matrixWorld}; });
   const buf=new ArrayBuffer(84+tris*50), dv=new DataView(buf);

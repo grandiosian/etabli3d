@@ -52,7 +52,13 @@ sceneBg();
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{ sceneBg(); sync(); });
 new MutationObserver(()=>{ sceneBg(); sync(); }).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 
-function resize(){ const r=stage.getBoundingClientRect(); if(r.width<2||r.height<2) return; renderer.setSize(r.width,r.height,false); camera.aspect=r.width/r.height; camera.updateProjectionMatrix(); }
+function resize(){ const r=stage.getBoundingClientRect(); if(r.width<2||r.height<2) return; renderer.setSize(r.width,r.height,false); camera.aspect=r.width/r.height; camera.updateProjectionMatrix(); applyViewOffset(); }
+/* On wide screens the demo card covers the left of the scene: shift the picture right by half its width. */
+function applyViewOffset(){
+  const r=stage.getBoundingClientRect(); if(r.width<2||r.height<2) return; const d=document.getElementById('demo');
+  const shift = (d && !d.hidden && r.width>760) ? Math.round((d.offsetWidth+10)/2) : 0;
+  if(shift) camera.setViewOffset(r.width,r.height,-shift,0,r.width,r.height); else camera.clearViewOffset();
+}
 new ResizeObserver(resize).observe(stage);
 
 /* TransformControls drives an invisible pivot; the selection follows it */
@@ -68,22 +74,22 @@ const markers=new THREE.Group(); markers.renderOrder=10; scene.add(markers);
 /* =========================================================
    State, history, autosave
    ========================================================= */
-let state={name:'Mon projet', parts:[], joints:[], nextId:1};
+let state={name:'Mon projet', parts:[], joints:[], nextId:1, note:null};
 let selection=[];
 let tab='part';
 let selJoint=null;
 const meshes=new Map();
 const hist={stack:[],idx:-1};
-function snapshot(){ return JSON.stringify({name:state.name,parts:state.parts,joints:state.joints,nextId:state.nextId}); }
+function snapshot(){ return JSON.stringify({name:state.name,parts:state.parts,joints:state.joints,nextId:state.nextId,note:state.note||null}); }
 function commit(){
   const s=snapshot(); if(hist.stack[hist.idx]===s) return;
   hist.stack=hist.stack.slice(0,hist.idx+1); hist.stack.push(s); if(hist.stack.length>80) hist.stack.shift(); hist.idx=hist.stack.length-1;
   autosave(); updateUndo();
 }
 function restore(s, keepSel=true){
-  const o=JSON.parse(s); state.name=o.name||'Mon projet'; state.parts=o.parts||[]; state.joints=o.joints||[]; state.nextId=o.nextId||1;
+  const o=JSON.parse(s); state.name=o.name||'Mon projet'; state.parts=o.parts||[]; state.joints=o.joints||[]; state.nextId=o.nextId||1; state.note=o.note||null;
   $('#projName').value=state.name;
-  selection = keepSel? selection.filter(id=>findPart(id)) : [];
+  selection = keepSel? selection.filter(id=>findPart(id)) : []; renderDemo();
   if(selJoint && !state.joints.find(j=>j.id===selJoint)) selJoint=null;
   simReset(true); sync(); renderInspector(); autosave(); updateUndo();
 }
@@ -94,8 +100,8 @@ let saveTimer=0;
 function autosave(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>{ try{ localStorage.setItem('etabli3d.autosave', snapshot()); }catch(e){} }, 400); }
 function loadProject(obj, push=true){
   if(!obj || !Array.isArray(obj.parts)) throw new Error('format');
-  state.name=obj.name||'Projet'; state.parts=obj.parts; state.joints=obj.joints||[]; state.nextId=obj.nextId|| (maxId(obj.parts)+1);
-  $('#projName').value=state.name; selection=[]; selJoint=null; simReset(true); sync(); renderInspector();
+  state.name=obj.name||'Projet'; state.parts=obj.parts; state.joints=obj.joints||[]; state.nextId=obj.nextId|| (maxId(obj.parts)+1); state.note=obj.note||null; demoClosed=false;
+  $('#projName').value=state.name; selection=[]; selJoint=null; simReset(true); sync(); renderInspector(); renderDemo();
   if(push){ hist.stack=[]; hist.idx=-1; commit(); }
   fitView();
 }
@@ -360,7 +366,7 @@ function setView(kind){
   let d = dirs[kind] ? new THREE.Vector3(...dirs[kind]).normalize() : camera.position.clone().sub(orbit.target).normalize();
   animateCam(c, c.clone().add(d.multiplyScalar(dist)));
 }
-function fitView(){ const c=new THREE.Vector3(); const b=sceneBox(); b.getCenter(c); const s=new THREE.Vector3(); b.getSize(s); const R=Math.max(35,s.length()*0.5); const dist=R/Math.sin(camera.fov*DEG/2); camera.position.copy(c.clone().add(new THREE.Vector3(0.55,-0.75,0.62).normalize().multiplyScalar(dist))); orbit.target.copy(c); orbit.update(); }
+function fitView(){ const c=new THREE.Vector3(); const b=sceneBox(); b.getCenter(c); const s=new THREE.Vector3(); b.getSize(s); const R=Math.max(35,s.length()*0.6); const dist=R/Math.sin(camera.fov*DEG/2); camera.position.copy(c.clone().add(new THREE.Vector3(0.55,-0.75,0.62).normalize().multiplyScalar(dist))); orbit.target.copy(c); orbit.update(); }
 let camAnim=null;
 function animateCam(target, pos){ camAnim={t0:performance.now(), ft:orbit.target.clone(), fp:camera.position.clone(), tt:target, tp:pos}; }
 function stepCam(now){

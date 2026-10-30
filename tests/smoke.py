@@ -31,6 +31,8 @@ with sync_playwright() as p:
     pg.goto(URL); pg.wait_for_timeout(2500)
     E = 'window.__etabli'
 
+    check('galerie ouverte à la première visite', pg.is_visible('#gallery'))
+    pg.click('#galleryClose')
     n = pg.evaluate(f'()=>[{E}.state.parts.length,{E}.state.joints.length]')
     check('exemple de démarrage chargé', n == [8, 4], n)
 
@@ -55,10 +57,18 @@ with sync_playwright() as p:
     stl = pg.evaluate(f'()=>{E}.stlBinary([...{E}.meshes.values()]).length')
     check('export STL', stl > 84, f'{stl} octets')
 
-    for ex in ['arm', 'crank', 'keyring']:
-        pg.evaluate(f"()=>{E}.loadExample('{ex}')"); pg.wait_for_timeout(600)
-        check(f'exemple {ex}', pg.evaluate(f'()=>{E}.state.parts.length') > 0)
+    for ex in pg.evaluate(f'()=>Object.keys({E}.SAMPLES)'):
+        pg.evaluate(f"()=>{E}.loadExample('{ex}')"); pg.wait_for_timeout(500)
+        r = pg.evaluate(f'''()=>{{const E={E};
+            const sk=E.state.parts.filter(p=>p.kind==='sketch').map(p=>{{const s=E.SK.d; E.SK.d=JSON.parse(JSON.stringify(p.params.sk)); const e=E.skSolve(); E.SK.d=s; return e;}});
+            return {{parts:E.state.parts.length, motors:E.state.joints.filter(j=>j.motor).length, note:!!E.state.note, skErr:Math.max(0,...sk)}}}}''')
+        ok = r['parts'] > 0 and r['note'] and r['skErr'] < 1e-3
+        if r['motors']:
+            pg.click('#sPlay'); pg.wait_for_timeout(800); pg.click('#sPlay')
+            ok = ok and pg.evaluate(f'()=>Object.values({E}.sim.values).some(v=>Math.abs(v)>0.5)')
+        check(f'exemple {ex}', ok, r)
         pg.screenshot(path=os.path.join(OUT, f'exemple-{ex}.png'))
+        pg.click('#sReset')
 
     # Sketch: rectangle + dimension typed in the field
     pg.click('#bNew'); pg.click('#bSketch'); pg.wait_for_timeout(300)
