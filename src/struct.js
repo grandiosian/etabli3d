@@ -376,8 +376,9 @@ function newNode(x,y){ const T=SD().truss; const n={id:T.nid++, x, y, sup:null, 
 function newBar(a,b){ const T=SD().truss; if(a===b || T.bars.some(k=>(k.a===a&&k.b===b)||(k.a===b&&k.b===a))) return null; const bar={id:T.nid++, a, b, sec:T.sec, D:T.D, d:T.d, mat:T.mat}; T.bars.push(bar); return bar; }
 function structChanged(push=true){ computeStruct(); stDraw(); if(ST.mode3d) buildStruct3D(); if(push) commit(); renderInspector(); }
 function stSetTool(t){ ST.tool=t; ST.chain=null; $$('#stTools [data-st]').forEach(b=>b.classList.toggle('on',b.dataset.st===t)); stCanvas.style.cursor= t==='select'?'default':'crosshair';
-  const H={select:'Cliquez un nœud ou une barre pour le régler. Glissez un nœud pour le déplacer.',bar:'Cliquez pour poser des nœuds reliés par des barres. Échap pour arrêter la chaîne.',fixe:'Cliquez un nœud : appui fixe (bloqué dans les deux directions).',glissant:'Cliquez un nœud : appui glissant (bloqué verticalement seulement).',charge:'Cliquez un nœud pour lui ajouter une force de 100 N vers le bas.',del:'Cliquez un nœud ou une barre pour le supprimer.'};
-  $('#stHint').textContent=H[t]||''; stDraw(); }
+  const H={select:'Cliquez un nœud, une barre ou une flèche pour le régler. Glissez un nœud pour le déplacer. Double-clic : zoomer.',bar:'Cliquez pour poser des nœuds reliés par des barres. Échap pour arrêter la chaîne.',fixe:'Cliquez un nœud : appui fixe (bloqué dans les deux directions).',glissant:'Cliquez un nœud : appui glissant (bloqué verticalement seulement).',charge:'Cliquez un nœud pour lui ajouter une force de 100 N vers le bas.',del:'Cliquez un nœud ou une barre pour le supprimer.'};
+  $('#stHint').textContent= ST.mode3d? ST3D_HINT : (H[t]||''); stDraw(); }
+const ST3D_HINT='Vue 3D : clic sur un objet pour le régler, double-clic pour zoomer dessus (dans le vide : tout voir). Glisser : tourner · clic droit : décaler · molette : zoom.';
 function stEvt(ev){ const r=stCanvas.getBoundingClientRect(); return [ev.clientX-r.left, ev.clientY-r.top]; }
 stCanvas.addEventListener('contextmenu',e=>e.preventDefault());
 stCanvas.addEventListener('pointerdown',ev=>{
@@ -409,6 +410,15 @@ stCanvas.addEventListener('pointermove',ev=>{
 stCanvas.addEventListener('pointerup',ev=>{ const dr=ST.drag; ST.drag=null; const [sx,sy]=stEvt(ev); const click= ST.down && Math.hypot(sx-ST.down.sx, sy-ST.down.sy)<5;
   if(dr?.kind==='node'){ if(dr.moved) structChanged(); else openStructBubble({t:'node',id:dr.id}, sx, sy); return; }
   if(dr?.kind==='pan' && click && ev.button===0){ if(SD().mod==='maillage' && (hitArrow(sx,sy) || meshHitAt(sx,sy))) openStructBubble({t:'mesh'}, sx, sy); else closeBubble(); } });
+/* double-click in 2D: zoom on a bar or a node, empty space = whole structure */
+stCanvas.addEventListener('dblclick',ev=>{
+  const [sx,sy]=stEvt(ev); const S=SD(); let box=null;
+  if(S.mod==='treillis'){ const T=S.truss, n=hitNode(sx,sy), b=n?null:hitBar(sx,sy);
+    if(n) box={minx:n.x-60,maxx:n.x+60,miny:n.y-60,maxy:n.y+60};
+    else if(b){ const A=T.nodes.find(k=>k.id===b.a), B=T.nodes.find(k=>k.id===b.b); if(A&&B){ const m=Math.max(30,Math.hypot(B.x-A.x,B.y-A.y)*0.25); box={minx:Math.min(A.x,B.x)-m,maxx:Math.max(A.x,B.x)+m,miny:Math.min(A.y,B.y)-m,maxy:Math.max(A.y,B.y)+m}; } } }
+  if(!box){ ST.fitted=false; stFit(); stDraw(); return; }
+  const w=box.maxx-box.minx, hh=box.maxy-box.miny; ST.view.s=clamp(Math.min(stW/(w*1.4), stH/(hh*1.6)),0.01,60); ST.view.cx=(box.minx+box.maxx)/2; ST.view.cy=(box.miny+box.maxy)/2; stDraw();
+});
 stCanvas.addEventListener('wheel',ev=>{ ev.preventDefault(); const [sx,sy]=stEvt(ev); const [wx,wy]=sToW(sx,sy); ST.view.s=clamp(ST.view.s*Math.exp(-ev.deltaY*0.0015),0.01,60); const [nx,ny]=sToW(sx,sy); ST.view.cx+=wx-nx; ST.view.cy+=wy-ny; stDraw(); },{passive:false});
 
 /* ---- 3D preview: bars become cylinders (tubes are hollow), plates become coloured slabs */
@@ -468,7 +478,10 @@ function meshHitAt(sx,sy){
   return false;
 }
 function setStructView3D(v){
-  ST.mode3d=v; $('#stCanvas').hidden=v; $$('#stTools [data-v3]').forEach(b=>b.classList.toggle('on', (b.dataset.v3==='1')===v));
+  // the 2D layer (#stWrap) sits above the WebGL canvas: it must be removed in 3D or it swallows every click and drag
+  if(ST.mode3d!==v) closeBubble();
+  ST.mode3d=v; $('#stCanvas').hidden=v; $('#stWrap').hidden= v && ws==='struct'; if(!v) requestAnimationFrame(()=>stResize());
+  if(v) $('#stHint').textContent=ST3D_HINT; else stSetTool(ST.tool); $$('#stTools [data-v3]').forEach(b=>b.classList.toggle('on', (b.dataset.v3==='1')===v));
   structGroup.visible=v; if(v){ buildStruct3D(); const bx=new THREE.Box3().setFromObject(structGroup); const c=new THREE.Vector3(); bx.getCenter(c); const s=new THREE.Vector3(); bx.getSize(s); const R=Math.max(40,s.length()*0.6), dist=R/Math.sin(camera.fov*DEG/2);
     animateCam(c, c.clone().add(new THREE.Vector3(0.35,-1,0.35).normalize().multiplyScalar(dist))); }
   stDraw();

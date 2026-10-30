@@ -269,9 +269,13 @@ renderer.domElement.addEventListener('pointerup', ev=>{
   else selection=[id];
   sync(); renderInspector();
 });
+/* double-click: frame the object under the cursor (empty space: frame everything).
+   In Modéliser, a sketch part opens its sketch instead. */
 renderer.domElement.addEventListener('dblclick', ev=>{
-  const hit=pickAt(ev); if(!hit) return; const p=findPart(hit.object.userData.id);
-  if(p && p.kind==='sketch' && !simLocked() && lv(2)) openSketch(p);
+  if(ws==='struct'){ if(!ST.mode3d) return; const hit=struct3DHit(ev); if(hit) frameObject(struct3DTarget(hit.object), 60); else frameObject(structGroup); return; }
+  const hit=pickAt(ev); if(!hit){ setView('fit'); return; } const p=findPart(hit.object.userData.id);
+  if(ws==='model' && p && p.kind==='sketch' && !simLocked() && lv(2)){ openSketch(p); return; }
+  frameObject(hit.object);
 });
 
 /* palette drag & drop onto the mat */
@@ -381,6 +385,14 @@ function setView(kind){
   let d = dirs[kind] ? new THREE.Vector3(...dirs[kind]).normalize() : camera.position.clone().sub(orbit.target).normalize();
   animateCam(c, c.clone().add(d.multiplyScalar(dist)));
 }
+/* zoom the camera onto a bounding box, keeping the current viewing direction */
+function frameBox(b, minR=30){
+  if(!b || b.isEmpty()) return; const c=new THREE.Vector3(); b.getCenter(c); const s=new THREE.Vector3(); b.getSize(s);
+  const R=Math.max(minR, s.length()*0.6), dist=R/Math.sin(camera.fov*DEG/2)*1.05;
+  const d=camera.position.clone().sub(orbit.target); if(d.lengthSq()<1e-9) d.set(0.55,-0.75,0.6); d.normalize();
+  animateCam(c, c.clone().add(d.multiplyScalar(dist)));
+}
+function frameObject(o, minR=30){ if(!o) return; o.updateWorldMatrix(true,true); frameBox(new THREE.Box3().setFromObject(o, true), minR); }
 function fitView(){ const c=new THREE.Vector3(); const b=sceneBox(); b.getCenter(c); const s=new THREE.Vector3(); b.getSize(s); const R=Math.max(35,s.length()*0.6); const dist=R/Math.sin(camera.fov*DEG/2); camera.position.copy(c.clone().add(new THREE.Vector3(0.55,-0.75,0.62).normalize().multiplyScalar(dist))); orbit.target.copy(c); orbit.update(); }
 let camAnim=null;
 function animateCam(target, pos){ camAnim={t0:performance.now(), ft:orbit.target.clone(), fp:camera.position.clone(), tt:target, tp:pos}; }

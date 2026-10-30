@@ -95,9 +95,15 @@ function openStructBubble(target, x, y){
   });
   updateBubblePlay(); refreshStructBubble(); placeBubble(x,y);
 }
-function struct3DClick(ev){
+function struct3DHit(ev){
   const r=renderer.domElement.getBoundingClientRect(); ndc.set(((ev.clientX-r.left)/r.width)*2-1, -((ev.clientY-r.top)/r.height)*2+1); ray.setFromCamera(ndc,camera);
-  const hit=ray.intersectObjects(structGroup.children,true).find(h=>h.object.userData?.t);
+  structGroup.updateMatrixWorld(true);   // the group may have been rebuilt since the last frame (e.g. first click of a double-click)
+  return ray.intersectObjects(structGroup.children,true).find(h=>h.object.userData?.t && h.object.visible!==false)||null;
+}
+/* the whole bar (group) or load arrow rather than one of its sub-meshes */
+function struct3DTarget(o){ while(o.parent && o.parent!==structGroup && o.parent.userData?.t===o.userData.t) o=o.parent; return o; }
+function struct3DClick(ev){
+  const r=renderer.domElement.getBoundingClientRect(); const hit=struct3DHit(ev);
   if(!hit) return closeBubble();
   const t=hit.object.userData; if(t.t!=='mesh') ST.sel={t:t.t,id:t.id};
   openStructBubble(t.t==='mesh'? {t:'mesh'} : {t:t.t,id:t.id}, ev.clientX-r.left, ev.clientY-r.top); renderInspector();
