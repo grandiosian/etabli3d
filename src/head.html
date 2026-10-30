@@ -452,10 +452,14 @@ html:not([data-glass="opaque"]) #bubble .bub-row input[type=range]{background:tr
 .jl-lay:hover{background:var(--panel-2)} .jl-lay.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 .jl-li svg{width:14px;height:14px;display:block}
 .jl-body{grid-column:1 / -1;gap:6px}
-#jlabels[data-lay="libre"] .jl-body{display:none}
+#jlabels[data-lay="libre"] .jl-body,#jlabels[data-lay="orbite"] .jl-body{display:none}
 .jl{pointer-events:auto;display:flex;flex-direction:row;align-items:center;gap:7px;max-width:240px;text-align:left;
   background:color-mix(in srgb,var(--panel) 94%,transparent);border:1px solid var(--line);border-left:4px solid var(--jc);border-radius:9px;padding:4px 9px 5px 6px;font-size:11.5px;line-height:1.3;color:var(--ink)}
-#jlabels[data-lay="libre"] > .jl{position:absolute;left:0;top:0;box-shadow:var(--shadow);will-change:transform}
+#jlabels[data-lay="libre"] > .jl,#jlabels[data-lay="orbite"] > .jl{position:absolute;left:0;top:0;box-shadow:var(--shadow);will-change:transform}
+/* the group itself is see-through: only its buttons and the labels show */
+#jlGroup.jl-group{background:transparent;border-color:transparent;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+#jlGroup .pgrip,.jl-lay{background:color-mix(in srgb,var(--panel) 70%,transparent);border-radius:6px}
+#jlGroup .pgrip{padding:2px}
 .jl-body .jl{max-width:none} .jl-body .jl-tx > *{white-space:nowrap}
 .jl > svg{width:18px;height:18px;flex:none;color:var(--jc)}
 .jl-n{flex:none;display:grid;place-items:center;width:18px;height:18px;border-radius:50%;border:2px solid var(--jc);font:700 10px var(--f-mono);color:var(--jc)}

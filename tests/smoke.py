@@ -166,6 +166,11 @@ with sync_playwright() as p:
         j.loc={{pid:p.id,lid:'axe'}}; const before=j.axis.slice(); E.locEdit(p,l,'flip'); return [before[2], j.axis[2]];}}""")
     check('inverser un repère inverse l’axe de la liaison', r[0] > 0.99 and r[1] < -0.99, r)
     # Étiquettes regroupées : dispositions et réduction automatique
+    pg.evaluate(f"()=>{E}.simReset(true)"); pg.wait_for_timeout(300)
+    r = pg.evaluate("""()=>{const st=document.querySelector('#stage').getBoundingClientRect(); const L=[...document.querySelectorAll('#jlabels > .jl')].map(e=>e.getBoundingClientRect());
+      return [document.querySelector('#jlabels').dataset.lay, L.length, L.every(r=>r.left>=st.left-1 && r.right<=st.right+1 && r.top>=st.top-1 && r.bottom<=st.bottom+1),
+        getComputedStyle(document.querySelector('#jlGroup')).backgroundColor]}""")
+    check('étiquettes autour du mécanisme (ovale, par défaut), groupe transparent', r[0]=='orbite' and r[1]==4 and r[2] and r[3] in ('rgba(0, 0, 0, 0)','transparent'), r)
     pg.click('#jlGroup .jl-lay[aria-label="En cercle"]'); pg.wait_for_timeout(200)
     r = pg.evaluate("()=>[document.querySelector('#jlabels').dataset.lay, document.querySelectorAll('#jlGroup .jl-body .jl').length, getComputedStyle(document.querySelector('#jlGroup .jl')).position]")
     check('étiquettes groupées en cercle', r == ['cercle', 4, 'absolute'], r)
