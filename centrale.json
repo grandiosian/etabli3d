@@ -6,7 +6,7 @@
   "atelier": {
     "app": "etabli3d",
     "nom": "Établi 3D",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "description": "Modeleur 3D pour la technologie : volumes, perçages, esquisses cotées, matières, liaisons et simulation de mouvements, structures, export STL pour l’impression 3D.",
     "url": "https://grandiosian.github.io/etabli3d/",
     "urls_secours": [],
@@ -18,6 +18,9 @@
       "4e",
       "3e"
     ],
+    "parametres": {
+      "#activite=<id>": "ouvre directement le tuto, l’exercice ou l’exemple <id> (tuto-premiers, exo-de, ex-maison…), même sans connexion à la Centrale"
+    },
     "_correspondance": "Champs de la table ateliers de la Centrale : app, nom, description, url, icone, urls_secours."
   },
   "centrale": {
@@ -770,6 +773,10 @@
       }
     ]
   },
+  "ateliers": {
+    "catalogue": "ateliers.json",
+    "note": "Un tuto, un exercice ou un exemple = un atelier (Etabli3D.ateliers()), tous niveaux. Ouverture directe sans connexion : #activite=<id>."
+  },
   "progression": {
     "envoi": "Centrale.progression(id, Etabli3D.progression(id))",
     "quand": [
@@ -865,6 +872,9 @@
       },
       "etabli3d.layout": {
         "contenu": "position des panneaux ; jamais envoyée à la Centrale"
+      },
+      "etabli3d.nuage": {
+        "contenu": "lien du dossier Nuage de la classe, collé par le professeur sur ce poste (Fichier → Déposer sur Nuage, quand l’élève n’est pas connecté)"
       }
     }
   },
@@ -882,7 +892,8 @@
       "estProjet(objet)": "true si l’objet est un projet chargeable.",
       "ouvrirProjet(objet)": "Ouvre un projet ; l’ancien reste accessible avec Annuler.",
       "resume()": "Résumé calculé (format Resume).",
-      "fichier(nom)": "Promise<Blob|null> : le fichier produit d’après l’extension du nom (.json projet, resume.json, .stl, .png)."
+      "fichier(nom)": "Promise<Blob|null> : le fichier produit d’après l’extension du nom (.json projet, resume.json, .stl, .png).",
+      "ateliers()": "catalogue des ateliers (contenu de ateliers.json)"
     }
   },
   "enums": {

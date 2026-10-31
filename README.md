@@ -52,7 +52,8 @@ Un exemple d'un niveau supérieur fait passer automatiquement à ce niveau.
 - **Arborescence** (avancé) : vue par pièces (groupes dépliables) ou par liaisons (arbre cinématique), masquer, verrouiller, renommer.
 - **Apparence** : rendu (plein, arêtes, fil de fer, rayons X), éclairage, ombres, thème auto / clair / sombre, couleur principale, couleur du plan de travail, arborescence (réductible et déplaçable).
 - **Fichiers** : projet en `.json` (Enregistrer / Ouvrir), export `.stl` pour l'impression 3D. Sauvegarde automatique dans le navigateur.
-- **Centrale de la classe** : avec le bouton **Mon code**, l'élève se connecte au serveur de la classe ; son projet et son avancement (tutos, exercices, exemples) y sont enregistrés, il les retrouve sur n'importe quel ordinateur et le professeur suit sa progression. Le menu Fichier propose alors d'envoyer le STL au professeur et, dans un atelier transversal, de reprendre ou déposer les fichiers de l'étape. Sans connexion, rien ne change. Contrat : [PASSERELLE.md](PASSERELLE.md) et [centrale.json](centrale.json).
+- **Centrale de la classe** : avec le bouton **Mon code**, l'élève se connecte au serveur de la classe ; son projet et son avancement (tutos, exercices, exemples) y sont enregistrés, il les retrouve sur n'importe quel ordinateur et le professeur suit sa progression. Le menu Fichier propose alors d'envoyer le STL au professeur et, dans un atelier transversal, de reprendre ou déposer les fichiers de l'étape. Sans connexion, rien ne change. Contrat : [PASSERELLE.md](PASSERELLE.md), [centrale.json](centrale.json) et le catalogue des ateliers [ateliers.json](ateliers.json).
+- **Sans serveur** : une activité s'ouvre directement par son adresse (`…/#activite=exo-plaque`) ; Fichier → **Déposer sur Nuage** enregistre le projet et ouvre le dossier Nuage de la classe (sauvegarde de secours).
 
 ## Bibliothèque : tutos, exercices, exemples
 
@@ -116,6 +117,7 @@ src/panels.js    panneaux déplaçables et réductibles, disposition mémorisée
 src/centrale.js  connexion à la Centrale de la classe, point d'accès window.Etabli3D
 src/init.js      exemples, raccourcis clavier, démarrage
 centrale.json    descripteur lu par la Centrale (passerelle.atelier v1)
+ateliers.json    catalogue des ateliers importé par la Centrale (catalogue.ateliers v1)
 outils/          verifier-descripteur.html : compare centrale.json et l'application
 build.py         assemble src/ en une seule page dans dist/
 ```

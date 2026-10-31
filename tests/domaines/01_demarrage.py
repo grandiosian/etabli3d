@@ -29,7 +29,7 @@ def run(t):
     r = pg.evaluate("()=>[!document.querySelector('#menuFile').hidden, [...document.querySelectorAll('#menuFile button')].map(b=>b.id).join(',')]")
     pg.click('#bFile'); pg.wait_for_timeout(100)
     hdr = pg.evaluate("()=>{const x=id=>document.querySelector(id).getBoundingClientRect(); return [x('#bUndo').left < x('#bFile').left, x('#lvl').left > innerWidth/2, x('#bLook').left > x('#lvl').left, x('#bHelp').left > x('#bLook').left]}")
-    check('menu Fichier (nouveau, ouvrir, enregistrer, STL, bibliothèque), flèches devant, niveaux / apparence / aide à droite', r == [True, 'bNew,bOpen,bSave,bStl,bExamples'] and all(hdr) and pg.is_hidden('#menuFile'), [r, hdr])
+    check('menu Fichier (nouveau, ouvrir, enregistrer, STL, dépôt Nuage, bibliothèque), flèches devant, niveaux / apparence / aide à droite', r == [True, 'bNew,bOpen,bSave,bStl,bNuage,bExamples'] and all(hdr) and pg.is_hidden('#menuFile'), [r, hdr])
     ed = pg.evaluate("()=>{const s=document.querySelector('.ed-shape'), r=s.getBoundingClientRect(), st=document.querySelector('#stage').getBoundingClientRect(); return [Math.abs((r.left+r.right)/2-(st.left+st.right)/2)<6, getComputedStyle(s).clipPath.startsWith('polygon')]}")
     check('barre d’édition centrée sur la vue, aux bords obliques', ed == [True, True], ed)
     pg.evaluate(f"()=>{E}.setSel([])")

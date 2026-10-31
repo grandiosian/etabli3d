@@ -3,7 +3,7 @@
 Notes détaillées pour Claude (voir la carte dans `CLAUDE.md`). Le contrat lui-même est dans `PASSERELLE.md` (même plan que NetSim). Test : domaine `centrale` (fausse Centrale : `tests/centrale/js/centrale-client.js`).
 
 ## Fichiers
-- `centrale.json` à la racine (format `passerelle.atelier` v1), copié dans `dist/` par `build.py` avec `outils/`.
+- `centrale.json` et `ateliers.json` (catalogue des ateliers, `Etabli3D.ateliers()`) à la racine, copiés dans `dist/` par `build.py` avec `outils/`.
 - Code dans `src/centrale.js`.
 
 ## Point d'accès
@@ -21,7 +21,12 @@ Notes détaillées pour Claude (voir la carte dans `CLAUDE.md`). Le contrat lui-
 ## Activités et progression
 - Activités : `tuto-<clé>`, `exo-<clé>`, `ex-<clé>` (clés de `LESSONS` / `SAMPLES`, jamais renommées).
 - `commit()` / `restore()` appellent `centraleTravail()` ; `markDone`, `lessonProgress`, `startLesson`, `loadExample` appellent `centraleProgres('type:clé')`.
-- **Après tout ajout de tuto, exercice ou exemple** : mettre à jour `activites.liste` (`outils/verifier-descripteur.html` donne la liste, le domaine de test `centrale` vérifie) et augmenter `atelier.version` = `ETABLI_VERSION`.
+- **Après tout ajout de tuto, exercice ou exemple** : mettre à jour `activites.liste` et `ateliers.json` (`outils/verifier-descripteur.html` donne les deux, le domaine de test `centrale` vérifie) et augmenter `atelier.version` = `ETABLI_VERSION`.
+
+## Sans serveur
+- `etabliOuvrirAdresse()` (au démarrage et sur `hashchange`) : `#activite=<id>` ouvre l'activité sans la Centrale ; ignoré si `centrale=` est dans l'adresse.
+- `deposerSurNuage()` (Fichier → Déposer sur Nuage, `#bNuage`) : `offerFile` du projet, puis lien Nuage de la session Centrale ou `etabli3d.nuage` ; sinon `nuageFenetre()` demande le lien au professeur.
+- Test : domaine `centrale` (« Sans serveur »).
 - Format du projet : `PROJET_FORMAT` (2).
 
 ## Compétences

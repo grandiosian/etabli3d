@@ -24,11 +24,14 @@ iframe{position:absolute;left:-9999px;width:1280px;height:800px;border:0}
 <body>
 <main>
   <h1>Vérifier le descripteur d’Établi 3D</h1>
-  <p>Compare <code>centrale.json</code> avec ce que l’application déclare réellement (<code>window.Etabli3D</code>). À ouvrir après chaque ajout de tuto, d’exercice ou d’exemple.</p>
+  <p>Compare <code>centrale.json</code> et <code>ateliers.json</code> avec ce que l’application déclare réellement (<code>window.Etabli3D</code>). À ouvrir après chaque ajout de tuto, d’exercice ou d’exemple.</p>
   <ul id="res"><li>Chargement de l’application…</li></ul>
   <p id="aide" hidden>Si des écarts apparaissent, remplace la section <code>activites.liste</code> de <code>centrale.json</code> par le texte ci-dessous et augmente <code>atelier.version</code> (et <code>ETABLI_VERSION</code> dans <code>src/centrale.js</code>).</p>
   <textarea id="maj" hidden readonly></textarea>
   <button id="cp" type="button" hidden>Copier la liste à jour</button>
+  <p id="aide2" hidden>Remplace tout le contenu de <code>ateliers.json</code> (à la racine du dépôt) par le texte ci-dessous.</p>
+  <textarea id="maj2" hidden readonly></textarea>
+  <button id="cp2" type="button" hidden>Copier ateliers.json</button>
 </main>
 <iframe id="f" title="Établi 3D"></iframe>
 <script>
@@ -36,6 +39,7 @@ iframe{position:absolute;left:-9999px;width:1280px;height:800px;border:0}
 // ?app=… pour viser une autre page (essais en local), sinon l'application publiée à côté
 const appUrl=new URLSearchParams(location.search).get('app')||'../index.html';
 const descUrl=new URLSearchParams(location.search).get('descripteur')||'../centrale.json';
+const catUrl=descUrl.replace(/centrale\.json(\?.*)?$/,'ateliers.json');
 const res=document.getElementById('res');
 const line=(ok,txt,det)=>{const li=document.createElement('li');li.className=ok?'ok':'ko';li.textContent=txt;if(det){const s=document.createElement('small');s.textContent=det;li.appendChild(s);}res.appendChild(li);return ok;};
 const f=document.getElementById('f');
@@ -58,6 +62,13 @@ f.addEventListener('load',async()=>{
   ok&=line(A.estProjet(d.projet),'Le projet courant est reconnu par estProjet()');
   const mats=(D.enums?.matieres||[]).map(m=>m.k).join(','),mp=(D.$defs?.Matiere?.properties?.k?.enum||[]).join(',');
   ok&=line(mats===mp,'Matières : enums et schéma identiques',mats===mp?'':mats+'\n'+mp);
+  let C=null;try{C=await (await fetch(catUrl,{cache:'no-store'})).json();}catch(e){C=null;}
+  const at=A.ateliers(),memeAt=!!C&&JSON.stringify(C)===JSON.stringify(at);
+  ok&=line(memeAt,`Catalogue ateliers.json : ${C&&C.ateliers?C.ateliers.length:0} ateliers dans le fichier, ${at.ateliers.length} dans l’application`,
+    memeAt?'':(C&&C.ateliers?(diff(C.ateliers,at.ateliers)==='Ordre différent.'?'En-tête différent (version de l’application ?)':diff(C.ateliers,at.ateliers)):'ateliers.json absent ou illisible'));
+  ok&=line(at.app_version===D.atelier.version,'ateliers.json et centrale.json ont la même version');
+  if(!memeAt){document.getElementById('aide2').hidden=false;const t2=document.getElementById('maj2');t2.hidden=false;t2.value=JSON.stringify(at,null,2)+'\n';const c2=document.getElementById('cp2');c2.hidden=false;
+    c2.onclick=()=>{navigator.clipboard.writeText(t2.value).then(()=>c2.textContent='Copié',()=>{t2.focus();t2.select();});};}
   if(!same){document.getElementById('aide').hidden=false;const t=document.getElementById('maj');t.hidden=false;t.value=JSON.stringify(liste,null,2);const c=document.getElementById('cp');c.hidden=false;
     c.onclick=()=>{navigator.clipboard.writeText(t.value).then(()=>c.textContent='Copié',()=>{t.focus();t.select();});};}
   finish(!!ok);

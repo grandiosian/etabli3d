@@ -1,0 +1,1167 @@
+{
+  "format": "catalogue.ateliers",
+  "version": 1,
+  "app": "etabli3d",
+  "app_version": "1.3.0",
+  "referentiel": "technologie-c4-2024",
+  "ateliers": [
+    {
+      "id": "tuto-premiers",
+      "titre": "Premiers pas",
+      "niveau": "",
+      "resume": "Poser un cube, le percer, l’exporter.",
+      "competences": [
+        "CCRI16.5.1",
+        "CCRI16.4.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "tuto-premiers",
+          "titre": "Premiers pas",
+          "total": 6,
+          "competences": [
+            "CCRI16.5.1",
+            "CCRI16.4.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "tuto-premiers",
+      "etiquettes": [
+        "tuto",
+        "Modéliser avec des volumes"
+      ]
+    },
+    {
+      "id": "tuto-mesures",
+      "titre": "Tailles et positions au millimètre",
+      "niveau": "",
+      "resume": "Taper des cotes, placer et tourner une pièce.",
+      "competences": [
+        "CCRI16.5.1",
+        "CCRI16.4.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "tuto-mesures",
+          "titre": "Tailles et positions au millimètre",
+          "total": 5,
+          "competences": [
+            "CCRI16.5.1",
+            "CCRI16.4.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "tuto-mesures",
+      "etiquettes": [
+        "tuto",
+        "Modéliser avec des volumes"
+      ]
+    },
+    {
+      "id": "tuto-empiler",
+      "titre": "Empiler et aligner",
+      "niveau": "",
+      "resume": "Soulever, aimanter au centre, grouper.",
+      "competences": [
+        "CCRI16.5.1",
+        "CCRI16.4.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "tuto-empiler",
+          "titre": "Empiler et aligner",
+          "total": 4,
+          "competences": [
+            "CCRI16.5.1",
+            "CCRI16.4.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "tuto-empiler",
+      "etiquettes": [
+        "tuto",
+        "Modéliser avec des volumes"
+      ]
+    },
+    {
+      "id": "tuto-esquisse",
+      "titre": "Ma première esquisse",
+      "niveau": "",
+      "resume": "Un rectangle coté avec un trou, extrudé.",
+      "competences": [
+        "CCRI16.5.1",
+        "CCRI16.4.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "tuto-esquisse",
+          "titre": "Ma première esquisse",
+          "total": 5,
+          "competences": [
+            "CCRI16.5.1",
+            "CCRI16.4.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "tuto-esquisse",
+      "etiquettes": [
+        "tuto",
+        "Esquisser et coter"
+      ]
+    },
+    {
+      "id": "tuto-debout",
+      "titre": "Esquisser debout",
+      "niveau": "",
+      "resume": "Dessiner sur le plan de face et extruder vers l’avant.",
+      "competences": [
+        "CCRI16.5.1",
+        "CCRI16.4.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "tuto-debout",
+          "titre": "Esquisser debout",
+          "total": 4,
+          "competences": [
+            "CCRI16.5.1",
+            "CCRI16.4.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "tuto-debout",
+      "etiquettes": [
+        "tuto",
+        "Esquisser et coter"
+      ]
+    },
+    {
+      "id": "tuto-bezier",
+      "titre": "Courbes de Bézier",
+      "niveau": "",
+      "resume": "Tracer une forme courbe point par point.",
+      "competences": [
+        "CCRI16.5.1",
+        "CCRI16.4.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "tuto-bezier",
+          "titre": "Courbes de Bézier",
+          "total": 6,
+          "competences": [
+            "CCRI16.5.1",
+            "CCRI16.4.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "tuto-bezier",
+      "etiquettes": [
+        "tuto",
+        "Esquisser et coter"
+      ]
+    },
+    {
+      "id": "tuto-pivot",
+      "titre": "Faire tourner une pièce",
+      "niveau": "",
+      "resume": "Valider, poser une liaison pivot, ajouter un moteur, simuler.",
+      "competences": [
+        "SFC11.5.1",
+        "CCRI16.5.1",
+        "SFC11.4.2",
+        "CCRI16.4.1",
+        "SFC11.3.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "tuto-pivot",
+          "titre": "Faire tourner une pièce",
+          "total": 6,
+          "competences": [
+            "SFC11.5.1",
+            "CCRI16.5.1",
+            "SFC11.4.2",
+            "CCRI16.4.1",
+            "SFC11.3.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "tuto-pivot",
+      "etiquettes": [
+        "tuto",
+        "Mettre en mouvement"
+      ]
+    },
+    {
+      "id": "tuto-engrenages",
+      "titre": "Deux roues dentées",
+      "niveau": "",
+      "resume": "Une roue motrice en entraîne une autre.",
+      "competences": [
+        "SFC11.5.1",
+        "CCRI16.5.1",
+        "SFC11.4.2",
+        "CCRI16.4.1",
+        "SFC11.3.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "tuto-engrenages",
+          "titre": "Deux roues dentées",
+          "total": 6,
+          "competences": [
+            "SFC11.5.1",
+            "CCRI16.5.1",
+            "SFC11.4.2",
+            "CCRI16.4.1",
+            "SFC11.3.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "tuto-engrenages",
+      "etiquettes": [
+        "tuto",
+        "Mettre en mouvement"
+      ]
+    },
+    {
+      "id": "tuto-treillis",
+      "titre": "Calculer un petit pont",
+      "niveau": "",
+      "resume": "Tracer un treillis, poser les appuis et une charge.",
+      "competences": [
+        "CCRI21.5.1",
+        "CCRI21.4.1",
+        "CCRI21.3.1"
+      ],
+      "activites": [
+        {
+          "id": "tuto-treillis",
+          "titre": "Calculer un petit pont",
+          "total": 5,
+          "competences": [
+            "CCRI21.5.1",
+            "CCRI21.4.1",
+            "CCRI21.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "tuto-treillis",
+      "etiquettes": [
+        "tuto",
+        "Simuler la déformation"
+      ]
+    },
+    {
+      "id": "exo-de",
+      "titre": "Dé à jouer",
+      "niveau": "",
+      "resume": "Un cube de 20 mm avec ses points creusés.",
+      "competences": [
+        "CCRI16.5.1",
+        "CCRI16.4.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "exo-de",
+          "titre": "Dé à jouer",
+          "total": 3,
+          "competences": [
+            "CCRI16.5.1",
+            "CCRI16.4.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "exo-de",
+      "etiquettes": [
+        "exo",
+        "Modéliser avec des volumes"
+      ]
+    },
+    {
+      "id": "exo-plaque",
+      "titre": "Plaque percée",
+      "niveau": "",
+      "resume": "Une plaque de fixation avec deux trous de vis.",
+      "competences": [
+        "CCRI16.5.1",
+        "CCRI16.4.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "exo-plaque",
+          "titre": "Plaque percée",
+          "total": 3,
+          "competences": [
+            "CCRI16.5.1",
+            "CCRI16.4.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "exo-plaque",
+      "etiquettes": [
+        "exo",
+        "Modéliser avec des volumes"
+      ]
+    },
+    {
+      "id": "exo-tour",
+      "titre": "Tour de 3 étages",
+      "niveau": "",
+      "resume": "Empiler des volumes sans qu’aucun ne flotte.",
+      "competences": [
+        "CCRI16.5.1",
+        "CCRI16.4.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "exo-tour",
+          "titre": "Tour de 3 étages",
+          "total": 3,
+          "competences": [
+            "CCRI16.5.1",
+            "CCRI16.4.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "exo-tour",
+      "etiquettes": [
+        "exo",
+        "Modéliser avec des volumes"
+      ]
+    },
+    {
+      "id": "exo-equerre",
+      "titre": "Équerre de fixation",
+      "niveau": "",
+      "resume": "Un profil en L coté, avec deux trous.",
+      "competences": [
+        "CCRI16.5.1",
+        "CCRI16.4.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "exo-equerre",
+          "titre": "Équerre de fixation",
+          "total": 4,
+          "competences": [
+            "CCRI16.5.1",
+            "CCRI16.4.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "exo-equerre",
+      "etiquettes": [
+        "exo",
+        "Esquisser et coter"
+      ]
+    },
+    {
+      "id": "exo-vase",
+      "titre": "Vase en révolution",
+      "niveau": "",
+      "resume": "Un demi-profil courbe tourné sur 360°.",
+      "competences": [
+        "CCRI16.5.1",
+        "CCRI16.4.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "exo-vase",
+          "titre": "Vase en révolution",
+          "total": 2,
+          "competences": [
+            "CCRI16.5.1",
+            "CCRI16.4.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "exo-vase",
+      "etiquettes": [
+        "exo",
+        "Esquisser et coter"
+      ]
+    },
+    {
+      "id": "exo-barriere",
+      "titre": "Barrière qui se lève",
+      "niveau": "",
+      "resume": "Une lisse qui pivote de 0 à 90° et revient.",
+      "competences": [
+        "SFC11.5.1",
+        "CCRI16.5.1",
+        "SFC11.4.2",
+        "CCRI16.4.1",
+        "SFC11.3.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "exo-barriere",
+          "titre": "Barrière qui se lève",
+          "total": 4,
+          "competences": [
+            "SFC11.5.1",
+            "CCRI16.5.1",
+            "SFC11.4.2",
+            "CCRI16.4.1",
+            "SFC11.3.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "exo-barriere",
+      "etiquettes": [
+        "exo",
+        "Mettre en mouvement"
+      ]
+    },
+    {
+      "id": "exo-reducteur",
+      "titre": "Réducteur 1/3",
+      "niveau": "",
+      "resume": "Diviser la vitesse par 3 avec deux roues.",
+      "competences": [
+        "SFC11.5.1",
+        "CCRI16.5.1",
+        "SFC11.4.2",
+        "CCRI16.4.1",
+        "SFC11.3.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "exo-reducteur",
+          "titre": "Réducteur 1/3",
+          "total": 3,
+          "competences": [
+            "SFC11.5.1",
+            "CCRI16.5.1",
+            "SFC11.4.2",
+            "CCRI16.4.1",
+            "SFC11.3.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "exo-reducteur",
+      "etiquettes": [
+        "exo",
+        "Mettre en mouvement"
+      ]
+    },
+    {
+      "id": "exo-pont",
+      "titre": "Pont de 400 mm",
+      "niveau": "",
+      "resume": "Un treillis qui porte 500 N sans casser.",
+      "competences": [
+        "CCRI21.5.1",
+        "CCRI21.4.1",
+        "CCRI21.3.1"
+      ],
+      "activites": [
+        {
+          "id": "exo-pont",
+          "titre": "Pont de 400 mm",
+          "total": 3,
+          "competences": [
+            "CCRI21.5.1",
+            "CCRI21.4.1",
+            "CCRI21.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "exo-pont",
+      "etiquettes": [
+        "exo",
+        "Simuler la déformation"
+      ]
+    },
+    {
+      "id": "ex-maison",
+      "titre": "Maison",
+      "niveau": "",
+      "resume": "Murs creusés par des perçages, toit fait de deux coins.",
+      "competences": [
+        "CCRI16.5.1",
+        "CCRI16.4.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "ex-maison",
+          "titre": "Maison",
+          "total": 2,
+          "competences": [
+            "CCRI16.5.1",
+            "CCRI16.4.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "ex-maison",
+      "etiquettes": [
+        "exemple",
+        "Modéliser avec des volumes"
+      ]
+    },
+    {
+      "id": "ex-crayons",
+      "titre": "Pot à crayons gravé",
+      "niveau": "",
+      "resume": "Un bloc percé de cinq trous, avec un nom gravé en creux.",
+      "competences": [
+        "CCRI16.5.1",
+        "CCRI16.4.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "ex-crayons",
+          "titre": "Pot à crayons gravé",
+          "total": 2,
+          "competences": [
+            "CCRI16.5.1",
+            "CCRI16.4.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "ex-crayons",
+      "etiquettes": [
+        "exemple",
+        "Modéliser avec des volumes"
+      ]
+    },
+    {
+      "id": "ex-de",
+      "titre": "Dé à jouer",
+      "niveau": "",
+      "resume": "Un cube de 20 mm et 21 sphères en perçage pour les points.",
+      "competences": [
+        "CCRI16.5.1",
+        "CCRI16.4.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "ex-de",
+          "titre": "Dé à jouer",
+          "total": 2,
+          "competences": [
+            "CCRI16.5.1",
+            "CCRI16.4.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "ex-de",
+      "etiquettes": [
+        "exemple",
+        "Modéliser avec des volumes"
+      ]
+    },
+    {
+      "id": "ex-porteCles",
+      "titre": "Porte-clés",
+      "niveau": "",
+      "resume": "Une plaque dessinée en esquisse cotée, avec un texte en relief.",
+      "competences": [
+        "CCRI16.5.1",
+        "CCRI16.4.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "ex-porteCles",
+          "titre": "Porte-clés",
+          "total": 2,
+          "competences": [
+            "CCRI16.5.1",
+            "CCRI16.4.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "ex-porteCles",
+      "etiquettes": [
+        "exemple",
+        "Modéliser avec des volumes"
+      ]
+    },
+    {
+      "id": "ex-plaque",
+      "titre": "Plaque de fixation",
+      "niveau": "",
+      "resume": "Esquisse totalement contrainte : cotes en chaîne et cercles égaux.",
+      "competences": [
+        "CCRI16.5.1",
+        "CCRI16.4.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "ex-plaque",
+          "titre": "Plaque de fixation",
+          "total": 3,
+          "competences": [
+            "CCRI16.5.1",
+            "CCRI16.4.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "ex-plaque",
+      "etiquettes": [
+        "exemple",
+        "Esquisser et coter"
+      ]
+    },
+    {
+      "id": "ex-pion",
+      "titre": "Pion d’échecs",
+      "niveau": "",
+      "resume": "Un demi-profil dessiné à droite de l’axe, tourné sur 360°.",
+      "competences": [
+        "CCRI16.5.1",
+        "CCRI16.4.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "ex-pion",
+          "titre": "Pion d’échecs",
+          "total": 2,
+          "competences": [
+            "CCRI16.5.1",
+            "CCRI16.4.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "ex-pion",
+      "etiquettes": [
+        "exemple",
+        "Esquisser et coter"
+      ]
+    },
+    {
+      "id": "ex-coeur",
+      "titre": "Pendentif cœur",
+      "niveau": "",
+      "resume": "Quatre courbes de Bézier symétriques forment un cœur.",
+      "competences": [
+        "CCRI16.5.1",
+        "CCRI16.4.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "ex-coeur",
+          "titre": "Pendentif cœur",
+          "total": 3,
+          "competences": [
+            "CCRI16.5.1",
+            "CCRI16.4.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "ex-coeur",
+      "etiquettes": [
+        "exemple",
+        "Esquisser et coter"
+      ]
+    },
+    {
+      "id": "ex-vase",
+      "titre": "Vase",
+      "niveau": "",
+      "resume": "Un profil courbe avec une paroi de 2 mm, tourné sur 360°.",
+      "competences": [
+        "CCRI16.5.1",
+        "CCRI16.4.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "ex-vase",
+          "titre": "Vase",
+          "total": 2,
+          "competences": [
+            "CCRI16.5.1",
+            "CCRI16.4.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "ex-vase",
+      "etiquettes": [
+        "exemple",
+        "Esquisser et coter"
+      ]
+    },
+    {
+      "id": "ex-barriere",
+      "titre": "Barrière de parking",
+      "niveau": "",
+      "resume": "Une lisse qui se lève de 0 à 90° et redescend.",
+      "competences": [
+        "SFC11.5.1",
+        "CCRI16.5.1",
+        "SFC11.4.2",
+        "CCRI16.4.1",
+        "SFC11.3.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "ex-barriere",
+          "titre": "Barrière de parking",
+          "total": 2,
+          "competences": [
+            "SFC11.5.1",
+            "CCRI16.5.1",
+            "SFC11.4.2",
+            "CCRI16.4.1",
+            "SFC11.3.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "ex-barriere",
+      "etiquettes": [
+        "exemple",
+        "Mettre en mouvement"
+      ]
+    },
+    {
+      "id": "ex-gears",
+      "titre": "Engrenages et crémaillère",
+      "niveau": "",
+      "resume": "Une roue Z20 entraîne un pignon Z10 et une crémaillère.",
+      "competences": [
+        "SFC11.5.1",
+        "CCRI16.5.1",
+        "SFC11.4.2",
+        "CCRI16.4.1",
+        "SFC11.3.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "ex-gears",
+          "titre": "Engrenages et crémaillère",
+          "total": 2,
+          "competences": [
+            "SFC11.5.1",
+            "CCRI16.5.1",
+            "SFC11.4.2",
+            "CCRI16.4.1",
+            "SFC11.3.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "ex-gears",
+      "etiquettes": [
+        "exemple",
+        "Mettre en mouvement"
+      ]
+    },
+    {
+      "id": "ex-reducteur",
+      "titre": "Réducteur à deux étages",
+      "niveau": "",
+      "resume": "Deux étages Z10 → Z30 : la sortie tourne 9 fois moins vite.",
+      "competences": [
+        "SFC11.5.1",
+        "CCRI16.5.1",
+        "SFC11.4.2",
+        "CCRI16.4.1",
+        "SFC11.3.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "ex-reducteur",
+          "titre": "Réducteur à deux étages",
+          "total": 2,
+          "competences": [
+            "SFC11.5.1",
+            "CCRI16.5.1",
+            "SFC11.4.2",
+            "CCRI16.4.1",
+            "SFC11.3.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "ex-reducteur",
+      "etiquettes": [
+        "exemple",
+        "Mettre en mouvement"
+      ]
+    },
+    {
+      "id": "ex-poulies",
+      "titre": "Poulies et courroie",
+      "niveau": "",
+      "resume": "Poulie Ø40 vers poulie Ø20 : la petite tourne 2 fois plus vite.",
+      "competences": [
+        "SFC11.5.1",
+        "CCRI16.5.1",
+        "SFC11.4.2",
+        "CCRI16.4.1",
+        "SFC11.3.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "ex-poulies",
+          "titre": "Poulies et courroie",
+          "total": 2,
+          "competences": [
+            "SFC11.5.1",
+            "CCRI16.5.1",
+            "SFC11.4.2",
+            "CCRI16.4.1",
+            "SFC11.3.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "ex-poulies",
+      "etiquettes": [
+        "exemple",
+        "Mettre en mouvement"
+      ]
+    },
+    {
+      "id": "ex-etau",
+      "titre": "Étau (vis-écrou)",
+      "niveau": "",
+      "resume": "Tourner la vis fait avancer le mors mobile de 2 mm par tour.",
+      "competences": [
+        "SFC11.5.1",
+        "CCRI16.5.1",
+        "SFC11.4.2",
+        "CCRI16.4.1",
+        "SFC11.3.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "ex-etau",
+          "titre": "Étau (vis-écrou)",
+          "total": 2,
+          "competences": [
+            "SFC11.5.1",
+            "CCRI16.5.1",
+            "SFC11.4.2",
+            "CCRI16.4.1",
+            "SFC11.3.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "ex-etau",
+      "etiquettes": [
+        "exemple",
+        "Mettre en mouvement"
+      ]
+    },
+    {
+      "id": "ex-bras",
+      "titre": "Bras articulé",
+      "niveau": "",
+      "resume": "Tourelle, épaule et coude : chaque pivot porte le suivant.",
+      "competences": [
+        "SFC11.5.1",
+        "CCRI16.5.1",
+        "SFC11.4.2",
+        "CCRI16.4.1",
+        "SFC11.3.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "ex-bras",
+          "titre": "Bras articulé",
+          "total": 2,
+          "competences": [
+            "SFC11.5.1",
+            "CCRI16.5.1",
+            "SFC11.4.2",
+            "CCRI16.4.1",
+            "SFC11.3.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "ex-bras",
+      "etiquettes": [
+        "exemple",
+        "Mettre en mouvement"
+      ]
+    },
+    {
+      "id": "ex-eolienne",
+      "titre": "Éolienne",
+      "niveau": "",
+      "resume": "Le rotor tourne sans fin pendant que la nacelle s’oriente.",
+      "competences": [
+        "SFC11.5.1",
+        "CCRI16.5.1",
+        "SFC11.4.2",
+        "CCRI16.4.1",
+        "SFC11.3.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "ex-eolienne",
+          "titre": "Éolienne",
+          "total": 2,
+          "competences": [
+            "SFC11.5.1",
+            "CCRI16.5.1",
+            "SFC11.4.2",
+            "CCRI16.4.1",
+            "SFC11.3.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "ex-eolienne",
+      "etiquettes": [
+        "exemple",
+        "Mettre en mouvement"
+      ]
+    },
+    {
+      "id": "ex-pontWarren",
+      "titre": "Pont en treillis",
+      "niveau": "",
+      "resume": "Un pont de 40 cm en baguettes de bois chargé de 60 kg.",
+      "competences": [
+        "CCRI21.5.1",
+        "CCRI21.4.1",
+        "CCRI21.3.1"
+      ],
+      "activites": [
+        {
+          "id": "ex-pontWarren",
+          "titre": "Pont en treillis",
+          "total": 3,
+          "competences": [
+            "CCRI21.5.1",
+            "CCRI21.4.1",
+            "CCRI21.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "ex-pontWarren",
+      "etiquettes": [
+        "exemple",
+        "Simuler la déformation"
+      ]
+    },
+    {
+      "id": "ex-grue",
+      "titre": "Grue en tubes",
+      "niveau": "",
+      "resume": "Un mât et une flèche en tubes d’aluminium portent 8 kg au bout.",
+      "competences": [
+        "CCRI21.5.1",
+        "CCRI21.4.1",
+        "CCRI21.3.1"
+      ],
+      "activites": [
+        {
+          "id": "ex-grue",
+          "titre": "Grue en tubes",
+          "total": 2,
+          "competences": [
+            "CCRI21.5.1",
+            "CCRI21.4.1",
+            "CCRI21.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "ex-grue",
+      "etiquettes": [
+        "exemple",
+        "Simuler la déformation"
+      ]
+    },
+    {
+      "id": "ex-pontSuspendu",
+      "titre": "Pont suspendu",
+      "niveau": "",
+      "resume": "Le tablier est pendu à un câble porteur tenu par deux pylônes.",
+      "competences": [
+        "CCRI21.5.1",
+        "CCRI21.4.1",
+        "CCRI21.3.1"
+      ],
+      "activites": [
+        {
+          "id": "ex-pontSuspendu",
+          "titre": "Pont suspendu",
+          "total": 3,
+          "competences": [
+            "CCRI21.5.1",
+            "CCRI21.4.1",
+            "CCRI21.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "ex-pontSuspendu",
+      "etiquettes": [
+        "exemple",
+        "Simuler la déformation"
+      ]
+    },
+    {
+      "id": "ex-plongeoir",
+      "titre": "Plongeoir",
+      "niveau": "",
+      "resume": "Une planche de 2,40 m encastrée, un plongeur de 80 kg au bout.",
+      "competences": [
+        "CCRI21.5.1",
+        "CCRI21.4.1",
+        "CCRI21.3.1"
+      ],
+      "activites": [
+        {
+          "id": "ex-plongeoir",
+          "titre": "Plongeoir",
+          "total": 2,
+          "competences": [
+            "CCRI21.5.1",
+            "CCRI21.4.1",
+            "CCRI21.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "ex-plongeoir",
+      "etiquettes": [
+        "exemple",
+        "Simuler la déformation"
+      ]
+    },
+    {
+      "id": "ex-plancher",
+      "titre": "Plancher simple",
+      "niveau": "",
+      "resume": "Une solive de 3 m posée sur deux murs, chargée sur toute sa longueur.",
+      "competences": [
+        "CCRI21.5.1",
+        "CCRI21.4.1",
+        "CCRI21.3.1"
+      ],
+      "activites": [
+        {
+          "id": "ex-plancher",
+          "titre": "Plancher simple",
+          "total": 2,
+          "competences": [
+            "CCRI21.5.1",
+            "CCRI21.4.1",
+            "CCRI21.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "ex-plancher",
+      "etiquettes": [
+        "exemple",
+        "Simuler la déformation"
+      ]
+    },
+    {
+      "id": "ex-voute",
+      "titre": "Voûte en pierre",
+      "niveau": "",
+      "resume": "Un arc de pierre de 3 m qui porte 5 tonnes au sommet.",
+      "competences": [
+        "CCRI21.5.1",
+        "CCRI21.4.1",
+        "CCRI21.3.1"
+      ],
+      "activites": [
+        {
+          "id": "ex-voute",
+          "titre": "Voûte en pierre",
+          "total": 2,
+          "competences": [
+            "CCRI21.5.1",
+            "CCRI21.4.1",
+            "CCRI21.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "ex-voute",
+      "etiquettes": [
+        "exemple",
+        "Simuler la déformation"
+      ]
+    },
+    {
+      "id": "ex-potence",
+      "titre": "Point suspendu",
+      "niveau": "",
+      "resume": "Une potence en bois porte une charge de 50 kg suspendue au bout du bras.",
+      "competences": [
+        "CCRI21.5.1",
+        "CCRI21.4.1",
+        "CCRI21.3.1"
+      ],
+      "activites": [
+        {
+          "id": "ex-potence",
+          "titre": "Point suspendu",
+          "total": 2,
+          "competences": [
+            "CCRI21.5.1",
+            "CCRI21.4.1",
+            "CCRI21.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "ex-potence",
+      "etiquettes": [
+        "exemple",
+        "Simuler la déformation"
+      ]
+    }
+  ]
+}

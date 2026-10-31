@@ -5,7 +5,7 @@
    - le module de la Centrale (js/centrale-client.js) est chargé à la fin du démarrage ; s'il est injoignable,
      Établi 3D fonctionne seul (enregistrement dans le navigateur).
    ========================================================= */
-const ETABLI_VERSION='1.2.0';   // = atelier.version de centrale.json
+const ETABLI_VERSION='1.3.0';   // = atelier.version de centrale.json
 const PROJET_FORMAT=2;          // version du document « projet » (2 : matières p.mat et images textures)
 
 /* ---- compétences (référentiel de la Centrale : /passerelle/competences.json, programme de technologie cycle 4)
@@ -92,6 +92,10 @@ window.Etabli3D=Object.freeze({
   activites:()=>etabliCatalogue().map(({id,titre,groupe,total,competences})=>({id,titre,groupe,total,competences})),
   /** Catalogue détaillé (champs de activites.liste dans centrale.json). */
   catalogue:etabliCatalogue,
+  /** Catalogue des ateliers (ateliers.json, format catalogue.ateliers v1) : un tuto, un exercice ou un exemple = un atelier. */
+  ateliers:()=>({format:'catalogue.ateliers', version:1, app:'etabli3d', app_version:ETABLI_VERSION, referentiel:'technologie-c4-2024',
+    ateliers:etabliCatalogue().map(a=>({id:a.id, titre:a.titre, niveau:'', resume:a.resume, competences:a.competences,
+      activites:[{id:a.id, titre:a.titre, total:a.total, competences:a.competences}], ouvrir:a.id, etiquettes:[a.type, a.groupe]}))}),
   /** Progression d'une activité au format de la Centrale, ou null si jamais ouverte. */
   progression:etabliProgression,
   /** Fusionne le résultat de Centrale.mesProgressions() (le meilleur est gardé). */
@@ -173,6 +177,47 @@ function centraleOuvrirActivite(id){
   const key=actKey(id); if(!key) return; const [type,k]=key.split(':');
   if(type==='ex'){ if(SAMPLES[k] && state.note?.key!==k) loadExample(k); }
   else if(LESSONS[k] && !(GUIDE.src==='tuto' && GUIDE.tuto===k)) startLesson(k);
+}
+/* Ouverture directe par l'adresse (#activite=exo-de), même sans la Centrale. Depuis le portail (#centrale=…&activite=…),
+   c'est la connexion qui ouvre l'activité demandée (centraleConnecte). */
+function etabliOuvrirAdresse(){
+  const h=location.hash.replace(/^#/,''); if(/(^|&)centrale=/.test(h)) return;
+  const m=/(?:^|&)activite=([^&]+)/.exec(h); if(!m) return;
+  let id; try{ id=decodeURIComponent(m[1]); }catch(e){ return; }
+  try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){}
+  if(!etabliCatalogue().some(a=>a.id===id)) return toast('Activité inconnue : '+id);
+  $('#gallery').hidden=true; centraleOuvrirActivite(id);
+}
+/* Sauvegarde de secours : le projet dans un fichier, puis le dossier Nuage de la classe
+   (lien donné par la Centrale si l'élève est connecté, sinon lien collé sur ce poste par le professeur). */
+const CLE_NUAGE='etabli3d.nuage';
+const lienNuageLocal=()=>{ try{ return localStorage.getItem(CLE_NUAGE)||''; }catch(e){ return ''; } };
+function nomFichierSecours(){
+  const s=window.Centrale?.connecte?.()? Centrale.session() : null;
+  return ((s? `${s.classe}-${s.eleve}-` : '')+slug(state.name)).replace(/[^A-Za-z0-9_.-]/g,'-')+'.json';
+}
+async function deposerSurNuage(){
+  if(state.edit) finishGroupEdit();
+  await offerFile(nomFichierSecours(), JSON.stringify(etabliProjet()));
+  const s=window.Centrale?.connecte?.()? Centrale.session() : null, lien=s?.depot?.url||lienNuageLocal();
+  if(!lien) return nuageFenetre();
+  window.open(lien,'_blank','noopener');
+  toast('Projet enregistré : glisse le fichier dans la page Nuage qui vient de s’ouvrir.'+(s?.depot?.mot_de_passe? ' Mot de passe : '+s.depot.mot_de_passe : ''), 6000);
+}
+function nuageFenetre(){
+  $('#nuageFenetre')?.remove();
+  const champ=h('input',{type:'url',placeholder:'https://nuage03.apps.education.fr/s/…','aria-label':'Lien du dossier Nuage de la classe',value:lienNuageLocal()});
+  const f=h('div',{class:'overlay',id:'nuageFenetre'},
+    h('div',{class:'cz-card',role:'dialog','aria-label':'Dépôt Nuage'},
+      h('div',{class:'cz-head'}, h('b',{},'Dépôt Nuage'), h('button',{class:'btn icon ghost','aria-label':'Fermer','data-fermer':'1'}, svgIcon('close'))),
+      h('p',{},'Ton projet est enregistré dans tes téléchargements. Aucun dossier Nuage n’est réglé sur cet ordinateur : demande le lien à ton professeur.'),
+      h('p',{},h('b',{},'Professeur : '),'collez le lien de partage du dossier Nuage de la classe. Il est gardé sur cet ordinateur.'), champ,
+      h('div',{class:'cz-actions'},
+        h('button',{class:'btn primary',onclick:()=>{ const v=champ.value.trim(); if(!/^https:\/\/\S+$/.test(v)) return toast('Le lien doit commencer par https://');
+          try{ localStorage.setItem(CLE_NUAGE, v); }catch(e){} f.remove(); window.open(v,'_blank','noopener'); toast('Lien gardé. Glisse le fichier dans la page Nuage.', 5000); }}, 'Garder et ouvrir'),
+        h('button',{class:'btn ghost','data-fermer':'1'}, 'Fermer'))));
+  f.addEventListener('click',e=>{ if(e.target===f || e.target.closest('[data-fermer]')) f.remove(); });
+  document.body.append(f); champ.focus();
 }
 /* Fichiers projet (.json, sauf resume.json) d'une étape : d'abord ses sorties (ce que l'élève y a déjà déposé), puis ses entrées */
 const estJsonProjet=nom=>/\.json$/i.test(nom||'') && !/resume\.json$/i.test(nom);

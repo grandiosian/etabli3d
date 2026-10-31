@@ -182,6 +182,14 @@ Pour les ateliers transversaux (`fichiers` dans `centrale.json`). Établi 3D rec
 
 ---
 
+### Le catalogue des ateliers et le travail sans serveur
+
+- **`ateliers.json`** (format `catalogue.ateliers` v1 de la Centrale), à côté de `centrale.json` : un tuto, un exercice ou un exemple = un atelier, tous niveaux, avec ses compétences et son activité. Produit par `Etabli3D.ateliers()`, vérifié par `outils/verifier-descripteur.html` et par `npm test`, copié dans `dist/` par `build.py`. La Centrale l’importe dans Ateliers → « Ateliers des applications ».
+- **Ouvrir par l’adresse** : `…/etabli3d/#activite=exo-plaque` ouvre l’activité, même sans la Centrale. Depuis le portail (`#centrale=…&activite=…`), c’est la connexion qui ouvre l’activité demandée.
+- **Sauvegarde de secours** : Fichier → « Déposer sur Nuage » enregistre le projet (`5A-07-mon-projet.json` si l’élève est connecté) puis ouvre le dossier Nuage de la classe : lien de la Centrale, sinon lien collé une fois sur le poste par le professeur (clé locale `etabli3d.nuage`).
+
+Règles communes à toutes les applications : [Données, bonnes pratiques et compatibilité](https://technoversailles.alwaysdata.net/passerelle/?doc=donnees).
+
 ## 3. Point d’accès JavaScript
 
 `window.Etabli3D` est le seul endroit où le code de connexion à la Centrale lit les données d’Établi 3D. Un test, l’outil de vérification ou une autre application s’en servent de la même façon.
@@ -191,6 +199,7 @@ Pour les ateliers transversaux (`fichiers` dans `centrale.json`). Établi 3D rec
 | `Etabli3D.app`, `Etabli3D.version`, `Etabli3D.descripteur` | `"etabli3d"`, la version (identique à `centrale.json`), `"centrale.json"`. |
 | `Etabli3D.activites()` | Liste envoyée à `Centrale.init`. |
 | `Etabli3D.catalogue()` | Catalogue détaillé : type, niveau, catégorie, résumé. |
+| `Etabli3D.ateliers()` | Contenu de `ateliers.json` (catalogue des ateliers). |
 | `Etabli3D.progression(id)` | `{titre, faites, total, statut}` ou `null` (les `constats` sont ajoutés à l’envoi). |
 | `Etabli3D.fusionnerProgression(serveur)` | Fusionne le résultat de `Centrale.mesProgressions()`. |
 | `Etabli3D.donnees()` | `{projet}`. |
@@ -204,6 +213,6 @@ Pour les ateliers transversaux (`fichiers` dans `centrale.json`). Établi 3D rec
 ## 4. Faire évoluer Établi 3D sans casser la Centrale
 
 1. Ajouter un tuto, un exercice ou un exemple : nouvelle clé dans `LESSONS` ou `SAMPLES`, jamais réutilisée.
-2. Ouvrir [`outils/verifier-descripteur.html`](outils/verifier-descripteur.html) (en ligne : `…/etabli3d/outils/verifier-descripteur.html`) : la page compare `centrale.json` avec l’application et donne la liste à jour à coller dans `activites.liste`. `npm test` fait la même vérification.
+2. Ouvrir [`outils/verifier-descripteur.html`](outils/verifier-descripteur.html) (en ligne : `…/etabli3d/outils/verifier-descripteur.html`) : la page compare `centrale.json` et `ateliers.json` avec l’application et donne leur contenu à jour. `npm test` fait la même vérification.
 3. Augmenter `atelier.version` et `ETABLI_VERSION` (`src/centrale.js`).
 4. Changer la forme du projet : mettre à jour `$defs/Projet`, augmenter `PROJET_FORMAT`, et garder la lecture de l’ancienne forme (les élèves ont du travail enregistré).

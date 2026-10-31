@@ -84,7 +84,7 @@ $$('#stTools [data-st]').forEach(b=>b.onclick=()=>stSetTool(b.dataset.st));
 $$('#stTools [data-v3]').forEach(b=>b.onclick=()=>setStructView3D(b.dataset.v3==='1'));
 $('#stFit').onclick=()=>{ if(ST.mode3d) setStructView3D(true); else { ST.fitted=false; stFit(); stDraw(); } };
 $('#bUndo').onclick=undo; $('#bRedo').onclick=redo;
-$('#bSave').onclick=saveProject; $('#bStl').onclick=exportStl;
+$('#bSave').onclick=saveProject; $('#bStl').onclick=exportStl; $('#bNuage').onclick=deposerSurNuage;
 $('#bOpen').onclick=()=>$('#fileIn').click();
 $('#fileIn').onchange=e=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ loadProject(JSON.parse(r.result), false); commit(); toast('Projet ouvert : '+state.name); }catch(err){ toast('Ce fichier n’est pas un projet Établi 3D (.json).'); } }; r.readAsText(f); e.target.value=''; };
 $('#bNew').onclick=()=>{ simReset(true); resetFor('Nouveau projet'); selection=[]; jf=null; selJoint=null; $('#projName').value=state.name; sync(); commit(); renderDemo(); setTab('part'); toast('Nouveau projet. Ctrl+Z pour revenir en arrière.'); };
@@ -171,6 +171,7 @@ initPanels();
   if(!loaded){ loadExample('maison'); hist.stack=[hist.stack[hist.stack.length-1]]; hist.idx=0; openGallery(); }
   else { renderInspector(); renderDemo(); }
   simUI(); updateUndo(); updateSteps();
+  etabliOuvrirAdresse(); window.addEventListener('hashchange', etabliOuvrirAdresse);   // #activite=… : ouverture directe, sans serveur
   centraleInit();   // connexion facultative à la Centrale de la classe (code élève, sauvegarde, progression)
 })();
 resize();

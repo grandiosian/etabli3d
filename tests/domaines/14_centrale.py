@@ -85,3 +85,31 @@ def run(t):
         else:
             check(f'Centrale : arrivée dans l’étape, {cas} → « {attendu} »', r[0] == '5A · 07' and r[2] == attendu, r)
         ctx.close()
+
+    # Sans serveur (Centrale injoignable) : #activite= ouvre l'activité ; « Déposer sur Nuage » enregistre le projet
+    # puis, sans lien de la classe, demande le lien au professeur et le garde sur le poste
+    ctx = b.new_context(viewport={'width': 1400, 'height': 860}, accept_downloads=True)
+    ctx.add_init_script("window.CENTRALE_URL='http://127.0.0.1:9/';")
+    sv = ctx.new_page(); sv.on('pageerror', lambda e: errors.append('sans serveur: ' + str(e)))
+    sv.goto(URL + '#activite=exo-plaque'); sv.wait_for_timeout(2500)
+    r = sv.evaluate("()=>[window.__etabli.GUIDE.tuto, location.hash, document.querySelector('#gallery').hidden]")
+    sv.evaluate("()=>{ location.hash='#activite=ex-de'; }"); sv.wait_for_timeout(1200)
+    r.append(sv.evaluate("()=>window.__etabli.state.note && window.__etabli.state.note.key"))
+    check('Sans serveur : #activite=exo-plaque ouvre l’exercice (adresse nettoyée), #activite=ex-de l’exemple',
+          r == ['plaque', '', True, 'de'], r)
+    sv.click('#bFile')
+    with sv.expect_download() as dl:
+        sv.click('#bNuage')
+    sv.wait_for_selector('#nuageFenetre', timeout=5000)
+    sv.fill('#nuageFenetre input', 'https://nuage03.apps.education.fr/s/ESSAI')
+    with ctx.expect_page() as nv:
+        sv.click('#nuageFenetre button:has-text("Garder et ouvrir")')
+    r = [dl.value.suggested_filename, sv.evaluate("()=>localStorage.getItem('etabli3d.nuage')"), sv.locator('#nuageFenetre').count()]
+    sv.click('#bFile')
+    with ctx.expect_page() as nv2:
+        with sv.expect_download():
+            sv.click('#bNuage')
+    r.append(sv.locator('#nuageFenetre').count())
+    check('Sans serveur : Déposer sur Nuage enregistre le projet, garde le lien du professeur et ouvre ensuite le dossier directement',
+          r[0].endswith('.json') and r[1] == 'https://nuage03.apps.education.fr/s/ESSAI' and r[2:] == [0, 0], r)
+    ctx.close()

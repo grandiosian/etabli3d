@@ -78,4 +78,5 @@ if __name__ == '__main__':
         write('artifact.html', read('head.html') + read('body.html') + script(CDN))
     # descripteur lu par la Centrale (à la racine du site) et outil de vérification
     shutil.copy(os.path.join(ROOT, 'centrale.json'), os.path.join(DIST, 'centrale.json'))
+    shutil.copy(os.path.join(ROOT, 'ateliers.json'), os.path.join(DIST, 'ateliers.json'))   # catalogue des ateliers
     shutil.copytree(os.path.join(ROOT, 'outils'), os.path.join(DIST, 'outils'), dirs_exist_ok=True)
