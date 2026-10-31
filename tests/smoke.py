@@ -632,6 +632,8 @@ with sync_playwright() as p:
     r = pg.evaluate(f"()=>[document.querySelector('#snapBox').parentElement.id, !!({E}.LAYOUT().snapBox||{{}}).dock, document.querySelector('#snapBox').classList.contains('docked')]")
     check('le panneau se décroche en le glissant', r == ['stage', False, False], r)
     # Les grands panneaux : guide à gauche, propriétés à droite, grille à gauche ; le cube de vue reste dans le coin
+    # (niveau Intermédiaire : sans l'arborescence, il y a la place pour les trois à 1400 px)
+    pg.click('#lvl [data-lvl="2"]'); pg.wait_for_timeout(300)
     pg.evaluate(f"()=>{{const E={E}; E.LAYOUT().demo=null; if(!document.querySelector('#demo').offsetParent) document.querySelector('#bGuide').click();}}"); pg.wait_for_timeout(200)
     ed = pg.locator('.ed-wrap').bounding_box(); drag_to('#demo .demo-grip', ed['x']-120, ed['y']+10)
     ed = pg.locator('.ed-wrap').bounding_box(); drag_to('#insp .insp-tt', ed['x']+ed['width']+60, ed['y']+40)
@@ -653,6 +655,7 @@ with sync_playwright() as p:
     pg.evaluate(f"()=>{E}.resetLayout()"); pg.wait_for_timeout(300)
     r = pg.evaluate("()=>[document.querySelector('#demo').parentElement.id, document.querySelector('#snapBox').parentElement.id, document.querySelectorAll('.dock-sp').length]")
     check('« Remettre les panneaux à leur place » les décroche tous', r == ['stage', 'stage', 0], r)
+    pg.click('#lvl [data-lvl="3"]'); pg.wait_for_timeout(300)
     pg.evaluate(f"()=>{{const E={E}; E.prefs.nav='auto'; E.applyNavBar();}}")
     # Arborescence : réduire, déplacer, remettre
     pg.evaluate(f"()=>{E}.LAYOUT().tree=null"); 
