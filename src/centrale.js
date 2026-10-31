@@ -5,7 +5,7 @@
    - le module de la Centrale (js/centrale-client.js) est chargé à la fin du démarrage ; s'il est injoignable,
      Établi 3D fonctionne seul (enregistrement dans le navigateur).
    ========================================================= */
-const ETABLI_VERSION='1.0.0';   // = atelier.version de centrale.json
+const ETABLI_VERSION='1.1.0';   // = atelier.version de centrale.json
 const PROJET_FORMAT=2;          // version du document « projet » (2 : matières p.mat et images textures)
 
 /* ---- activités : tutos, exercices et exemples (identifiants stables : tuto-<clé>, exo-<clé>, ex-<clé>) */
@@ -108,10 +108,11 @@ function centraleInit(){
 }
 function centraleDemarrer(){
   if(!window.Centrale) return;
-  Centrale.init({api:CZ.serveur+'api/', app:'etabli3d', activites:Etabli3D.activites(),
+  const avecJeton=/(^|[#&])centrale=/.test(location.hash);   // à lire AVANT init : le module retire aussitôt le jeton de l'adresse
+  Centrale.init({api:CZ.serveur+'api/', app:'etabli3d', activites:Etabli3D.activites(), avantDeQuitter:centraleAvantDeQuitter,
     surDeconnexion:()=>{ CZ.pret=false; centraleBouton(); centraleMenu(); toast('Session terminée : reconnecte-toi pour enregistrer ton travail.'); }});
   const btn=h('button',{class:'btn ghost',id:'bCentrale',type:'button',onclick:centraleClic}); $('#bGuide').before(btn); CZ.bouton=btn; centraleBouton();
-  if(/(^|[#&])centrale=/.test(location.hash) || Centrale.connecte()) Centrale.afficherConnexion(centraleCorps(), {onConnecte:centraleConnecte});
+  if(avecJeton || Centrale.connecte()) Centrale.afficherConnexion(centraleCorps(), {onConnecte:centraleConnecte});
 }
 function centraleBouton(){
   const b=CZ.bouton; if(!b) return; const s=window.Centrale?.connecte() && Centrale.session(); b.innerHTML='';
@@ -142,13 +143,15 @@ async function centraleConnecte(infos){
     const serveur=await Centrale.mesProgressions(); Etabli3D.fusionnerProgression(serveur);
     for(const a of Etabli3D.activites()){ const l=Etabli3D.progression(a.id), p=serveur?.[a.id]; if(l && (!p || l.faites>(p.faites||0) || (l.statut==='termine' && p.statut!=='termine'))) Centrale.progression(a.id, l); }
     // 2. projet : celui du serveur s'il existe (l'ancien reste dans Annuler), sinon on envoie celui du navigateur
+    //    (dans un atelier : date du projet du serveur AVANT cet envoi, pour la comparer aux dépôts de l'étape)
+    CZ.projetMaj= Centrale.contexteAtelier?.()? ((await Centrale.listeDonnees().catch(()=>[])).find(c=>c.cle==='projet')?.maj||0) : 0;
     const projet=await Centrale.charger('projet', null);
     if(estProjet(projet)){ if(JSON.stringify(projet)!==JSON.stringify(etabliProjet())) ouvrirProjet(projet); }
     else Centrale.sauver('projet', etabliProjet());
     CZ.pret=true;
-    // 3. atelier transversal : projet vide → on part du fichier fourni par l'étape
+    // 3. atelier transversal : on reprend le projet de l'étape (dépôt de l'élève, sinon fichier reçu)
     const E= Centrale.contexteAtelier && Centrale.contexteAtelier()? await Centrale.etape().catch(()=>null) : null; CZ.etape=E;
-    if(E?.etape && !state.parts.length){ const f=await atelierEntree(E); if(f) toast(`Fichier de l’atelier ouvert : ${f}.`); }
+    if(E?.etape){ const f=await atelierArrivee(E).catch(()=>null); if(f) toast(`Fichier de l’atelier ouvert : ${f}. Ton projet précédent reste dans Annuler.`); }
     // 4. activité demandée depuis le portail
     const dem=Centrale.activiteDemandee(); if(dem) centraleOuvrirActivite(dem);
     centraleMenu(); toast(`Connecté : ${infos.classe} · élève ${infos.eleve}. Ton travail est enregistré automatiquement.`);
@@ -159,16 +162,55 @@ function centraleOuvrirActivite(id){
   if(type==='ex'){ if(SAMPLES[k] && state.note?.key!==k) loadExample(k); }
   else if(LESSONS[k] && !(GUIDE.src==='tuto' && GUIDE.tuto===k)) startLesson(k);
 }
-/* premier fichier .json de l'étape (entrées) qui soit un projet Établi 3D */
-async function atelierEntree(E){
-  for(const nom of E.etape.entrees||[]){ if(!/\.json$/i.test(nom)) continue; const o=await Centrale.projet.charger(nom, {format:'json'}).catch(()=>null); if(estProjet(o)){ ouvrirProjet(o); return nom; } }
+/* Fichiers projet (.json, sauf resume.json) d'une étape : d'abord ses sorties (ce que l'élève y a déjà déposé), puis ses entrées */
+const estJsonProjet=nom=>/\.json$/i.test(nom||'') && !/resume\.json$/i.test(nom);
+function atelierNoms(E){ return [...new Set([...(E.etape.sorties||[]), ...(E.etape.entrees||[])].filter(estJsonProjet))]; }
+/* premier fichier .json de l'étape qui soit un projet Établi 3D : le dépôt de l'élève (sorties), sinon le fichier reçu (entrées) */
+async function atelierEntree(E, noms=atelierNoms(E)){
+  for(const nom of noms){ const o=await Centrale.projet.charger(nom, {format:'json'}).catch(()=>null); if(estProjet(o)){ ouvrirProjet(o); return nom; } }
   return null;
+}
+/* Arrivée dans une étape. On ouvre le fichier de l'atelier, sauf si le projet en cours est plus récent :
+   - l'élève (ou son équipe) a déjà déposé un projet à cette étape → on le reprend, sauf si le projet que l'élève
+     avait sur le serveur en arrivant (CZ.projetMaj) a été modifié après ce dépôt (travail continué puis onglet fermé) ;
+   - rien de déposé → fichier reçu, sauf si l'élève a déjà commencé cette étape sur ce poste (repère local). */
+async function atelierArrivee(E){
+  const noms=atelierNoms(E); if(!noms.length) return null;
+  const fichiers=E.fichiers||[], repere=`etabli3d.atelier:${E.parcours?.id}:${E.numero}`;
+  const depot=fichiers.find(f=>!f.fourni && (E.etape.sorties||[]).includes(f.nom) && estJsonProjet(f.nom));
+  let ouvrir=!state.parts.length;
+  if(!ouvrir && depot) ouvrir=!(CZ.projetMaj > depot.maj+5);
+  else if(!ouvrir){ try{ ouvrir=!localStorage.getItem(repere); }catch(e){ ouvrir=true; } }
+  try{ localStorage.setItem(repere, '1'); }catch(e){}
+  if(!ouvrir) return null;
+  const avant=JSON.stringify(etabliProjet().parts), f=await atelierEntree(E, depot? [depot.nom, ...noms.filter(n=>n!==depot.nom)] : noms);
+  return f && JSON.stringify(etabliProjet().parts)!==avant? f : null;
+}
+/* Dépose chaque sortie de l'étape, produite d'après son extension, de la plus rapide à la plus lente à produire
+   (projet .json, resume.json, .stl, puis l'aperçu .png qui demande un rendu). Renvoie le nombre de fichiers déposés. */
+const coutSortie=nom=>/\.png$/i.test(nom)? 3 : /\.stl$/i.test(nom)? 2 : /resume\.json$/i.test(nom)? 1 : 0;
+async function atelierDepot(E, silencieux){
+  const noms=[...(E?.etape?.sorties||[])].sort((a,b)=>coutSortie(a)-coutSortie(b)); let n=0;
+  for(const nom of noms){ const b=await fichierPour(nom); if(!b) continue;
+    try{ await Centrale.projet.sauver(nom, b); n++; }
+    catch(e){ if(!silencieux) toast(e.conflit? `« ${nom} » a été modifié par ${e.auteur||'un coéquipier'} : rouvre le fichier puis recommence.` : 'Dépôt impossible : '+e.message); throw e; } }
+  CZ.depose=JSON.stringify(etabliProjet());
+  return n;
 }
 async function atelierDeposer(){
   const E=CZ.etape||await Centrale.etape().catch(()=>null); const noms=E?.etape?.sorties||[]; if(!noms.length) return toast('Cette étape de l’atelier n’attend pas de fichier.');
-  let n=0; for(const nom of noms){ const b=await fichierPour(nom); if(!b) continue;
-    try{ await Centrale.projet.sauver(nom, b); n++; }catch(e){ toast(e.conflit? `« ${nom} » a été modifié par ${e.auteur||'un coéquipier'} : rouvre le fichier puis recommence.` : 'Dépôt impossible : '+e.message); return; } }
+  let n; try{ n=await atelierDepot(E, false); }catch(e){ return; }
   toast(n? `${n} fichier${n>1?'s':''} déposé${n>1?'s':''} dans le dossier de l’atelier : ${noms.join(', ')}.` : 'Aucun des fichiers demandés ne peut être produit ici.');
+}
+/* Appelé par le module avant « ← Mes ateliers » et « Étape suivante » (5 s au plus) : dépose les sorties de l'étape
+   si le projet a changé depuis le dernier dépôt. Sans atelier ou sans connexion : rien. */
+async function centraleAvantDeQuitter(){
+  if(!CZ.pret || !window.Centrale?.connecte() || !Centrale.contexteAtelier?.()) return;
+  if(state.edit) finishGroupEdit();
+  centraleTravail();
+  const E=await Centrale.etape().catch(()=>CZ.etape); if(!E?.etape?.sorties?.length || !E.etape.ouverte) return;
+  if(CZ.depose===JSON.stringify(etabliProjet()) && E.etape.sorties.every(n=>(E.etape.deposees||[]).includes(n))) return;
+  await atelierDepot(E, true).catch(()=>{});
 }
 async function envoyerStl(){
   const b=fichierStl(); if(!b) return toast('Rien à envoyer : il faut au moins une pièce solide visible.');

@@ -6,7 +6,7 @@
   "atelier": {
     "app": "etabli3d",
     "nom": "Établi 3D",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Modeleur 3D pour la technologie : volumes, perçages, esquisses cotées, matières, liaisons et simulation de mouvements, structures, export STL pour l’impression 3D.",
     "url": "https://grandiosian.github.io/etabli3d/",
     "urls_secours": [],
@@ -34,6 +34,11 @@
       "activite_directe": "Centrale.activiteDemandee() renvoie un id d’activité (ex. tuto-premiers, exo-de, ex-maison) : Établi 3D ouvre le tuto, l’exercice ou l’exemple, sauf si l’élève est déjà dessus.",
       "retour": "Bouton « ← Mes ateliers » ajouté par le module."
     },
+    "parcours": {
+      "bouton_suivant": "module",
+      "avant_de_quitter": "Dépose dans le dossier de projet chaque sortie de l’étape (produite d’après son extension : .json projet, resume.json, .stl, .png), si le projet a changé depuis le dernier dépôt. Rien hors atelier.",
+      "arrivee": "Ouvre le projet de l’étape : le .json déjà déposé par l’élève ou son équipe (sorties), sinon le .json reçu (entrées) ; garde le projet en cours s’il est plus récent que ce dépôt. Le projet précédent reste dans Annuler."
+    },
     "fonctions_utilisees": [
       "init",
       "afficherConnexion",
@@ -42,6 +47,7 @@
       "deconnexion",
       "charger",
       "sauver",
+      "listeDonnees",
       "progression",
       "mesProgressions",
       "activiteDemandee",
@@ -517,38 +523,44 @@
   },
   "fichiers": {
     "utilises": true,
-    "convention": "recoit et produit : listes de { nom, type, description }. Établi 3D reconnaît un fichier à son extension : le professeur peut renommer les fichiers d’une étape (ex. support-telephone.json) tant que l’extension est gardée.",
+    "convention": "recoit et produit : listes de { nom, type, description }. Établi 3D reconnaît un fichier à son extension : les noms sont des motifs (* = n’importe quel nom), le professeur nomme les fichiers de l’étape comme il veut (ex. support-telephone.json, support.stl). Le nom conseillé est indiqué dans « nom_conseille ».",
     "recoit": [
       {
-        "nom": "projet.etabli3d.json",
+        "nom": "*.json",
+        "nom_conseille": "projet.etabli3d.json",
         "type": "application/json",
-        "description": "Projet de départ (format Projet). Ouvert automatiquement si l’élève arrive dans l’étape avec un projet vide, ou par Fichier → Reprendre le fichier de l’atelier."
+        "description": "Projet de départ (format Projet). Ouvert en arrivant dans l’étape (si l’élève n’y a rien déposé), ou par Fichier → Reprendre le fichier de l’atelier. Un .json qui n’est pas un projet Établi 3D est ignoré."
       }
     ],
     "produit": [
       {
-        "nom": "projet.etabli3d.json",
+        "nom": "*.json",
+        "nom_conseille": "projet.etabli3d.json",
         "type": "application/json",
-        "description": "Le projet de l’élève (format Projet)."
+        "description": "Le projet de l’élève (format Projet). Sauf resume.json."
       },
       {
-        "nom": "piece.stl",
+        "nom": "resume.json",
+        "nom_conseille": "resume.json",
+        "type": "application/json",
+        "description": "Résumé calculé : pièces, tailles, volumes, matières, masses, liaisons (format Resume). Pour un tableur, un questionnaire ou une fiche de fabrication. Le nom doit finir par resume.json."
+      },
+      {
+        "nom": "*.stl",
+        "nom_conseille": "piece.stl",
         "type": "model/stl",
         "description": "Maillage binaire en mm des pièces solides visibles, pour l’impression 3D (perçages déjà retirés)."
       },
       {
-        "nom": "apercu.png",
+        "nom": "*.png",
+        "nom_conseille": "apercu.png",
         "type": "image/png",
         "description": "Image de la vue 3D (640 px de large)."
-      },
-      {
-        "nom": "resume.json",
-        "type": "application/json",
-        "description": "Résumé calculé : pièces, tailles, volumes, matières, masses, liaisons (format Resume). Pour un tableur, un questionnaire ou une fiche de fabrication."
       }
     ],
-    "depot": "Fichier → Déposer dans le dossier de l’atelier : chaque nom de sortie de l’étape est produit d’après son extension, puis Centrale.projet.sauver(nom, blob).",
-    "fichiers_eleve": "Fichier → Envoyer le STL au professeur : Centrale.envoyerFichier(stl, Centrale.nomFichier('stl', nom du projet))."
+    "depot": "Automatique avant « Étape suivante » et « ← Mes ateliers » (avantDeQuitter), ou Fichier → Déposer dans le dossier de l’atelier : chaque nom de sortie de l’étape est produit d’après son extension, puis Centrale.projet.sauver(nom, blob).",
+    "fichiers_eleve": "Fichier → Envoyer le STL au professeur : Centrale.envoyerFichier(stl, Centrale.nomFichier('stl', nom du projet)).",
+    "dossier_projet": true
   },
   "stockage_local": {
     "description": "Copies dans le navigateur de l’élève, utilisées sans connexion ou quand la Centrale est injoignable.",

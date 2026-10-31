@@ -20,11 +20,11 @@ Un fichier JSON à la racine du site, nommé `centrale.json`.
 |---|---|---|
 | `format`, `version` | `"passerelle.atelier"`, `1` | Reconnaître le fichier. |
 | `atelier` | `app` (`etabli3d`), `nom`, `description`, `url`, `urls_secours`, `icone`, `classes`, `version` | Remplir l’onglet **Ateliers**. |
-| `centrale` | Module chargé, serveur par défaut, sites à autoriser, connexion, fonctions du module utilisées | Savoir quoi autoriser et ce que l’application prend en charge. |
+| `centrale` | Module chargé, serveur par défaut, sites à autoriser, connexion, **parcours** (`bouton_suivant`, `avant_de_quitter`, `arrivee`), fonctions du module utilisées | Savoir quoi autoriser et ce que l’application prend en charge. |
 | `activites` | 39 activités : tutos (`tuto-…`), exercices (`exo-…`), exemples (`ex-…`), avec `id`, `titre`, `groupe`, `total` et des champs descriptifs | Colonnes du **Suivi**, cartes du **portail**, étapes de **parcours**. |
 | `progression` | Quand l’application envoie la progression, ce que veulent dire `faites`, `total`, `statut` | Interpréter l’avancement. |
 | `donnees` | Une clé : `projet` | Afficher, valider ou exporter le travail de l’élève. |
-| `fichiers` | `recoit` et `produit` : listes de `{ nom, type, description }` | Étapes « reçoit / produit » des ateliers transversaux. |
+| `fichiers` | `dossier_projet: true` ; `recoit` et `produit` : listes de `{ nom, nom_conseille, type, description }`, `nom` étant un motif par extension (`*.json`, `*.stl`…) | Étapes « reçoit / produit » des ateliers transversaux. |
 | `stockage_local` | Clés `localStorage` | Dépannage sur un poste. |
 | `acces_javascript` | `window.Etabli3D` | Point d’accès unique. |
 | `enums` | Niveaux, catégories, matières (masse volumique), cotes de chaque forme | Libellés. |
@@ -72,6 +72,7 @@ Un fichier JSON à la racine du site, nommé `centrale.json`.
         init({activites}) ───────┤ activiteDemandee()
         envoyerFichier(stl) ─────┤
         projet.sauver(sorties) ──┤ projet.charger(entrées)     (ateliers transversaux)
+        avantDeQuitter ──────────┤ (dépôt des sorties avant « Étape suivante »)
                                  ▼
                              Centrale
 ```
@@ -135,26 +136,28 @@ Envoyée à la Centrale par `Centrale.progression(id, Etabli3D.progression(id))`
 
 ### Les fichiers
 
-Pour les ateliers transversaux (`fichiers` dans `centrale.json`). Établi 3D reconnaît un fichier à son **extension** : le professeur peut nommer les fichiers d’une étape comme il veut.
+Pour les ateliers transversaux (`fichiers` dans `centrale.json`). Établi 3D reconnaît un fichier à son **extension** : le professeur peut nommer les fichiers d’une étape comme il veut. Le descripteur déclare donc des **motifs** (`nom`), avec un `nom_conseille` ; la Centrale vérifie l’enchaînement des étapes avec ces motifs.
 
-| Sens | Nom proposé | Type | Contenu |
-|---|---|---|---|
-| reçoit | `projet.etabli3d.json` | `application/json` | Projet de départ (`$defs/Projet`). |
-| produit | `projet.etabli3d.json` | `application/json` | Projet de l’élève. |
-| produit | `piece.stl` | `model/stl` | Maillage en mm des pièces solides, pour l’impression 3D. |
-| produit | `apercu.png` | `image/png` | Image de la vue 3D. |
-| produit | `resume.json` | `application/json` | Résumé : pièces, tailles, volumes, matières, masses, liaisons (`$defs/Resume`). |
+| Sens | Motif (`nom`) | Nom conseillé | Type | Contenu |
+|---|---|---|---|---|
+| reçoit | `*.json` | `projet.etabli3d.json` | `application/json` | Projet de départ (`$defs/Projet`). Un `.json` qui n’est pas un projet est ignoré. |
+| produit | `*.json` | `projet.etabli3d.json` | `application/json` | Projet de l’élève (sauf `resume.json`). |
+| produit | `resume.json` | `resume.json` | `application/json` | Résumé : pièces, tailles, volumes, matières, masses, liaisons (`$defs/Resume`). Le nom doit finir par `resume.json`. |
+| produit | `*.stl` | `piece.stl` | `model/stl` | Maillage en mm des pièces solides, pour l’impression 3D. |
+| produit | `*.png` | `apercu.png` | `image/png` | Image de la vue 3D. |
 
 ### Quand les données circulent
 
 | Moment | Établi 3D fait |
 |---|---|
 | Chargement de la page | Lit `etabli3d.autosave` et `etabli3d.progress` ; charge le module de la Centrale (sans effet s’il est injoignable). |
-| Connexion (« Mon code » ou jeton `#centrale=`) | `mesProgressions()` → fusion (le meilleur gagne) → renvoie ce qui est meilleur localement. `charger("projet")` → remplace le projet local s’il diffère (Annuler pour revenir), sinon `sauver("projet")`. Dans un atelier transversal, si le projet est vide : ouvre l’entrée `.json` de l’étape. Puis ouvre `activiteDemandee()` si l’élève n’y est pas déjà. |
+| Connexion (« Mon code » ou jeton `#centrale=`, repéré **avant** `Centrale.init` qui le retire de l’adresse) | `mesProgressions()` → fusion (le meilleur gagne) → renvoie ce qui est meilleur localement. `charger("projet")` → remplace le projet local s’il diffère (Annuler pour revenir), sinon `sauver("projet")`. Puis ouvre `activiteDemandee()` si l’élève n’y est pas déjà. |
+| Arrivée dans une étape d’atelier transversal | Ouvre le `.json` déjà déposé par l’élève ou son équipe (sorties de l’étape), sinon le `.json` reçu (entrées, ou fichier fourni par le professeur). Garde le projet en cours s’il est plus récent : projet du serveur modifié après ce dépôt, ou étape déjà commencée sur ce poste sans dépôt (repère local `etabli3d.atelier:<parcours>:<étape>`). L’ancien projet reste dans Annuler. |
 | Chaque modification (et Annuler / Rétablir) | `etabli3d.autosave` après 400 ms, puis `sauver("projet")` (regroupé par la Centrale). |
 | Ouverture d’un tuto, d’un exercice ou d’un exemple ; étape réussie ; activité terminée | `progression(id, …)`. |
 | Fichier → Envoyer le STL au professeur | `envoyerFichier(stl, nomFichier("stl", nom du projet))`. |
-| Fichier → Reprendre le fichier de l’atelier / Déposer dans le dossier de l’atelier | `projet.charger(entrée)` / `projet.sauver(sortie, fichier)` pour chaque sortie de l’étape. |
+| « Étape suivante → » ou « ← Mes ateliers » (bouton du module) | `avantDeQuitter` : dépose chaque sortie de l’étape (`.json`, `resume.json`, `.stl`, puis `.png`), si le projet a changé depuis le dernier dépôt. C’est ce dépôt qui termine l’étape et ouvre la suivante en mode « dans l’ordre ». |
+| Fichier → Reprendre le fichier de l’atelier / Déposer dans le dossier de l’atelier | `projet.charger(…)` (dépôt de l’élève, sinon entrée) / `projet.sauver(sortie, fichier)` pour chaque sortie de l’étape. En équipe, un conflit (coéquipier plus récent) est signalé au lieu d’écraser. |
 | Déconnexion | Le module envoie ce qui reste ; Établi 3D continue dans le navigateur. |
 
 ---
