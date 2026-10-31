@@ -118,7 +118,9 @@ window.Etabli3D=Object.freeze({
    ========================================================= */
 const CZ={pret:false, bouton:null, fenetre:null, serveur:'', constate:new Set(), indices:{}};
 function centraleInit(){
-  CZ.serveur=window.CENTRALE_URL||'https://technoversailles.alwaysdata.net/';
+  // Copie servie par une Centrale (…/miroir/etabli3d/) : on parle à cette Centrale-là (ex. Centrale locale)
+  const miroir=/^https?:$/.test(location.protocol)&&location.pathname.match(/^(.*?\/)miroir\/[^/]+\//);
+  CZ.serveur=window.CENTRALE_URL||(miroir?location.origin+miroir[1]:'https://technoversailles.alwaysdata.net/');
   const js=document.createElement('script'); js.src=CZ.serveur+'js/centrale-client.js'; js.onload=centraleDemarrer;   // injoignable : rien ne change
   document.head.appendChild(js);
 }
