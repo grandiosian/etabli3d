@@ -1,0 +1,268 @@
+{
+ "$schema": "https://technoversailles.alwaysdata.net/passerelle/passerelle-atelier.schema.json",
+ "$id": "https://grandiosian.github.io/etabli3d/centrale.json",
+ "format": "passerelle.atelier",
+ "version": 1,
+ "atelier": {
+  "app": "etabli3d",
+  "nom": "Établi 3D",
+  "version": "2.0.0",
+  "description": "Modeleur 3D pour la technologie au collège : volumes, perçages, esquisses cotées, matières, liaisons et simulation, structures, export STL.",
+  "url": "https://grandiosian.github.io/etabli3d/",
+  "urls_secours": [],
+  "icone": "🧊",
+  "depot": "https://github.com/grandiosian/etabli3d",
+  "langue": "fr",
+  "classes": [
+   "5e",
+   "4e",
+   "3e"
+  ],
+  "_correspondance": "Champs de la table ateliers de la Centrale : app, nom, description, url, icone, urls_secours."
+ },
+ "centrale": {
+  "module": "js/centrale-client.js",
+  "serveur_par_defaut": "https://technoversailles.alwaysdata.net/",
+  "changer_de_serveur": "window.CENTRALE_URL = \"https://…/\" avant le chargement de la page.",
+  "sites_a_autoriser": [
+   "https://grandiosian.github.io"
+  ],
+  "chargement": "src/centrale.js charge le module au démarrage. S’il est injoignable, Établi 3D fonctionne seul (enregistrement dans le navigateur et en fichier).",
+  "connexion": {
+   "bouton": "« Mon code » dans la barre du haut (#bCentrale) ; une fois connecté, il affiche l’identifiant de l’élève.",
+   "depuis_le_portail": "Jeton dans l’adresse (#centrale=…) : connexion automatique.",
+   "activite_directe": "Centrale.activiteDemandee() renvoie un identifiant (tuto-premiers, exo-plaque…) : le tuto ou l’exercice démarre dans le Guide.",
+   "retour": "Bouton « ← Mes ateliers » ajouté par le module."
+  },
+  "fonctions_utilisees": [
+   "init",
+   "afficherConnexion",
+   "connecte",
+   "session",
+   "identifiant",
+   "deconnexion",
+   "charger",
+   "sauver",
+   "progression",
+   "mesProgressions",
+   "activiteDemandee",
+   "etape",
+   "projet.charger",
+   "projet.sauver",
+   "projet.liste"
+  ],
+  "autre_passerelle": "passerelle/manifest.json : échanges par postMessage avec une page qui intègre Établi 3D (ENT, page d’essai). Indépendante de la Centrale ; même document de projet."
+ },
+ "activites": {
+  "declaration": "Centrale.init({ activites: czActivites() }) : un tuto ou un exercice = une activité.",
+  "champs_envoyes": [
+   "id",
+   "titre",
+   "groupe",
+   "total"
+  ],
+  "identifiants_stables": true,
+  "regle": "id = <type>-<clé de LESSONS> (tuto-… ou exo-…) ; groupe = Tutos ou Exercices · catégorie ; total = nombre d’étapes du tuto ou de critères de l’exercice. Les exemples de démonstration ne sont pas suivis.",
+  "liste": [
+   {
+    "id": "tuto-premiers",
+    "titre": "Premiers pas",
+    "groupe": "Tutos · Modéliser avec des volumes",
+    "niveau": 1,
+    "total": 6
+   },
+   {
+    "id": "tuto-mesures",
+    "titre": "Tailles et positions au millimètre",
+    "groupe": "Tutos · Modéliser avec des volumes",
+    "niveau": 1,
+    "total": 5
+   },
+   {
+    "id": "tuto-empiler",
+    "titre": "Empiler et aligner",
+    "groupe": "Tutos · Modéliser avec des volumes",
+    "niveau": 1,
+    "total": 4
+   },
+   {
+    "id": "tuto-esquisse",
+    "titre": "Ma première esquisse",
+    "groupe": "Tutos · Esquisser et coter",
+    "niveau": 2,
+    "total": 5
+   },
+   {
+    "id": "tuto-debout",
+    "titre": "Esquisser debout",
+    "groupe": "Tutos · Esquisser et coter",
+    "niveau": 2,
+    "total": 4
+   },
+   {
+    "id": "tuto-bezier",
+    "titre": "Courbes de Bézier",
+    "groupe": "Tutos · Esquisser et coter",
+    "niveau": 2,
+    "total": 6
+   },
+   {
+    "id": "tuto-pivot",
+    "titre": "Faire tourner une pièce",
+    "groupe": "Tutos · Mettre en mouvement",
+    "niveau": 2,
+    "total": 6
+   },
+   {
+    "id": "tuto-engrenages",
+    "titre": "Deux roues dentées",
+    "groupe": "Tutos · Mettre en mouvement",
+    "niveau": 3,
+    "total": 6
+   },
+   {
+    "id": "tuto-treillis",
+    "titre": "Calculer un petit pont",
+    "groupe": "Tutos · Simuler la déformation",
+    "niveau": 2,
+    "total": 5
+   },
+   {
+    "id": "exo-de",
+    "titre": "Dé à jouer",
+    "groupe": "Exercices · Modéliser avec des volumes",
+    "niveau": 1,
+    "total": 3
+   },
+   {
+    "id": "exo-plaque",
+    "titre": "Plaque percée",
+    "groupe": "Exercices · Modéliser avec des volumes",
+    "niveau": 1,
+    "total": 3
+   },
+   {
+    "id": "exo-tour",
+    "titre": "Tour de 3 étages",
+    "groupe": "Exercices · Modéliser avec des volumes",
+    "niveau": 1,
+    "total": 3
+   },
+   {
+    "id": "exo-equerre",
+    "titre": "Équerre de fixation",
+    "groupe": "Exercices · Esquisser et coter",
+    "niveau": 2,
+    "total": 4
+   },
+   {
+    "id": "exo-vase",
+    "titre": "Vase en révolution",
+    "groupe": "Exercices · Esquisser et coter",
+    "niveau": 3,
+    "total": 2
+   },
+   {
+    "id": "exo-barriere",
+    "titre": "Barrière qui se lève",
+    "groupe": "Exercices · Mettre en mouvement",
+    "niveau": 2,
+    "total": 4
+   },
+   {
+    "id": "exo-reducteur",
+    "titre": "Réducteur 1/3",
+    "groupe": "Exercices · Mettre en mouvement",
+    "niveau": 3,
+    "total": 3
+   },
+   {
+    "id": "exo-pont",
+    "titre": "Pont de 400 mm",
+    "groupe": "Exercices · Simuler la déformation",
+    "niveau": 2,
+    "total": 3
+   }
+  ]
+ },
+ "progression": {
+  "envoi": "Centrale.progression(id, czReussi(k)) quand le tuto ou l’exercice est réussi (markDone).",
+  "quand": [
+   "tuto terminé ou exercice réussi",
+   "connexion : les réussites gardées dans le navigateur et absentes du serveur sont renvoyées"
+  ],
+  "champs": {
+   "titre": "titre du tuto ou de l’exercice",
+   "faites": "égal à total (seule la réussite est envoyée)",
+   "total": "nombre d’étapes ou de critères",
+   "statut": "termine"
+  },
+  "champs_non_utilises": [
+   "score",
+   "score_max",
+   "details"
+  ]
+ },
+ "donnees": {
+  "projet": {
+   "description": "Le projet en cours (pièces, liaisons, structures, consignes « Mon TP », images de matière). Même document que Fichier → Enregistrer.",
+   "sauvegarde": "À chaque modification enregistrée dans l’historique (autosave) ; la Centrale regroupe les envois (3 s au plus).",
+   "chargement": "À la connexion, hors atelier transversal : le projet du serveur remplace celui du navigateur s’il est différent ; s’il n’y en a pas, celui du navigateur est envoyé.",
+   "taille_typique": "5 à 200 Ko ; jusqu’à 2 Mo avec des images de matière (limite de la Centrale : 2 Mo par clé).",
+   "format": {
+    "$ref": "#/$defs/Projet"
+   }
+  }
+ },
+ "fichiers": {
+  "utilises": true,
+  "dossier_projet": true,
+  "recoit": [
+   {
+    "nom": "*.json",
+    "type": "application/json",
+    "description": "Projet Établi 3D (étape précédente ou fichier fourni) : ouvert comme projet de départ. Un .json qui n’est pas un projet est ignoré.",
+    "format": {
+     "$ref": "#/$defs/Projet"
+    }
+   }
+  ],
+  "produit": [
+   {
+    "nom": "*.json",
+    "type": "application/json",
+    "description": "Le projet de l’élève, déposé automatiquement 4 s après chaque modification et par « Déposer ».",
+    "format": {
+     "$ref": "#/$defs/Projet"
+    }
+   },
+   {
+    "nom": "*.stl",
+    "type": "model/stl",
+    "description": "Maillage binaire en mm des pièces solides visibles, pour l’impression 3D : déposé par « Déposer »."
+   }
+  ],
+  "ressources": [],
+  "note": "En atelier transversal, le projet de départ est la sortie .json déjà déposée à cette étape, sinon la première entrée .json. La consigne de l’étape devient « Mon TP » dans le Guide. Conflit d’équipe : recharger la version de l’équipe ou garder la sienne."
+ },
+ "stockage_local": {
+  "description": "Copies dans le navigateur de l’élève.",
+  "cles": {
+   "etabli3d.progress": {
+    "contenu": "avancement des tutos, exercices et exemples"
+   },
+   "etabli3d.layout / préférences": {
+    "contenu": "disposition des panneaux et réglages d’affichage ; jamais envoyés"
+   },
+   "etabli3d.hubs": {
+    "contenu": "pages autorisées par la passerelle postMessage ; jamais envoyé"
+   }
+  }
+ },
+ "$defs": {
+  "Projet": {
+   "description": "Document etabli3d.project (format 2), décrit par le schéma de la passerelle postMessage.",
+   "$ref": "https://grandiosian.github.io/etabli3d/passerelle/etabli3d.schema.json"
+  }
+ }
+}

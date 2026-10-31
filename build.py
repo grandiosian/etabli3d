@@ -82,4 +82,6 @@ if __name__ == '__main__':
         write('index.html', full_page(CDN))
         # la passerelle est publiée à côté de l'application (manifeste, schéma, page d'essai du centralisateur)
         shutil.copytree(PASS, os.path.join(DIST, 'passerelle'), dirs_exist_ok=True)
+        # descripteur lu par la Centrale élèves (format passerelle.atelier), à la racine du site
+        shutil.copy(os.path.join(ROOT, 'centrale.json'), os.path.join(DIST, 'centrale.json'))
         write('artifact.html', read('head.html') + read('body.html') + script(CDN))

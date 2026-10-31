@@ -156,4 +156,14 @@ Première fois seulement : *Settings → Pages → Build and deployment → Sour
     - un `.json` est le projet. Il est déposé automatiquement quelques secondes après chaque modification ;
     - un `.stl` est l'export pour l'impression. Il est déposé avec le bouton **Déposer dans le dossier**.
   - En équipe, si un coéquipier a modifié le projet entre-temps, le panneau propose de prendre sa version ou de garder la sienne.
+- **Descripteur `centrale.json`** (racine du dépôt, publié à la racine du site par `build.py`).
+  - Il suit le format `passerelle.atelier` de la Centrale : <https://technoversailles.alwaysdata.net/passerelle/>.
+  - Il décrit :
+    - l'atelier ;
+    - les 17 tutos et exercices suivis (identifiants `tuto-…` / `exo-…`, nombre d'étapes) ;
+    - la clé de données `projet` ;
+    - les fichiers reçus et produits dans le dossier de projet (`*.json`, `*.stl`).
+  - Dans la Centrale, l'onglet Ateliers → « Lire la passerelle » s'en sert pour remplir la fiche et connaître les activités avant la première connexion d'un élève.
+  - `npm test` vérifie que la liste des activités correspond à `LESSONS`. Après l'ajout d'un tuto ou d'un exercice, il faut aussi l'ajouter dans `centrale.json`.
+  - Ce descripteur ne remplace pas la passerelle `postMessage` (`PASSERELLE.md`, `passerelle/`), qui sert aux pages qui intègrent Établi 3D. Les deux échangent le même document de projet.
 

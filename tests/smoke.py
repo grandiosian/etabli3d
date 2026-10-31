@@ -4,7 +4,7 @@
 Requires `npm install` (three.js in node_modules), `python3 build.py --local`, and Playwright for Python.
 Screenshots go to tests/out/.
 """
-import functools, http.server, os, socketserver, sys, threading
+import functools, http.server, json, os, socketserver, sys, threading
 from playwright.sync_api import sync_playwright
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -710,6 +710,13 @@ with sync_playwright() as p:
     unk = hub.evaluate("async()=>{try{await window.passerelle.request('nope')}catch(e){return e.code}}")
     check('passerelle : connexion, ouverture d’un projet, résumé (volume, masse), projet, STL, vignette, événements, erreurs', r == ['etabli3d', 2] and s1 == [1, 'bois', 72, 36, [60, 60, 90]] and pj == ['etabli3d', 2, 'bois', 2] and bad == 'bad-project' and stl == [True, True, True] and th == [200, True] and 'selection.changed' in ev and 'project.changed' in ev and unk == 'unknown-type', [r, s1, pj, bad, stl, th, ev, unk])
     hub.close()
+
+    # Centrale élèves : le descripteur centrale.json déclare exactement les tutos et exercices (même id, même nombre d'étapes)
+    with open(os.path.join(ROOT, 'centrale.json'), encoding='utf-8') as f:
+        cz = json.load(f)
+    decl = {a['id']: a['total'] for a in cz['activites']['liste']}
+    reel = pg.evaluate(f"()=>Object.fromEntries(Object.entries({E}.LESSONS).map(([k,T])=>[T.type+'-'+k,(T.steps||[]).length]))")
+    check('centrale.json : activités identiques aux tutos et exercices', decl == reel and cz['atelier']['app'] == 'etabli3d', [set(decl) ^ set(reel)])
 
     check('aucune erreur JavaScript', not errors, errors[:3])
     b.close()

@@ -24,12 +24,15 @@ CZ = { pret: false, atelier: null, bouton: null, fenetre: null, panneau: null, m
   document.head.appendChild(js);
 })();
 
+/** Progression d'un tuto ou exercice réussi : toutes ses étapes (ou critères) sont faites. */
+const czReussi = k => { const n = (LESSONS[k].steps || []).length; return { titre: LESSONS[k].title, faites: n, total: n, statut: 'termine' }; };
+
 /** Identifiant d'activité pour la Centrale : « tuto-premiers » (le « : » d'Établi 3D n'y est pas accepté). */
 const czId = id => String(id).replace(':', '-');
 
 function czActivites(){
   return Object.entries(LESSONS).map(([k, T]) => ({
-    id: T.type + '-' + k, titre: T.title,
+    id: T.type + '-' + k, titre: T.title, total: (T.steps || []).length,
     groupe: (T.type === 'exo' ? 'Exercices' : 'Tutos') + ' · ' + ((LCATS.find(c => c[0] === T.cat) || [])[1] || ''),
   }));
 }
@@ -47,8 +50,7 @@ function czDemarrer(){
 
 /* ---------- Projet au format « Enregistrer » ---------- */
 function czProjet(){
-  return { app: 'etabli3d', version: 1, name: state.name, parts: state.parts, joints: state.joints, nextId: state.nextId,
-           note: state.note || null, tp: state.tp || null, struct: state.struct || null };
+  return bridgeProject();   // même document que Fichier → Enregistrer et la passerelle postMessage (format 2)
 }
 const czEsc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const czEstProjet = o => !!o && typeof o === 'object' && Array.isArray(o.parts);
@@ -132,7 +134,7 @@ async function czEnvoyerProgression(){
   for (const id of Object.keys(PROG.done)) {
     const [type, k] = id.split(':');
     if ((type === 'tuto' || type === 'exo') && LESSONS[k] && serveur[czId(id)]?.statut !== 'termine') {
-      Centrale.progression(czId(id), { titre: LESSONS[k].title, statut: 'termine' });
+      Centrale.progression(czId(id), czReussi(k));
     }
   }
 }
@@ -141,7 +143,7 @@ async function czEnvoyerProgression(){
 function czProgres(id){
   if (!CZ || !CZ.pret || !window.Centrale || !Centrale.connecte()) return;
   const [type, k] = String(id).split(':');
-  if ((type === 'tuto' || type === 'exo') && LESSONS[k]) Centrale.progression(czId(id), { titre: LESSONS[k].title, statut: 'termine' });
+  if ((type === 'tuto' || type === 'exo') && LESSONS[k]) Centrale.progression(czId(id), czReussi(k));
 }
 
 /** Appelé par autosave() (scene.js) à chaque modification du projet. */
