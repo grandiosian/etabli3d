@@ -70,7 +70,9 @@ Trois objets connus qui se suivent en taille, en gris, sont posés loin derrièr
 
 ## Rendu
 
-Dans **Apparence** : affichage des pièces (plein, arêtes, fil de fer, rayons X), éclairage (atelier, doux, contrasté, soleil) et ombres portées.
+Dans **Apparence** : affichage des pièces (plein, **texture** — impression 3D avec ses couches, bois, métal, damier —, arêtes, fil de fer, rayons X), **qualité haute** (image plus fine, reflets, plus lent), éclairage (atelier, doux, contrasté, soleil) et ombres portées.
+
+Les petits panneaux (navigation, grille) peuvent se **plaquer** contre un côté oblique de la barre d'édition : glissez-les près de son bord, ils prennent sa hauteur et son biais ; glissez leur poignée pour les décrocher.
 
 ### Exemples de démonstration
 

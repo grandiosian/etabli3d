@@ -19,6 +19,7 @@ function setWs(k){
   if(prev==='mech' && k!=='mech'){ if(simActive()) simReset(true); jf=null; cancelPick(); }
   if(locPick!=null){ locPick=null; $('#pickHint').hidden=true; }
   ws=k; document.documentElement.dataset.ws=k;
+  for(const id of DOCKABLE) applyLayout(id);   // un panneau plaqué sur la languette (Modéliser) revient sur la vue ailleurs
   const struct=k==='struct';
   mat.visible=!struct; matEdge.visible=!struct; axes.visible=!struct;
   structGroup.visible= struct && ST.mode3d;

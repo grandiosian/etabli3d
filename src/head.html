@@ -86,17 +86,33 @@ button{cursor:pointer}
 /* ---------- shape rack */
 #rack{grid-area:rack;background:var(--panel);border-bottom:1px solid var(--line);overflow:hidden;padding:0 8px 3px;display:flex;flex-direction:column;align-items:stretch;gap:0}
 .rack-row{display:flex;flex-direction:row;align-items:stretch;gap:2px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;min-height:60px}
-#toolbar{grid-area:tools;display:flex;justify-content:center;padding:0 8px;background:transparent!important;border:0!important;pointer-events:none;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+#toolbar{grid-area:tools;display:flex;justify-content:center;padding:0 8px 0 calc(8px + var(--tree-w,0px));z-index:31!important;background:transparent!important;border:0!important;pointer-events:none;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 /* barre d'édition centrée, bords obliques \ … / (trapèze plus large en haut) */
-.ed-wrap{pointer-events:auto;max-width:100%;filter:drop-shadow(0 4px 8px rgba(20,40,32,.18))}
-/* liseré blanc : un trapèze blanc un peu plus grand derrière la barre */
-.ed-rim{background:#fff;padding:0 2.5px 2.5px;clip-path:polygon(0 0,100% 0,calc(100% - 27px) 100%,27px 100%)}
-.ed-shape{display:flex;align-items:stretch;gap:10px;padding:3px 34px 4px;overflow-x:auto;scrollbar-width:none;
-  background:color-mix(in srgb,var(--panel) var(--insp-a,94%),transparent);clip-path:polygon(0 0,100% 0,calc(100% - 26px) 100%,26px 100%)}
-html[data-theme="dark"] .ed-rim{background:#e8eeeb}
+:root{--ed-rim:#ffffff;--ed-bg:color-mix(in srgb,var(--panel) var(--insp-a,94%),transparent);--ed-shadow:rgba(20,40,32,.18)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ed-rim:color-mix(in srgb,var(--ink-2) 55%,var(--panel));--ed-bg:color-mix(in srgb,var(--panel-2) var(--insp-a,94%),transparent);--ed-shadow:rgba(0,0,0,.5)}}
+:root[data-theme="dark"]{--ed-rim:color-mix(in srgb,var(--ink-2) 55%,var(--panel));--ed-bg:color-mix(in srgb,var(--panel-2) var(--insp-a,94%),transparent);--ed-shadow:rgba(0,0,0,.5)}
+/* languette + ailes : une rangée centrée ; l'ombre portée est commune */
+.ed-row{display:flex;align-items:stretch;pointer-events:none;max-width:100%;filter:drop-shadow(0 4px 8px var(--ed-shadow))}
+.ed-wrap{pointer-events:auto;min-width:0;display:flex}
+/* liseré : un trapèze un peu plus grand derrière la barre (blanc en clair, gris clair en sombre) */
+.ed-rim{background:var(--ed-rim);padding:0 2.5px 2.5px;clip-path:polygon(0 0,100% 0,calc(100% - 27px) 100%,27px 100%);display:flex;min-width:0}
+.ed-shape{display:flex;align-items:stretch;gap:6px;padding:3px 32px 4px;overflow-x:auto;scrollbar-width:none;min-width:0;
+  background:var(--ed-bg);clip-path:polygon(0 0,100% 0,calc(100% - 26px) 100%,26px 100%)}
+/* ailes : un panneau plaqué contre un côté oblique de la languette, même hauteur, bords parallèles */
+.ed-wing{pointer-events:auto;display:flex;background:var(--ed-rim);padding:0 2.5px 2.5px}
+.ed-wing:not(:has(> .float:not(.nav-off))){display:none}
+.ed-wing[data-side="L"]{margin-right:-22px;clip-path:polygon(0 0,calc(100% - 27px) 0,100% 100%,27px 100%)}
+.ed-wing[data-side="R"]{margin-left:-22px;clip-path:polygon(27px 0,100% 0,calc(100% - 27px) 100%,0 100%)}
+.ed-wing > .float.docked{position:static!important;transform:none!important;display:flex;align-items:center;gap:6px;border:0;border-radius:0;box-shadow:none!important;padding:3px 32px!important;background:var(--ed-bg)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+.ed-wing[data-side="L"] > .float.docked{clip-path:polygon(0 0,calc(100% - 26px) 0,100% 100%,26px 100%)}
+.ed-wing[data-side="R"] > .float.docked{clip-path:polygon(26px 0,100% 0,calc(100% - 26px) 100%,0 100%)}
+.ed-wing > .float.docked .pgrip{background:transparent}
+/* pendant le glisser d'un panneau : le côté où il va se plaquer s'éclaire */
+.ed-row.snap-L .ed-rim,.ed-row.snap-R .ed-rim{background:var(--accent)}
+#tools .tool:disabled svg{color:var(--ink-2)}
 #tools{display:flex;align-items:stretch;gap:8px}
 /* barre d'édition : boutons plus grands, rangés par famille, actifs selon la sélection */
-.ed-head{display:flex;flex-direction:column;justify-content:center;min-width:118px;padding:0 6px 0 2px;border-right:1px solid var(--line)}
+.ed-head{display:flex;flex-direction:column;justify-content:center;min-width:96px;padding:0 6px 0 2px;border-right:1px solid var(--line)}
 .ed-head b{font-family:var(--f-display);font-weight:600;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}
 .ed-head small{font-size:12.5px;font-weight:600;color:var(--ink);max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #toolbar:not(.has-sel) .ed-head small{color:var(--ink-2);font-weight:400}
@@ -104,7 +120,7 @@ html[data-theme="dark"] .ed-rim{background:#e8eeeb}
 .ed-grp:last-child{border-right:0}
 .ed-btns{display:flex;gap:2px}
 .ed-grp > small{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);font-family:var(--f-display)}
-#tools .tool{flex-direction:column!important;gap:2px!important;min-width:66px!important;padding:4px 6px 3px!important;font-size:11.5px!important;font-weight:500}
+#tools .tool{flex-direction:column!important;gap:2px!important;min-width:58px!important;padding:4px 6px 3px!important;font-size:11.5px!important;font-weight:500}
 #tools .tool svg{width:28px!important;height:28px!important}
 #tools .tool:not(:disabled) svg{color:var(--accent)} #tools .tool.danger:not(:disabled) svg{color:var(--danger)}
 #tools .tool{flex-direction:column;gap:2px;padding:4px 6px;min-width:58px;font-size:10.5px;border-color:transparent;background:transparent}
@@ -139,6 +155,11 @@ html[data-theme="dark"] .ed-rim{background:#e8eeeb}
 #views{top:10px;right:10px;flex-direction:column;align-items:center;padding:2px 4px 4px}
 #views.float{background:transparent!important;border-color:transparent;box-shadow:none;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 #views .pgrip{opacity:.5} #views:hover .pgrip{opacity:1}
+/* cube de vue : poignée et bouton réduire posés dans les coins du haut, sans barre entre eux */
+#views:not(.collapsed) > .pgrip{position:absolute;left:4px;right:4px;top:2px;z-index:2;justify-content:space-between;pointer-events:none;background:transparent!important;padding:0}
+#views > .pgrip > *{pointer-events:auto;border-radius:6px}
+#views > .pgrip > svg{padding:2px 1px;width:14px;height:20px;box-sizing:content-box}
+#views > .pgrip > svg:hover,#views > .pgrip > .pmin:hover{background:var(--panel-2);color:var(--ink)}
 .vc-wrap{position:relative;width:184px;height:184px}
 #vcube{position:absolute;left:34px;top:34px;width:116px;height:116px;cursor:grab;touch-action:none}
 #vcube:active{cursor:grabbing}

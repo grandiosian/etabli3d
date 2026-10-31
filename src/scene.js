@@ -185,10 +185,25 @@ const selLineMat=new THREE.LineBasicMaterial({color:0xdf9a00, depthTest:true});
 const edgeLineMat=new THREE.LineBasicMaterial({color:0x1b2421, transparent:true, opacity:.8});
 /* ---- options de rendu (Apparence) : éclairage, ombres, affichage des pièces */
 const LIGHTS={studio:{name:'Atelier', h:1.5, s:1.7, f:.55}, doux:{name:'Doux', h:2.2, s:.9, f:.75}, contraste:{name:'Contrasté', h:.7, s:2.6, f:.18}, soleil:{name:'Soleil', h:1.1, s:2.4, f:.35, warm:true}};
-const RMODES=[['plein','Plein'],['aretes','Arêtes'],['filaire','Fil de fer'],['xray','Rayons X']];
+const RMODES=[['plein','Plein'],['texture','Texture'],['aretes','Arêtes'],['filaire','Fil de fer'],['xray','Rayons X']];
+const TEXTURES=[['impression','Impression 3D',1],['bois','Bois',2],['metal','Métal',3],['damier','Damier',4]];
+/* haute qualité : image calculée plus finement, reflets d'un éclairage d'atelier (environnement), couleurs « film »,
+   ombres plus fines. Plus lent : à garder pour regarder ou faire une capture. */
+let envTex=null;
+function applyQuality(){
+  const hq=!!prefs.hq, dpr=window.devicePixelRatio||1;
+  renderer.setPixelRatio(hq? Math.min(3, dpr*1.6) : Math.min(2, dpr));
+  if(hq && !envTex){ const pm=new THREE.PMREMGenerator(renderer); envTex=pm.fromScene(new RoomEnvironment(), 0.04).texture; pm.dispose(); }
+  scene.environment= hq? envTex : null; scene.environmentIntensity=0.45;
+  renderer.toneMapping= hq? THREE.NeutralToneMapping : THREE.NoToneMapping; renderer.toneMappingExposure=0.95;   // tons neutres : les couleurs des pièces restent fidèles
+  sun.shadow.mapSize.set(hq? 4096:2048, hq? 4096:2048); if(sun.shadow.map){ sun.shadow.map.dispose(); sun.shadow.map=null; }
+  for(const r of meshes.values()) r.mesh.material.needsUpdate=true; mat.material.needsUpdate=true; resize();
+}
 scene.add(sun.target);
 function applyRender(){
-  const L=LIGHTS[prefs.light]||LIGHTS.studio; hemi.intensity=L.h; sun.intensity=L.s; fill.intensity=L.f; sun.color.set(L.warm? 0xfff1d6 : 0xffffff);
+  const L=LIGHTS[prefs.light]||LIGHTS.studio, q= prefs.hq? 0.35 : 1; hemi.intensity=L.h*q; sun.intensity=L.s*(prefs.hq? 0.85 : 1); fill.intensity=L.f*q; sun.color.set(L.warm? 0xfff1d6 : 0xffffff);
+  TEXK.value=(TEXTURES.find(t=>t[0]===prefs.tex)||TEXTURES[0])[2];
+  if(!!prefs.hq !== (renderer.toneMapping!==THREE.NoToneMapping)) applyQuality();
   const on=!!prefs.shadows; if(renderer.shadowMap.enabled!==on){ renderer.shadowMap.enabled=on; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
     sun.castShadow=on; sun.shadow.mapSize.set(2048,2048); sun.shadow.bias=-0.0004; sun.shadow.normalBias=0.4; mat.receiveShadow=on;
     for(const r of meshes.values()) r.mesh.material.needsUpdate=true; mat.material.needsUpdate=true; }
@@ -204,11 +219,32 @@ function fitShadow(){
 /* Perçages : pièce transparente barrée de hachures obliques fixées à l'écran (toujours face à la caméra).
    Même matériau que les solides ; la définition HATCH ajoute les hachures à la fin du rendu. */
 const HATCH={s:{value:9}, w:{value:1.7}, c:{value:new THREE.Color(0x37413e)}};
+/* Mode texture : un motif calculé dans le repère de la pièce (en mm), sans image ni coordonnées UV,
+   donc il marche aussi sur les groupes et les esquisses. TEXK : 1 impression 3D (couches de 0,6 mm, un peu grossies),
+   2 bois (cernes), 3 métal brossé, 4 damier de 5 mm. */
+const TEXK={value:1};
+const TEX_GLSL=`
+float th(vec3 p){ return fract(sin(dot(p, vec3(12.9898,78.233,37.719)))*43758.5453); }
+float tn(vec3 p){ vec3 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
+  return mix(mix(mix(th(i),th(i+vec3(1,0,0)),f.x), mix(th(i+vec3(0,1,0)),th(i+vec3(1,1,0)),f.x), f.y),
+             mix(mix(th(i+vec3(0,0,1)),th(i+vec3(1,0,1)),f.x), mix(th(i+vec3(0,1,1)),th(i+vec3(1,1,1)),f.x), f.y), f.z); }
+vec3 texPat(vec3 p, vec3 n, int k){
+  if(k==1){ float l=fract(p.z/0.6); float g=smoothstep(0.0,0.25,l)*smoothstep(1.0,0.75,l); float side=1.0-abs(n.z);
+    return vec3(mix(1.0, 0.8+0.2*g, side) * (0.96+0.04*tn(p*0.8))); }
+  if(k==2){ float r=length(p.xy)*0.55 + 2.2*tn(p*vec3(0.08,0.08,0.02)) + 0.6*tn(p*vec3(0.5,0.5,0.06));
+    float ring=0.5+0.5*sin(r*6.2832); float grain=tn(p*vec3(0.6,0.6,4.0));
+    return vec3(0.78+0.16*ring+0.06*grain) * vec3(1.0,0.93,0.82); }
+  if(k==3){ float s=tn(p*vec3(0.15,14.0,14.0))*0.6+tn(p*vec3(0.05,40.0,40.0))*0.4; return vec3(0.84+0.2*s); }
+  vec3 c=floor(p/5.0); float ch=mod(c.x+c.y+c.z, 2.0); return vec3(0.72+0.28*ch);
+}`;
 function partMaterial(){
   const m=new THREE.MeshStandardMaterial({roughness:.5,metalness:.04});
   m.onBeforeCompile=sh=>{
-    sh.uniforms.hatchS=HATCH.s; sh.uniforms.hatchW=HATCH.w; sh.uniforms.hatchC=HATCH.c;
-    sh.fragmentShader=sh.fragmentShader.replace('void main() {','#ifdef HATCH\nuniform float hatchS; uniform float hatchW; uniform vec3 hatchC;\n#endif\nvoid main() {')
+    sh.uniforms.hatchS=HATCH.s; sh.uniforms.hatchW=HATCH.w; sh.uniforms.hatchC=HATCH.c; sh.uniforms.texK=TEXK;
+    sh.vertexShader=sh.vertexShader.replace('void main() {','#ifdef TEX\nvarying vec3 vTexP; varying vec3 vTexN;\n#endif\nvoid main() {')
+      .replace('#include <begin_vertex>','#include <begin_vertex>\n#ifdef TEX\n vTexP=transformed; vTexN=normalize(objectNormal);\n#endif');
+    sh.fragmentShader=sh.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n#ifdef TEX\n diffuseColor.rgb*=texPat(vTexP, normalize(vTexN), texK);\n#endif')
+    sh.fragmentShader=sh.fragmentShader.replace('void main() {','#ifdef HATCH\nuniform float hatchS; uniform float hatchW; uniform vec3 hatchC;\n#endif\n#ifdef TEX\nuniform int texK; varying vec3 vTexP; varying vec3 vTexN;\n'+TEX_GLSL+'\n#endif\nvoid main() {')
       .replace('#include <dithering_fragment>', `#include <dithering_fragment>
 #ifdef HATCH
   { float k=mod(gl_FragCoord.x+gl_FragCoord.y, hatchS); float d=min(k, hatchS-k)*0.7071;
@@ -219,7 +255,8 @@ function partMaterial(){
   };
   return m;
 }
-function setHatch(mt, on){ if(!!(mt.defines && 'HATCH' in mt.defines)===on) return; mt.defines= on? {HATCH:''} : {}; mt.needsUpdate=true; }
+function setDefine(mt, k, on){ mt.defines ||= {}; if(!!(k in mt.defines)===on) return; if(on) mt.defines[k]=''; else delete mt.defines[k]; mt.needsUpdate=true; }
+function setHatch(mt, on){ setDefine(mt, 'HATCH', on); }
 const holeLineMat=new THREE.LineBasicMaterial({color:0x37413e, transparent:true, opacity:.55});
 function sync(){
   const ids=new Set();
@@ -239,7 +276,8 @@ function sync(){
     mt.emissive.set(sel? markCol : '#000000'); mt.emissiveIntensity= sel? .16:0;
     r.mesh.renderOrder = p.hole? 2:0;
     // rendu choisi dans Apparence : fil de fer, arêtes, rayons X ; ombres
-    const RM=prefs.rmode||'plein'; mt.wireframe= RM==='filaire';
+    const RM=prefs.rmode||'plein'; mt.wireframe= RM==='filaire'; setDefine(mt, 'TEX', RM==='texture' && !p.hole);
+    const tx= RM==='texture' && !p.hole ? prefs.tex : null; mt.roughness= tx==='metal'? .32 : tx==='impression'? .62 : .5; mt.metalness= tx==='metal'? .55 : .04;
     if(RM==='xray' && !p.hole){ mt.transparent=true; mt.opacity=.32; mt.depthWrite=false; }
     r.mesh.castShadow=r.mesh.receiveShadow= !!prefs.shadows && !p.hole;
     const wantLine = sel || p.hole || RM==='aretes' || RM==='xray', full= RM==='aretes' || RM==='xray' || p.kind!=='group';

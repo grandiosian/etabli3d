@@ -13,8 +13,21 @@ const movedDemo=()=> !!LAYOUT.demo && LAYOUT.demo.x!=null && !$('#demo')?.classL
 
 function setPos(el,x,y){ el.style.left=x+'px'; el.style.top=y+'px'; el.style.right='auto'; el.style.bottom='auto'; el.style.transform='none'; }
 function clearPos(el){ for(const k of ['left','top','right','bottom','transform']) el.style[k]=''; }
+/* panneaux qui peuvent se plaquer contre un côté oblique de la languette d'édition (Modéliser, grand écran) */
+const DOCKABLE=['navBar','snapBox'];
+function dockTarget(r){   // côté où un panneau de rectangle r se plaquerait, ou null
+  const row=$('.ed-row'), ed=$('.ed-wrap'); if(!row || !ed || !ed.offsetParent || ws!=='model' || !WIDE.matches) return null;
+  const e=ed.getBoundingClientRect(); if(r.top > e.bottom+70 || r.bottom < e.top-20) return null;
+  const cx=(r.left+r.right)/2, q=Math.min(200, e.width*0.3);
+  if(cx < e.left+q && r.right > e.left-160) return 'L';
+  if(cx > e.right-q && r.left < e.right+160) return 'R';
+  return null;
+}
 function applyLayout(id){
   const el=$('#'+id); if(!el) return; const L=LAYOUT[id];
+  const dock= DOCKABLE.includes(id) && L?.dock && ws==='model' && WIDE.matches ? L.dock : null;
+  if(dock){ const w=$('#edWing'+dock); if(el.parentElement!==w){ w.append(el); } el.classList.add('docked'); clearPos(el); el.classList.toggle('collapsed', !!L?.c); return; }
+  if(el.classList.contains('docked')){ $('#stage').append(el); el.classList.remove('docked'); }
   if(L && L.x!=null){ const st=$('#stage').getBoundingClientRect(); if(st.width>2){ const w=el.offsetWidth||80, hh=el.offsetHeight||30; setPos(el, clamp(L.x,0,Math.max(0,st.width-Math.min(w,st.width))), clamp(L.y,0,Math.max(0,st.height-Math.min(hh,st.height)))); } }
   else clearPos(el);
   if(id!=='demo') el.classList.toggle('collapsed', !!L?.c);
@@ -22,11 +35,17 @@ function applyLayout(id){
 function startPanelDrag(e, el, id){
   if(e.button!==0 || e.target.closest('button,select,input')) return;
   e.preventDefault(); e.stopPropagation();
-  const st=$('#stage').getBoundingClientRect(), r=el.getBoundingClientRect(); const ox=e.clientX-r.left, oy=e.clientY-r.top;
-  el.classList.add('dragging');
-  const move=ev=>{ setPos(el, clamp(ev.clientX-st.left-ox,0,Math.max(0,st.width-r.width)), clamp(ev.clientY-st.top-oy,0,Math.max(0,st.height-r.height))); };
-  const up=()=>{ window.removeEventListener('pointermove',move); window.removeEventListener('pointerup',up); el.classList.remove('dragging');
-    const rr=el.getBoundingClientRect(); LAYOUT[id]={...LAYOUT[id], x:Math.round(rr.left-st.left), y:Math.round(rr.top-st.top)}; saveLayout();
+  const st=$('#stage').getBoundingClientRect();
+  if(el.classList.contains('docked')){ const r0=el.getBoundingClientRect(); delete LAYOUT[id].dock; $('#stage').append(el); el.classList.remove('docked'); setPos(el, r0.left-st.left, Math.max(0, r0.top-st.top)); }   // décroché : il repart de là où il était
+  const r=el.getBoundingClientRect(); const ox=e.clientX-r.left, oy=e.clientY-r.top;
+  el.classList.add('dragging'); const row=$('.ed-row'), canDock=DOCKABLE.includes(id); let side=null;
+  const move=ev=>{ const up0= canDock && ws==='model'? Math.max(0, st.top-($('#toolbar').getBoundingClientRect().top||st.top)) : 0;   // on peut monter dans la rangée de la languette pour s'y plaquer
+    setPos(el, clamp(ev.clientX-st.left-ox,0,Math.max(0,st.width-r.width)), clamp(ev.clientY-st.top-oy,-up0,Math.max(0,st.height-r.height)));
+    if(canDock){ side=dockTarget(el.getBoundingClientRect()); row?.classList.toggle('snap-L', side==='L'); row?.classList.toggle('snap-R', side==='R'); } };
+  const up=()=>{ window.removeEventListener('pointermove',move); window.removeEventListener('pointerup',up); el.classList.remove('dragging'); row?.classList.remove('snap-L','snap-R');
+    if(side){ for(const k of DOCKABLE) if(k!==id && LAYOUT[k]?.dock===side){ delete LAYOUT[k].dock; LAYOUT[k].x=null; applyLayout(k); } }   // un seul panneau par côté
+    if(side){ LAYOUT[id]={c:LAYOUT[id]?.c, dock:side}; saveLayout(); applyLayout(id); requestAnimationFrame(()=>placeInsp()); toast('Panneau plaqué contre la barre d’édition. Glissez sa poignée pour le décrocher.'); return; }
+    const rr=el.getBoundingClientRect(); LAYOUT[id]={...LAYOUT[id], x:Math.round(rr.left-st.left), y:Math.max(0,Math.round(rr.top-st.top))}; saveLayout(); applyLayout(id);
     if(id==='bubble') el.dataset.side='';
     if(id==='views') placeInsp();
     if(id==='demo'){ applyViewOffset(); if(ws==='struct'){ ST.fitted=false; stFit(); stDraw(); } } };
@@ -66,8 +85,8 @@ function applyDock(){
 function placeViews(){
   const v=$('#views'); if(!v) return; if(!WIDE.matches || LAYOUT.views?.x!=null){ if(LAYOUT.views?.x==null) v.style.top=''; return; }
   const tb=$('#toolbar'), th= tb && tb.offsetParent? tb.offsetHeight : 0; if(!th){ v.style.top=''; return; }
-  const ed=$('.ed-wrap')?.getBoundingClientRect(), st=$('#stage').getBoundingClientRect(), left=st.right-10-v.offsetWidth;
-  v.style.top= (ed && ed.right+8<left)? (4-th)+'px' : '';
+  const ed=$('.ed-row')?.getBoundingClientRect(), st=$('#stage').getBoundingClientRect(), left=st.right-10-v.offsetWidth;
+  v.style.top= (ed && ed.right+8<left)? (2-th)+'px' : '';   // la poignée est posée dans les coins : le cube monte d'autant
 }
 function placeInsp(){
   const el=$('#insp'); if(!el) return; placeViews();
@@ -112,6 +131,8 @@ function placeDemo(){ const d=$('#demo'); if(!d) return; const host= !$('#sk').h
    screens: the canvas extends under them by OVR.t / OVR.l / OVR.r px, measured from the actual layout */
 const WIDE=matchMedia('(min-width: 861px)');
 function updateOverlay(){
+  { const o=$('#outliner'), app=$('#app'); const tw=(WIDE.matches && o && o.offsetParent && !app.classList.contains('tree-float'))? o.offsetWidth : 0;
+    app.style.setProperty('--tree-w', tw+'px'); }   // la languette se centre sur la vue, à droite de l'arborescence
   let l=0, r=0, t=0;
   if(WIDE.matches){ const a=$('#app').getBoundingClientRect(), st=$('#stage').getBoundingClientRect(), top=$('#top').getBoundingClientRect();
     l=Math.max(0,Math.round(st.left-a.left)); r=Math.max(0,Math.round(a.right-st.right)); t=Math.max(0,Math.round(st.top-top.bottom)); }
@@ -121,7 +142,7 @@ function updateOverlay(){
 }
 function resetLayout(){
   LAYOUT={}; saveLayout();
-  for(const [id] of FLOATS){ const el=$('#'+id); if(el){ clearPos(el); el.classList.remove('collapsed'); } }
+  for(const [id] of FLOATS){ const el=$('#'+id); if(el){ applyLayout(id); clearPos(el); el.classList.remove('collapsed'); } }
   clearPos($('#demo')); if(ws==='mech') buildJointLabels(); if(!$('#bubble').hidden) placeBubble(BUB.x,BUB.y); applyDock(); applyViewOffset(); if(ws==='struct'){ ST.fitted=false; stResize(); }
   toast('Disposition des panneaux réinitialisée.');
 }
