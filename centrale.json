@@ -34,6 +34,10 @@
    "activite_directe": "Centrale.activiteDemandee() renvoie un identifiant (tuto-premiers, exo-plaque…) : le tuto ou l’exercice démarre dans le Guide.",
    "retour": "Bouton « ← Mes ateliers » ajouté par le module."
   },
+  "parcours": {
+   "bouton_suivant": "module",
+   "avant_de_quitter": "Dépose le projet (.json) de l’étape dans le dossier de projet (czDeposer(false)). Le .stl reste à déposer avec le bouton « Déposer dans le dossier »."
+  },
   "fonctions_utilisees": [
    "init",
    "afficherConnexion",

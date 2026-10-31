@@ -156,6 +156,7 @@ Première fois seulement : *Settings → Pages → Build and deployment → Sour
     - un `.json` est le projet. Il est déposé automatiquement quelques secondes après chaque modification ;
     - un `.stl` est l'export pour l'impression. Il est déposé avec le bouton **Déposer dans le dossier**.
   - En équipe, si un coéquipier a modifié le projet entre-temps, le panneau propose de prendre sa version ou de garder la sienne.
+  - Le bouton **« Étape suivante → »** du module Centrale (en bas à gauche) dépose d'abord le projet (`avantDeQuitter`), puis ouvre l'étape suivante du parcours dans la bonne application.
 - **Descripteur `centrale.json`** (racine du dépôt, publié à la racine du site par `build.py`).
   - Il suit le format `passerelle.atelier` de la Centrale : <https://technoversailles.alwaysdata.net/passerelle/>.
   - Il décrit :

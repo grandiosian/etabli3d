@@ -41,6 +41,8 @@ function czDemarrer(){
   if (!window.Centrale) return;
   Centrale.init({
     api: CZ_SERVEUR + 'api/', app: 'etabli3d', activites: czActivites(),
+    // « ← Mes ateliers » et « Étape suivante → » (boutons du module) : le projet en attente est d'abord déposé
+    avantDeQuitter: () => (CZ.atelier ? czDeposer(false) : null),
     surDeconnexion: () => { CZ.pret = false; czMajBouton(); toast('Session terminée : reconnecte-toi pour enregistrer ton travail.'); },
   });
   czStyle();
