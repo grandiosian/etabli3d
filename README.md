@@ -134,8 +134,12 @@ Tests automatiques (Chromium sans écran) :
 ```bash
 npm install
 pip install playwright
-npm test
+npm test                    # tous les domaines (avant de pousser)
+npm test -- panneaux        # un seul domaine, pendant une correction
+python3 tests/smoke.py --liste
 ```
+
+Les tests sont rangés par domaine dans `tests/domaines/` ; chaque domaine part d'une page neuve.
 
 ## Mise en ligne
 
