@@ -1,0 +1,1531 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://grandiosian.github.io/etabli3d/centrale.json",
+  "format": "passerelle.atelier",
+  "version": 1,
+  "atelier": {
+    "app": "etabli3d",
+    "nom": "Établi 3D",
+    "version": "1.0.0",
+    "description": "Modeleur 3D pour la technologie : volumes, perçages, esquisses cotées, matières, liaisons et simulation de mouvements, structures, export STL pour l’impression 3D.",
+    "url": "https://grandiosian.github.io/etabli3d/",
+    "urls_secours": [],
+    "icone": "🧊",
+    "depot": "https://github.com/grandiosian/etabli3d",
+    "langue": "fr",
+    "classes": [
+      "5e",
+      "4e",
+      "3e"
+    ],
+    "_correspondance": "Champs de la table ateliers de la Centrale : app, nom, description, url, icone, urls_secours."
+  },
+  "centrale": {
+    "module": "js/centrale-client.js",
+    "serveur_par_defaut": "https://technoversailles.alwaysdata.net/",
+    "changer_de_serveur": "window.CENTRALE_URL = \"https://…/\" avant le chargement de la page.",
+    "sites_a_autoriser": [
+      "https://grandiosian.github.io"
+    ],
+    "chargement": "Le module est chargé à la fin du démarrage. S’il est injoignable, Établi 3D fonctionne seul (enregistrement dans le navigateur).",
+    "connexion": {
+      "bouton": "« Mon code » dans la barre du haut, avant Guide ; une fois connecté, il affiche « classe · élève » et permet de se déconnecter.",
+      "depuis_le_portail": "Jeton dans l’adresse (#centrale=…) : connexion automatique.",
+      "activite_directe": "Centrale.activiteDemandee() renvoie un id d’activité (ex. tuto-premiers, exo-de, ex-maison) : Établi 3D ouvre le tuto, l’exercice ou l’exemple, sauf si l’élève est déjà dessus.",
+      "retour": "Bouton « ← Mes ateliers » ajouté par le module."
+    },
+    "fonctions_utilisees": [
+      "init",
+      "afficherConnexion",
+      "connecte",
+      "session",
+      "deconnexion",
+      "charger",
+      "sauver",
+      "progression",
+      "mesProgressions",
+      "activiteDemandee",
+      "envoyerFichier",
+      "nomFichier",
+      "contexteAtelier",
+      "etape",
+      "projet.charger",
+      "projet.sauver"
+    ],
+    "fonctions_non_utilisees": [
+      "listeFichiers",
+      "chargerFichier",
+      "supprimerFichier",
+      "listeRessources",
+      "chargerRessource",
+      "parcours",
+      "ateliers",
+      "lien",
+      "ouvrir",
+      "telecharger",
+      "ouvrirDepot"
+    ]
+  },
+  "activites": {
+    "declaration": "Centrale.init({ activites: Etabli3D.activites() }) : liste envoyée à la première connexion de la session.",
+    "champs_envoyes": [
+      "id",
+      "titre",
+      "groupe",
+      "total"
+    ],
+    "identifiants_stables": true,
+    "identifiants": "tuto-<clé> (tuto pas à pas), exo-<clé> (exercice vérifié automatiquement), ex-<clé> (exemple de démonstration). Les clés ne changent jamais.",
+    "groupes": [
+      "Modéliser avec des volumes",
+      "Esquisser et coter",
+      "Mettre en mouvement",
+      "Simuler la déformation"
+    ],
+    "champs_descriptifs": {
+      "type": "tuto | exo | exemple",
+      "niveau": "1 Débutant, 2 Intermédiaire, 3 Avancé (enums.niveaux)",
+      "categorie": "model | sketch | move | struct",
+      "resume": "une phrase"
+    },
+    "liste": [
+      {
+        "id": "tuto-premiers",
+        "titre": "Premiers pas",
+        "groupe": "Modéliser avec des volumes",
+        "total": 6,
+        "type": "tuto",
+        "niveau": 1,
+        "categorie": "model",
+        "resume": "Poser un cube, le percer, l’exporter."
+      },
+      {
+        "id": "tuto-mesures",
+        "titre": "Tailles et positions au millimètre",
+        "groupe": "Modéliser avec des volumes",
+        "total": 5,
+        "type": "tuto",
+        "niveau": 1,
+        "categorie": "model",
+        "resume": "Taper des cotes, placer et tourner une pièce."
+      },
+      {
+        "id": "tuto-empiler",
+        "titre": "Empiler et aligner",
+        "groupe": "Modéliser avec des volumes",
+        "total": 4,
+        "type": "tuto",
+        "niveau": 1,
+        "categorie": "model",
+        "resume": "Soulever, aimanter au centre, grouper."
+      },
+      {
+        "id": "tuto-esquisse",
+        "titre": "Ma première esquisse",
+        "groupe": "Esquisser et coter",
+        "total": 5,
+        "type": "tuto",
+        "niveau": 2,
+        "categorie": "sketch",
+        "resume": "Un rectangle coté avec un trou, extrudé."
+      },
+      {
+        "id": "tuto-debout",
+        "titre": "Esquisser debout",
+        "groupe": "Esquisser et coter",
+        "total": 4,
+        "type": "tuto",
+        "niveau": 2,
+        "categorie": "sketch",
+        "resume": "Dessiner sur le plan de face et extruder vers l’avant."
+      },
+      {
+        "id": "tuto-bezier",
+        "titre": "Courbes de Bézier",
+        "groupe": "Esquisser et coter",
+        "total": 6,
+        "type": "tuto",
+        "niveau": 2,
+        "categorie": "sketch",
+        "resume": "Tracer une forme courbe point par point."
+      },
+      {
+        "id": "tuto-pivot",
+        "titre": "Faire tourner une pièce",
+        "groupe": "Mettre en mouvement",
+        "total": 6,
+        "type": "tuto",
+        "niveau": 2,
+        "categorie": "move",
+        "resume": "Valider, poser une liaison pivot, ajouter un moteur, simuler."
+      },
+      {
+        "id": "tuto-engrenages",
+        "titre": "Deux roues dentées",
+        "groupe": "Mettre en mouvement",
+        "total": 6,
+        "type": "tuto",
+        "niveau": 3,
+        "categorie": "move",
+        "resume": "Une roue motrice en entraîne une autre."
+      },
+      {
+        "id": "tuto-treillis",
+        "titre": "Calculer un petit pont",
+        "groupe": "Simuler la déformation",
+        "total": 5,
+        "type": "tuto",
+        "niveau": 2,
+        "categorie": "struct",
+        "resume": "Tracer un treillis, poser les appuis et une charge."
+      },
+      {
+        "id": "exo-de",
+        "titre": "Dé à jouer",
+        "groupe": "Modéliser avec des volumes",
+        "total": 3,
+        "type": "exo",
+        "niveau": 1,
+        "categorie": "model",
+        "resume": "Un cube de 20 mm avec ses points creusés."
+      },
+      {
+        "id": "exo-plaque",
+        "titre": "Plaque percée",
+        "groupe": "Modéliser avec des volumes",
+        "total": 3,
+        "type": "exo",
+        "niveau": 1,
+        "categorie": "model",
+        "resume": "Une plaque de fixation avec deux trous de vis."
+      },
+      {
+        "id": "exo-tour",
+        "titre": "Tour de 3 étages",
+        "groupe": "Modéliser avec des volumes",
+        "total": 3,
+        "type": "exo",
+        "niveau": 1,
+        "categorie": "model",
+        "resume": "Empiler des volumes sans qu’aucun ne flotte."
+      },
+      {
+        "id": "exo-equerre",
+        "titre": "Équerre de fixation",
+        "groupe": "Esquisser et coter",
+        "total": 4,
+        "type": "exo",
+        "niveau": 2,
+        "categorie": "sketch",
+        "resume": "Un profil en L coté, avec deux trous."
+      },
+      {
+        "id": "exo-vase",
+        "titre": "Vase en révolution",
+        "groupe": "Esquisser et coter",
+        "total": 2,
+        "type": "exo",
+        "niveau": 3,
+        "categorie": "sketch",
+        "resume": "Un demi-profil courbe tourné sur 360°."
+      },
+      {
+        "id": "exo-barriere",
+        "titre": "Barrière qui se lève",
+        "groupe": "Mettre en mouvement",
+        "total": 4,
+        "type": "exo",
+        "niveau": 2,
+        "categorie": "move",
+        "resume": "Une lisse qui pivote de 0 à 90° et revient."
+      },
+      {
+        "id": "exo-reducteur",
+        "titre": "Réducteur 1/3",
+        "groupe": "Mettre en mouvement",
+        "total": 3,
+        "type": "exo",
+        "niveau": 3,
+        "categorie": "move",
+        "resume": "Diviser la vitesse par 3 avec deux roues."
+      },
+      {
+        "id": "exo-pont",
+        "titre": "Pont de 400 mm",
+        "groupe": "Simuler la déformation",
+        "total": 3,
+        "type": "exo",
+        "niveau": 2,
+        "categorie": "struct",
+        "resume": "Un treillis qui porte 500 N sans casser."
+      },
+      {
+        "id": "ex-maison",
+        "titre": "Maison",
+        "groupe": "Modéliser avec des volumes",
+        "total": 2,
+        "type": "exemple",
+        "niveau": 1,
+        "categorie": "model",
+        "resume": "Murs creusés par des perçages, toit fait de deux coins."
+      },
+      {
+        "id": "ex-crayons",
+        "titre": "Pot à crayons gravé",
+        "groupe": "Modéliser avec des volumes",
+        "total": 2,
+        "type": "exemple",
+        "niveau": 1,
+        "categorie": "model",
+        "resume": "Un bloc percé de cinq trous, avec un nom gravé en creux."
+      },
+      {
+        "id": "ex-de",
+        "titre": "Dé à jouer",
+        "groupe": "Modéliser avec des volumes",
+        "total": 2,
+        "type": "exemple",
+        "niveau": 1,
+        "categorie": "model",
+        "resume": "Un cube de 20 mm et 21 sphères en perçage pour les points."
+      },
+      {
+        "id": "ex-porteCles",
+        "titre": "Porte-clés",
+        "groupe": "Modéliser avec des volumes",
+        "total": 2,
+        "type": "exemple",
+        "niveau": 2,
+        "categorie": "model",
+        "resume": "Une plaque dessinée en esquisse cotée, avec un texte en relief."
+      },
+      {
+        "id": "ex-plaque",
+        "titre": "Plaque de fixation",
+        "groupe": "Esquisser et coter",
+        "total": 3,
+        "type": "exemple",
+        "niveau": 2,
+        "categorie": "sketch",
+        "resume": "Esquisse totalement contrainte : cotes en chaîne et cercles égaux."
+      },
+      {
+        "id": "ex-pion",
+        "titre": "Pion d’échecs",
+        "groupe": "Esquisser et coter",
+        "total": 2,
+        "type": "exemple",
+        "niveau": 3,
+        "categorie": "sketch",
+        "resume": "Un demi-profil dessiné à droite de l’axe, tourné sur 360°."
+      },
+      {
+        "id": "ex-coeur",
+        "titre": "Pendentif cœur",
+        "groupe": "Esquisser et coter",
+        "total": 3,
+        "type": "exemple",
+        "niveau": 2,
+        "categorie": "sketch",
+        "resume": "Quatre courbes de Bézier symétriques forment un cœur."
+      },
+      {
+        "id": "ex-vase",
+        "titre": "Vase",
+        "groupe": "Esquisser et coter",
+        "total": 2,
+        "type": "exemple",
+        "niveau": 3,
+        "categorie": "sketch",
+        "resume": "Un profil courbe avec une paroi de 2 mm, tourné sur 360°."
+      },
+      {
+        "id": "ex-barriere",
+        "titre": "Barrière de parking",
+        "groupe": "Mettre en mouvement",
+        "total": 2,
+        "type": "exemple",
+        "niveau": 2,
+        "categorie": "move",
+        "resume": "Une lisse qui se lève de 0 à 90° et redescend."
+      },
+      {
+        "id": "ex-gears",
+        "titre": "Engrenages et crémaillère",
+        "groupe": "Mettre en mouvement",
+        "total": 2,
+        "type": "exemple",
+        "niveau": 3,
+        "categorie": "move",
+        "resume": "Une roue Z20 entraîne un pignon Z10 et une crémaillère."
+      },
+      {
+        "id": "ex-reducteur",
+        "titre": "Réducteur à deux étages",
+        "groupe": "Mettre en mouvement",
+        "total": 2,
+        "type": "exemple",
+        "niveau": 3,
+        "categorie": "move",
+        "resume": "Deux étages Z10 → Z30 : la sortie tourne 9 fois moins vite."
+      },
+      {
+        "id": "ex-poulies",
+        "titre": "Poulies et courroie",
+        "groupe": "Mettre en mouvement",
+        "total": 2,
+        "type": "exemple",
+        "niveau": 3,
+        "categorie": "move",
+        "resume": "Poulie Ø40 vers poulie Ø20 : la petite tourne 2 fois plus vite."
+      },
+      {
+        "id": "ex-etau",
+        "titre": "Étau (vis-écrou)",
+        "groupe": "Mettre en mouvement",
+        "total": 2,
+        "type": "exemple",
+        "niveau": 3,
+        "categorie": "move",
+        "resume": "Tourner la vis fait avancer le mors mobile de 2 mm par tour."
+      },
+      {
+        "id": "ex-bras",
+        "titre": "Bras articulé",
+        "groupe": "Mettre en mouvement",
+        "total": 2,
+        "type": "exemple",
+        "niveau": 2,
+        "categorie": "move",
+        "resume": "Tourelle, épaule et coude : chaque pivot porte le suivant."
+      },
+      {
+        "id": "ex-eolienne",
+        "titre": "Éolienne",
+        "groupe": "Mettre en mouvement",
+        "total": 2,
+        "type": "exemple",
+        "niveau": 2,
+        "categorie": "move",
+        "resume": "Le rotor tourne sans fin pendant que la nacelle s’oriente."
+      },
+      {
+        "id": "ex-pontWarren",
+        "titre": "Pont en treillis",
+        "groupe": "Simuler la déformation",
+        "total": 3,
+        "type": "exemple",
+        "niveau": 2,
+        "categorie": "struct",
+        "resume": "Un pont de 40 cm en baguettes de bois chargé de 60 kg."
+      },
+      {
+        "id": "ex-grue",
+        "titre": "Grue en tubes",
+        "groupe": "Simuler la déformation",
+        "total": 2,
+        "type": "exemple",
+        "niveau": 2,
+        "categorie": "struct",
+        "resume": "Un mât et une flèche en tubes d’aluminium portent 8 kg au bout."
+      },
+      {
+        "id": "ex-pontSuspendu",
+        "titre": "Pont suspendu",
+        "groupe": "Simuler la déformation",
+        "total": 3,
+        "type": "exemple",
+        "niveau": 2,
+        "categorie": "struct",
+        "resume": "Le tablier est pendu à un câble porteur tenu par deux pylônes."
+      },
+      {
+        "id": "ex-plongeoir",
+        "titre": "Plongeoir",
+        "groupe": "Simuler la déformation",
+        "total": 2,
+        "type": "exemple",
+        "niveau": 2,
+        "categorie": "struct",
+        "resume": "Une planche de 2,40 m encastrée, un plongeur de 80 kg au bout."
+      },
+      {
+        "id": "ex-plancher",
+        "titre": "Plancher simple",
+        "groupe": "Simuler la déformation",
+        "total": 2,
+        "type": "exemple",
+        "niveau": 2,
+        "categorie": "struct",
+        "resume": "Une solive de 3 m posée sur deux murs, chargée sur toute sa longueur."
+      },
+      {
+        "id": "ex-voute",
+        "titre": "Voûte en pierre",
+        "groupe": "Simuler la déformation",
+        "total": 2,
+        "type": "exemple",
+        "niveau": 2,
+        "categorie": "struct",
+        "resume": "Un arc de pierre de 3 m qui porte 5 tonnes au sommet."
+      },
+      {
+        "id": "ex-potence",
+        "titre": "Point suspendu",
+        "groupe": "Simuler la déformation",
+        "total": 2,
+        "type": "exemple",
+        "niveau": 2,
+        "categorie": "struct",
+        "resume": "Une potence en bois porte une charge de 50 kg suspendue au bout du bras."
+      }
+    ]
+  },
+  "progression": {
+    "envoi": "Centrale.progression(id, Etabli3D.progression(id))",
+    "quand": [
+      "ouverture d’un tuto, d’un exercice ou d’un exemple (faites = 0)",
+      "tuto ou exercice : chaque nouvelle étape ou critère réussi (vérifiés automatiquement deux fois par seconde)",
+      "activité terminée (statut = termine) : toutes les étapes d’un tuto, tous les critères d’un exercice, toutes les cases « À essayer » d’un exemple"
+    ],
+    "champs": {
+      "titre": "titre de l’activité",
+      "faites": "tuto / exercice : meilleur nombre d’étapes ou de critères réussis ; exemple : 0 tant qu’il n’est pas terminé, puis total",
+      "total": "nombre d’étapes (tuto), de critères (exercice) ou de cases « À essayer » (exemple)",
+      "statut": "commence | termine"
+    },
+    "champs_non_utilises": [
+      "score",
+      "score_max",
+      "details"
+    ],
+    "a_la_connexion": "Établi 3D lit mesProgressions(), garde le meilleur entre le navigateur et le serveur (Etabli3D.fusionnerProgression), puis renvoie les activités où le navigateur est en avance.",
+    "format": {
+      "$ref": "#/$defs/Progression"
+    }
+  },
+  "donnees": {
+    "projet": {
+      "description": "Le projet en cours : pièces, matières et images, liaisons, structure, fiche d’exemple et consignes du TP. Même contenu que Fichier → Enregistrer le projet (.json).",
+      "sauvegarde": "À chaque modification enregistrée dans l’historique (y compris Annuler / Rétablir) ; la Centrale regroupe les envois (3 s au plus).",
+      "chargement": "À la connexion : si le serveur a un projet différent, il remplace celui du navigateur (l’ancien reste accessible avec Annuler). Sinon le projet du navigateur est envoyé.",
+      "taille_typique": "5 à 60 Ko ; jusqu’à quelques centaines de Ko avec des images de matière (512 px max chacune). Limite de la Centrale : 2 Mo par clé.",
+      "format": {
+        "$ref": "#/$defs/Projet"
+      }
+    }
+  },
+  "fichiers": {
+    "utilises": true,
+    "convention": "recoit et produit : listes de { nom, type, description }. Établi 3D reconnaît un fichier à son extension : le professeur peut renommer les fichiers d’une étape (ex. support-telephone.json) tant que l’extension est gardée.",
+    "recoit": [
+      {
+        "nom": "projet.etabli3d.json",
+        "type": "application/json",
+        "description": "Projet de départ (format Projet). Ouvert automatiquement si l’élève arrive dans l’étape avec un projet vide, ou par Fichier → Reprendre le fichier de l’atelier."
+      }
+    ],
+    "produit": [
+      {
+        "nom": "projet.etabli3d.json",
+        "type": "application/json",
+        "description": "Le projet de l’élève (format Projet)."
+      },
+      {
+        "nom": "piece.stl",
+        "type": "model/stl",
+        "description": "Maillage binaire en mm des pièces solides visibles, pour l’impression 3D (perçages déjà retirés)."
+      },
+      {
+        "nom": "apercu.png",
+        "type": "image/png",
+        "description": "Image de la vue 3D (640 px de large)."
+      },
+      {
+        "nom": "resume.json",
+        "type": "application/json",
+        "description": "Résumé calculé : pièces, tailles, volumes, matières, masses, liaisons (format Resume). Pour un tableur, un questionnaire ou une fiche de fabrication."
+      }
+    ],
+    "depot": "Fichier → Déposer dans le dossier de l’atelier : chaque nom de sortie de l’étape est produit d’après son extension, puis Centrale.projet.sauver(nom, blob).",
+    "fichiers_eleve": "Fichier → Envoyer le STL au professeur : Centrale.envoyerFichier(stl, Centrale.nomFichier('stl', nom du projet))."
+  },
+  "stockage_local": {
+    "description": "Copies dans le navigateur de l’élève, utilisées sans connexion ou quand la Centrale est injoignable.",
+    "cles": {
+      "etabli3d.autosave": {
+        "contenu": "projet courant",
+        "format": {
+          "$ref": "#/$defs/Projet"
+        }
+      },
+      "etabli3d.progress": {
+        "contenu": "avancement : done[« tuto:clé » | « exo:clé » | « ex:clé »] = date, seen[…] = 1, part[clé] = étapes réussies",
+        "format": {
+          "$ref": "#/$defs/ProgressionLocale"
+        }
+      },
+      "etabli3d.prefs": {
+        "contenu": "préférences d’affichage du poste (niveau, thème, rendu…) ; jamais envoyées à la Centrale"
+      },
+      "etabli3d.layout": {
+        "contenu": "position des panneaux ; jamais envoyée à la Centrale"
+      }
+    }
+  },
+  "acces_javascript": {
+    "objet": "window.Etabli3D",
+    "membres": {
+      "app": "Identifiant de l’atelier : \"etabli3d\".",
+      "version": "Version d’Établi 3D (identique à atelier.version).",
+      "descripteur": "Chemin de ce fichier : \"centrale.json\".",
+      "activites()": "Liste envoyée à la Centrale : [{id, titre, groupe, total}].",
+      "catalogue()": "Catalogue détaillé (champs de activites.liste).",
+      "progression(id)": "{titre, faites, total, statut} ou null si l’activité n’a jamais été ouverte.",
+      "fusionnerProgression(serveur)": "Fusionne le résultat de Centrale.mesProgressions().",
+      "donnees()": "{projet} : valeurs des clés enregistrées.",
+      "estProjet(objet)": "true si l’objet est un projet chargeable.",
+      "ouvrirProjet(objet)": "Ouvre un projet ; l’ancien reste accessible avec Annuler.",
+      "resume()": "Résumé calculé (format Resume).",
+      "fichier(nom)": "Promise<Blob|null> : le fichier produit d’après l’extension du nom (.json projet, resume.json, .stl, .png)."
+    }
+  },
+  "enums": {
+    "niveaux": [
+      {
+        "niveau": 1,
+        "titre": "Débutant"
+      },
+      {
+        "niveau": 2,
+        "titre": "Intermédiaire"
+      },
+      {
+        "niveau": 3,
+        "titre": "Avancé"
+      }
+    ],
+    "categories": [
+      {
+        "id": "model",
+        "titre": "Modéliser avec des volumes"
+      },
+      {
+        "id": "sketch",
+        "titre": "Esquisser et coter"
+      },
+      {
+        "id": "move",
+        "titre": "Mettre en mouvement"
+      },
+      {
+        "id": "struct",
+        "titre": "Simuler la déformation"
+      }
+    ],
+    "matieres": [
+      {
+        "k": "pla",
+        "nom": "PLA (impression 3D)",
+        "masse_volumique": 1.24
+      },
+      {
+        "k": "bois",
+        "nom": "Bois (pin)",
+        "masse_volumique": 0.5
+      },
+      {
+        "k": "mdf",
+        "nom": "Médium (MDF)",
+        "masse_volumique": 0.75
+      },
+      {
+        "k": "carton",
+        "nom": "Carton",
+        "masse_volumique": 0.7
+      },
+      {
+        "k": "acier",
+        "nom": "Acier",
+        "masse_volumique": 7.85
+      },
+      {
+        "k": "alu",
+        "nom": "Aluminium",
+        "masse_volumique": 2.7
+      },
+      {
+        "k": "laiton",
+        "nom": "Laiton",
+        "masse_volumique": 8.5
+      },
+      {
+        "k": "plexi",
+        "nom": "Plexiglas",
+        "masse_volumique": 1.19
+      },
+      {
+        "k": "caoutchouc",
+        "nom": "Caoutchouc",
+        "masse_volumique": 1.1
+      },
+      {
+        "k": "beton",
+        "nom": "Béton",
+        "masse_volumique": 2.4
+      },
+      {
+        "k": "pierre",
+        "nom": "Pierre",
+        "masse_volumique": 2.6
+      },
+      {
+        "k": "image",
+        "nom": "Image importée",
+        "masse_volumique": null
+      }
+    ],
+    "formes": {
+      "box": {
+        "L": "longueur X",
+        "l": "largeur Y",
+        "h": "hauteur Z"
+      },
+      "cylinder": {
+        "d": "diamètre",
+        "h": "hauteur",
+        "seg": "facettes"
+      },
+      "sphere": {
+        "d": "diamètre",
+        "seg": "facettes"
+      },
+      "cone": {
+        "d": "diamètre de base",
+        "d2": "diamètre du haut",
+        "h": "hauteur",
+        "seg": "facettes"
+      },
+      "pyramid": {
+        "L": "X",
+        "l": "Y",
+        "h": "Z"
+      },
+      "wedge": {
+        "L": "X",
+        "l": "Y",
+        "h": "Z"
+      },
+      "tube": {
+        "d": "diamètre extérieur",
+        "di": "diamètre intérieur",
+        "h": "hauteur",
+        "seg": "facettes"
+      },
+      "torus": {
+        "d": "diamètre moyen",
+        "e": "épaisseur",
+        "seg": "facettes"
+      },
+      "text": {
+        "txt": "texte (40 car.)",
+        "size": "hauteur des lettres",
+        "h": "épaisseur",
+        "font": "sans|serif|mono|round"
+      },
+      "gear": {
+        "z": "nombre de dents",
+        "m": "module",
+        "e": "épaisseur",
+        "dh": "diamètre d'alésage"
+      },
+      "rack": {
+        "n": "nombre de dents",
+        "m": "module",
+        "e": "épaisseur",
+        "hb": "hauteur sous les dents"
+      },
+      "sketch": {
+        "sk": "dessin (voir $defs/sketch)",
+        "mode": "extrude|revolve",
+        "h": "hauteur d'extrusion",
+        "plane": "xy|xz|yz"
+      }
+    }
+  },
+  "$defs": {
+    "Activite": {
+      "type": "object",
+      "required": [
+        "id",
+        "titre",
+        "groupe",
+        "total"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^(tuto|exo|ex)-[A-Za-z0-9]+$"
+        },
+        "titre": {
+          "type": "string"
+        },
+        "groupe": {
+          "type": "string"
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "Progression": {
+      "type": "object",
+      "required": [
+        "faites",
+        "total",
+        "statut"
+      ],
+      "properties": {
+        "titre": {
+          "type": "string"
+        },
+        "faites": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "statut": {
+          "enum": [
+            "commence",
+            "termine"
+          ]
+        }
+      }
+    },
+    "ProgressionLocale": {
+      "type": "object",
+      "properties": {
+        "done": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "seen": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "part": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "Resume": {
+      "type": "object",
+      "properties": {
+        "nom": {
+          "type": "string"
+        },
+        "unites": {
+          "type": "object"
+        },
+        "pieces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "nom": {
+                "type": "string"
+              },
+              "forme": {
+                "type": "string"
+              },
+              "percage": {
+                "type": "boolean"
+              },
+              "matiere": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "taille": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "description": "X, Y, Z en mm"
+              },
+              "volume": {
+                "type": "number",
+                "description": "cm³"
+              },
+              "masse": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "g, si la matière est connue"
+              },
+              "validation": {
+                "enum": [
+                  "none",
+                  "stale",
+                  "ok",
+                  "warn",
+                  "err"
+                ]
+              }
+            }
+          }
+        },
+        "liaisons": {
+          "type": "array"
+        },
+        "totaux": {
+          "type": "object"
+        }
+      }
+    },
+    "Projet": {
+      "description": "Projet Établi 3D (clé de données « projet », même contenu que Fichier → Enregistrer). Unités : mm, degrés, N, MPa. Z vers le haut. Les champs inconnus doivent être conservés.",
+      "type": "object",
+      "required": [
+        "parts"
+      ],
+      "properties": {
+        "app": {
+          "const": "etabli3d"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Version du format du projet. 1 : d'origine. 2 : ajoute part.mat et textures."
+        },
+        "name": {
+          "type": "string",
+          "description": "Nom du projet"
+        },
+        "parts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Piece"
+          },
+          "description": "Pièces de premier niveau, dans l'ordre de création"
+        },
+        "joints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Liaison"
+          },
+          "default": []
+        },
+        "nextId": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Prochain identifiant libre, partagé par pièces, liaisons et enfants de groupes"
+        },
+        "note": {
+          "$ref": "#/$defs/Fiche"
+        },
+        "tp": {
+          "$ref": "#/$defs/ConsignesTP"
+        },
+        "struct": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/Structure"
+            }
+          ]
+        },
+        "textures": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "description": "Images de matière utilisées par les pièces (part.mat.k = 'image'), clé = identifiant",
+              "additionalProperties": {
+                "type": "object",
+                "required": [
+                  "src"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "src": {
+                    "type": "string",
+                    "pattern": "^data:image/",
+                    "description": "Image en data URL (JPEG ≤ 512 px conseillé)"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "Vec3": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "Couleur": {
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}$"
+    },
+    "Piece": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "pos",
+        "rot"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "kind": {
+          "enum": [
+            "box",
+            "cylinder",
+            "sphere",
+            "cone",
+            "pyramid",
+            "wedge",
+            "tube",
+            "torus",
+            "text",
+            "gear",
+            "rack",
+            "sketch",
+            "group"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "params": {
+          "type": "object",
+          "description": "Cotes de la forme en mm : voir enums.formes"
+        },
+        "color": {
+          "$ref": "#/$defs/Couleur"
+        },
+        "hole": {
+          "type": "boolean",
+          "description": "true : perçage, retire la matière des solides du même groupe"
+        },
+        "pos": {
+          "$ref": "#/$defs/Vec3",
+          "description": "Position de l'origine de la pièce (base, centre) dans le repère du parent, mm"
+        },
+        "rot": {
+          "$ref": "#/$defs/Vec3",
+          "description": "Rotation en degrés, angles d'Euler ordre XYZ"
+        },
+        "mat": {
+          "$ref": "#/$defs/Matiere"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Piece"
+          },
+          "description": "Seulement pour kind = group ; positions relatives au groupe"
+        },
+        "hidden": {
+          "type": "boolean"
+        },
+        "locked": {
+          "type": "boolean"
+        },
+        "inGroup": {
+          "type": "integer",
+          "description": "Interne : mode édition d'un groupe"
+        },
+        "valid": {
+          "type": "object",
+          "description": "Résultat de la validation : {key, level: ok|warn|err, tris, proxy, issues[]}. Recalculé par l'app : à conserver, ne pas produire."
+        },
+        "locs": {
+          "type": "array",
+          "description": "Repères (locators) en coordonnées de la pièce : {id, name, kind: centre|base|axe|face, pos, dir, auto}"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "group"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "children"
+            ]
+          }
+        }
+      ]
+    },
+    "Matiere": {
+      "type": "object",
+      "required": [
+        "k"
+      ],
+      "properties": {
+        "k": {
+          "enum": [
+            "pla",
+            "bois",
+            "mdf",
+            "carton",
+            "acier",
+            "alu",
+            "laiton",
+            "plexi",
+            "caoutchouc",
+            "beton",
+            "pierre",
+            "image"
+          ]
+        },
+        "img": {
+          "type": "string",
+          "description": "Si k = image : clé dans textures"
+        },
+        "size": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Si k = image : côté du motif en mm (projection sur trois plans)"
+        }
+      }
+    },
+    "Esquisse": {
+      "type": "object",
+      "description": "Esquisse 2D dans le plan (u, v) choisi. Contour extérieur dans le sens trigonométrique, trous dans le sens horaire.",
+      "properties": {
+        "nid": {
+          "type": "integer"
+        },
+        "pts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "x",
+              "y"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "fixed": {
+                "type": "boolean"
+              },
+              "origin": {
+                "type": "boolean"
+              },
+              "it": {
+                "enum": [
+                  "lin",
+                  "auto",
+                  "bez"
+                ]
+              },
+              "tm": {
+                "enum": [
+                  "sym",
+                  "align",
+                  "free"
+                ]
+              }
+            }
+          }
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "a",
+              "b"
+            ]
+          }
+        },
+        "circles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "c",
+              "r"
+            ]
+          }
+        },
+        "beziers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "a",
+              "b",
+              "t1",
+              "t2"
+            ],
+            "description": "t1 : poignée au départ a, t2 : à l'arrivée b, relatives"
+          }
+        },
+        "cons": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "enum": [
+                  "dist",
+                  "dx",
+                  "dy",
+                  "diam",
+                  "h",
+                  "v",
+                  "par",
+                  "perp",
+                  "eq",
+                  "eqr"
+                ]
+              },
+              "value": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      }
+    },
+    "Liaison": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "child"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "fixe",
+            "pivot",
+            "glissiere"
+          ]
+        },
+        "child": {
+          "type": "integer",
+          "description": "Pièce mobile (une seule liaison par pièce mobile)"
+        },
+        "parent": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Support ; null = le bâti (plan de travail)"
+        },
+        "origin": {
+          "$ref": "#/$defs/Vec3",
+          "description": "Point de l'axe, repère du support, mm"
+        },
+        "axis": {
+          "$ref": "#/$defs/Vec3",
+          "description": "Direction unitaire de l'axe, repère du support"
+        },
+        "min": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Butée basse (° ou mm)"
+        },
+        "max": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "motor": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "mode": {
+                  "enum": [
+                    "continu",
+                    "alternatif"
+                  ]
+                },
+                "speed": {
+                  "type": "number",
+                  "description": "°/s ou mm/s"
+                }
+              }
+            }
+          ]
+        },
+        "driver": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "joint": {
+                  "type": "integer"
+                },
+                "ratio": {
+                  "type": "number"
+                }
+              }
+            }
+          ],
+          "description": "Transmission : mouvement = ratio × mouvement de la liaison menante"
+        },
+        "loc": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "pid": {
+                  "type": "integer"
+                },
+                "lid": {
+                  "type": "string"
+                }
+              }
+            }
+          ],
+          "description": "Repère auquel l'axe est accroché"
+        }
+      }
+    },
+    "Fiche": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "observe": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "try": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "description": "Fiche d'exemple (HTML simple autorisé : b, i, span.kbd)"
+        }
+      ]
+    },
+    "ConsignesTP": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "tasks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "t"
+                ],
+                "properties": {
+                  "t": {
+                    "type": "string"
+                  },
+                  "done": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          },
+          "description": "Consignes du professeur, cochées par l'élève"
+        }
+      ]
+    },
+    "Structure": {
+      "type": "object",
+      "description": "Atelier Structures. Plan vertical (x horizontal, y vertical), mm / N / MPa.",
+      "properties": {
+        "mod": {
+          "enum": [
+            "treillis",
+            "maillage"
+          ]
+        },
+        "truss": {
+          "type": "object",
+          "properties": {
+            "nodes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "x",
+                  "y"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "sup": {
+                    "enum": [
+                      null,
+                      "fixe",
+                      "glissant"
+                    ]
+                  },
+                  "fx": {
+                    "type": "number"
+                  },
+                  "fy": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "bars": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "a",
+                  "b"
+                ],
+                "properties": {
+                  "sec": {
+                    "enum": [
+                      "plein",
+                      "tube",
+                      "cable"
+                    ]
+                  },
+                  "D": {
+                    "type": "number"
+                  },
+                  "d": {
+                    "type": "number"
+                  },
+                  "mat": {
+                    "enum": [
+                      "bois",
+                      "acier",
+                      "alu",
+                      "pla",
+                      "pierre",
+                      "beton"
+                    ]
+                  }
+                }
+              }
+            },
+            "nid": {
+              "type": "integer"
+            },
+            "mat": {
+              "type": "string"
+            },
+            "sec": {
+              "type": "string"
+            },
+            "D": {
+              "type": "number"
+            },
+            "d": {
+              "type": "number"
+            },
+            "grav": {
+              "type": "boolean"
+            },
+            "labels": {
+              "type": "boolean"
+            }
+          }
+        },
+        "mesh": {
+          "type": "object",
+          "description": "Maillage : forme (poutre, arc…), cotes P, épaisseur t, matériau, appuis (encastre, appuis, pieds), charge, F en N"
+        }
+      }
+    }
+  }
+}

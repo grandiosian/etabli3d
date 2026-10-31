@@ -114,14 +114,14 @@ function usedTextures(){ const all=state.textures||{}, out={}; const walk=ps=>{ 
 function commit(){
   const s=snapshot(); if(hist.stack[hist.idx]===s) return;
   hist.stack=hist.stack.slice(0,hist.idx+1); hist.stack.push(s); if(hist.stack.length>80) hist.stack.shift(); hist.idx=hist.stack.length-1;
-  autosave(); updateUndo(); bridgeChanged();
+  autosave(); updateUndo(); centraleTravail();
 }
 function restore(s, keepSel=true){
   const o=JSON.parse(s); state.name=o.name||'Mon projet'; state.parts=o.parts||[]; state.joints=o.joints||[]; state.nextId=o.nextId||1; state.note=o.note||null; state.tp=o.tp||null; state.struct=o.struct||null; state.edit=o.edit||null; state.textures={...(state.textures||{}), ...(o.textures||{})};
   $('#projName').value=state.name; updateGroupEditUI();
   selection = keepSel? selection.filter(id=>findPart(id)) : []; renderDemo();
   if(selJoint && !state.joints.find(j=>j.id===selJoint)) selJoint=null;
-  simReset(true); sync(); renderInspector(); autosave(); updateUndo(); updateSteps(); bridgeChanged();
+  simReset(true); sync(); renderInspector(); autosave(); updateUndo(); updateSteps(); centraleTravail();
   if(ws==='struct'){ computeStruct(); stDraw(); if(ST.mode3d) buildStruct3D(); }
 }
 function undo(){ if(hist.idx>0){ hist.idx--; restore(hist.stack[hist.idx]); } }

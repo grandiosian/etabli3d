@@ -400,7 +400,7 @@ function loadExample(k){
   const S=SAMPLES[k]; if(!S) return;
   if(S.level>prefs.level){ setLevel(S.level,true); setTimeout(()=>toast(`Niveau ${LEVELS[S.level-1].name} activé pour cet exemple.`),50); }
   closeBubble(); ST.anim.on=false; ST.k=1; resetAmpRef(); simReset(true); S.build();
-  state.note={key:k, title:S.title, observe:S.note.observe, try:S.note.try}; PROG.seen['ex:'+k]=1; saveProg();
+  state.note={key:k, title:S.title, observe:S.note.observe, try:S.note.try}; PROG.seen['ex:'+k]=1; saveProg(); centraleProgres('ex:'+k);
   selection=[]; selJoint=null; jf=null;
   S.after?.();
   $('#projName').value=state.name; demoClosed=false; demoOpen=!matchMedia('(max-width: 860px)').matches; GUIDE.src='note'; GUIDE.noteDone=[]; GUIDE.step=0;

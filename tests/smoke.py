@@ -637,6 +637,25 @@ with sync_playwright() as p:
     check('fenêtre étroite : la languette se resserre, rien n’est coupé ; plus large : les panneaux reviennent', r == [True, True, True] and r2 == ['edWingL', 'edWingR'], [r, r2])
     for k in ('snapBox', 'navBar'):
         g = pg.locator(f'#{k} .pgrip').bounding_box(); pg.mouse.move(g['x']+5, g['y']+8); pg.mouse.down(); pg.mouse.move(g['x']+60, g['y']+420, steps=10); pg.mouse.up(); pg.wait_for_timeout(200)
+    # Les grands panneaux aussi : guide à gauche, cube de vue et propriétés à droite
+    pg.evaluate(f"()=>{{const E={E}; E.LAYOUT().demo=null; if(!document.querySelector('#demo').offsetParent) document.querySelector('#bGuide').click();}}"); pg.wait_for_timeout(200)
+    def drag_to(grip, tx, ty):
+        g = pg.locator(grip).first.bounding_box(); pg.mouse.move(g['x']+5, g['y']+6); pg.mouse.down(); pg.mouse.move(tx, ty, steps=12); pg.mouse.up(); pg.wait_for_timeout(350)
+    ed = pg.locator('.ed-wrap').bounding_box(); drag_to('#demo .demo-grip', ed['x']-120, ed['y']+10)
+    ed = pg.locator('.ed-wrap').bounding_box(); drag_to('#views > .pgrip', ed['x']+ed['width']+40, ed['y']+10)
+    ed = pg.locator('.ed-wrap').bounding_box(); drag_to('#insp .insp-tt', ed['x']+ed['width']+60, ed['y']+40)
+    r = pg.evaluate("""()=>{const q=s=>document.querySelector(s), b=s=>q(s).getBoundingClientRect(), w=b('.ed-wrap'), t=q('#toolbar'), cs=getComputedStyle(t), tl=t.getBoundingClientRect().left+parseFloat(cs.paddingLeft), tr=t.getBoundingClientRect().right-parseFloat(cs.paddingRight), sh=q('.ed-shape');
+      return [['demo','views','insp'].map(k=>q('#'+k).classList.contains('docked-tall') && q('#dsp-'+k)?.parentElement.id), b('#demo').right<=w.left+30 && Math.abs(b('#demo').top-w.top)<2, b('#insp').left>=w.right-30, getComputedStyle(q('#demo')).clipPath.startsWith('polygon'), Math.abs((w.left+w.right)/2-(tl+tr)/2)<3, sh.scrollWidth<=sh.clientWidth+1]}""")
+    pg.evaluate(f"()=>{E}.setWs('check')"); pg.wait_for_timeout(300)
+    r2 = pg.evaluate("()=>['demo','views'].map(k=>document.querySelector('#'+k).parentElement.id).concat([document.querySelector('#insp').classList.contains('docked')])")
+    pg.evaluate(f"()=>{E}.setWs('model')"); pg.wait_for_timeout(300)
+    r3 = pg.evaluate("()=>['demo','views','insp'].map(k=>document.querySelector('#'+k).classList.contains('docked-tall'))")
+    pg.screenshot(path=os.path.join(OUT, 'panneaux-plaques.png'))
+    # au niveau avancé l'arborescence prend de la place : le cube, plaqué le premier, cède la sienne aux propriétés
+    check('grands panneaux plaqués (guide à gauche, propriétés à droite) : coin oblique, languette centrée et entière ; le plus ancien cède sa place ; remis sur la vue hors de Modéliser', r[0][0] == 'edWingL' and r[0][2] == 'edWingR' and r[1] and r[3:] == [True, True, True] and r2 == ['stage', 'stage', False] and r3[0] and r3[2], [r, r2, r3])
+    pg.evaluate(f"()=>{E}.resetLayout()"); pg.wait_for_timeout(300)
+    r = pg.evaluate("()=>[document.querySelector('#demo').parentElement.id, document.querySelector('#views').parentElement.id, document.querySelectorAll('.dock-sp').length]")
+    check('« Remettre les panneaux à leur place » les décroche tous', r == ['stage', 'stage', 0], r)
     pg.evaluate(f"()=>{{const E={E}; E.prefs.nav='auto'; E.applyNavBar();}}")
     # Arborescence : réduire, déplacer, remettre
     pg.evaluate(f"()=>{E}.LAYOUT().tree=null"); 
@@ -694,22 +713,42 @@ with sync_playwright() as p:
     r = pg.evaluate(f"""()=>{{const E={E}, bad=[]; for(const k of Object.keys(E.LESSONS)){{ try{{ E.startLesson(k); }}catch(e){{ bad.push(k+': '+e.message); }} }} return bad;}}""")
     check('tous les tutos et exercices démarrent', r == [], r)
 
-    # Passerelle : une page « centralisatrice » intègre l'app et dialogue par postMessage
-    hub = b.new_page(viewport={'width': 1400, 'height': 860}); hub.on('pageerror', lambda e: errors.append('hub: ' + str(e)))
-    hub.goto(URL.replace('/dist/test.html', '/passerelle/hub-exemple.html?app=/dist/test.html')); hub.wait_for_function('()=>window.passerelle', timeout=30000)
-    r = hub.evaluate("async()=>{const a=window.passerelle; return [a.manifest.app.id, a.manifest.document.formatVersion]}")
-    hub.click('#bLoad'); hub.wait_for_timeout(1200)
-    s1 = hub.evaluate("async()=>{const s=await window.passerelle.request('summary.get'); const p=s.parts[0]; return [s.parts.length, p.material, Math.round(p.volume), Math.round(p.mass), p.size]}")
-    pj = hub.evaluate("async()=>{const r=await window.passerelle.request('project.get'); return [r.project.app, r.project.version, r.project.parts[0].mat.k, r.project.tp.tasks.length]}")
-    bad = hub.evaluate("async()=>{try{await window.passerelle.request('project.load',{project:{parts:[{id:1,kind:'blob'}]}}); return null}catch(e){return e.code}}")
-    stl = hub.evaluate("async()=>{const r=await window.passerelle.request('export.stl'); return [r.name.endsWith('.stl'), r.triangles>100, atob(r.base64).length===84+50*r.triangles]}")
-    th = hub.evaluate("async()=>{const r=await window.passerelle.request('view.thumbnail',{width:200}); return [r.width, r.dataUrl.startsWith('data:image/png')]}")
-    hub.evaluate("()=>{window.__ev=[]; window.passerelle.on('*',(d,m)=>window.__ev.push(m.type))}")
-    hub.evaluate("()=>{const w=document.querySelector('#app').contentWindow; w.__etabli.setSel([1]);}"); hub.frame_locator('#app').locator('#tDup').click(); hub.wait_for_timeout(1000)
-    ev = hub.evaluate("()=>window.__ev")
-    unk = hub.evaluate("async()=>{try{await window.passerelle.request('nope')}catch(e){return e.code}}")
-    check('passerelle : connexion, ouverture d’un projet, résumé (volume, masse), projet, STL, vignette, événements, erreurs', r == ['etabli3d', 2] and s1 == [1, 'bois', 72, 36, [60, 60, 90]] and pj == ['etabli3d', 2, 'bois', 2] and bad == 'bad-project' and stl == [True, True, True] and th == [200, True] and 'selection.changed' in ev and 'project.changed' in ev and unk == 'unknown-type', [r, s1, pj, bad, stl, th, ev, unk])
-    hub.close()
+    # Passerelle avec la Centrale : une fausse Centrale (tests/centrale/) répond comme le vrai module
+    base = URL.split('/dist/')[0]
+    depart = {'app': 'etabli3d', 'version': 2, 'name': 'Support de départ', 'nextId': 2, 'joints': [],
+              'parts': [{'id': 1, 'kind': 'box', 'name': 'Socle', 'params': {'L': 60, 'l': 40, 'h': 5}, 'color': '#4aa36b', 'hole': False, 'pos': [0, 0, 0], 'rot': [0, 0, 0]}]}
+    serveur = {'app': 'etabli3d', 'version': 2, 'name': 'Porte-crayon', 'nextId': 4, 'joints': [],
+               'parts': [{'id': 1, 'kind': 'group', 'name': 'Porte-crayon', 'color': '#c8955a', 'mat': {'k': 'bois'}, 'hole': False, 'pos': [0, 0, 0], 'rot': [0, 0, 0], 'params': {}, 'children': [
+                   {'id': 2, 'kind': 'cylinder', 'name': 'Corps', 'params': {'d': 60, 'h': 90, 'seg': 64}, 'color': '#c8955a', 'hole': False, 'pos': [0, 0, 0], 'rot': [0, 0, 0]},
+                   {'id': 3, 'kind': 'cylinder', 'name': 'Creux', 'params': {'d': 52, 'h': 90, 'seg': 64}, 'color': '#7b8985', 'hole': True, 'pos': [0, 0, 4], 'rot': [0, 0, 0]}]}]}
+    cfg = {'activite': 'ex-de', 'progressions': {'tuto-premiers': {'faites': 3, 'total': 6, 'statut': 'commence'}, 'exo-de': {'faites': 3, 'total': 3, 'statut': 'termine'}},
+           'projet': serveur, 'atelier': {'titre': 'Fabriquer le support', 'entrees': ['depart.json'], 'sorties': ['projet.etabli3d.json', 'piece.stl', 'apercu.png', 'resume.json']},
+           'fichiers': {'depart.json': depart}}
+    import json as _json
+    ctx = b.new_context(viewport={'width': 1400, 'height': 860})
+    ctx.add_init_script(f"window.CENTRALE_URL='{base}/tests/centrale/'; window.__CZ_TEST={_json.dumps(cfg)};")
+    cz = ctx.new_page(); cz.on('pageerror', lambda e: errors.append('centrale: ' + str(e)))
+    cz.goto(URL); cz.wait_for_timeout(2500); cz.click('#galleryClose')
+    r = cz.evaluate("()=>[__cz.init.app, __cz.init.activites.length, Etabli3D.activites().length, document.querySelector('#bCentrale').textContent.trim()]")
+    cz.click('#bCentrale'); cz.wait_for_timeout(200); cz.click('#czFaux'); cz.wait_for_timeout(1500)
+    r2 = cz.evaluate("""()=>{const E=window.__etabli; return [document.querySelector('#bCentrale').textContent.trim(), !!E.PROG.done['exo:de'], E.PROG.part.premiers, E.state.note && E.state.note.key,
+      __cz.progres.some(([id,p])=>id==='ex-de' && p.faites===0 && p.statut==='commence'), __cz.sauve.some(([k,v])=>k==='projet' && v.app==='etabli3d'), Etabli3D.progression('exo-de').statut]}""")
+    cz.keyboard.press('Control+z'); cz.wait_for_timeout(300)
+    r3 = cz.evaluate("()=>[window.__etabli.state.name, window.__etabli.state.parts[0].mat && window.__etabli.state.parts[0].mat.k]")
+    n0 = cz.evaluate("()=>__cz.sauve.length")
+    cz.click('#bFile'); cz.locator('#menuFile .cz-item', has_text='Reprendre').click(); cz.wait_for_timeout(600)
+    r4 = cz.evaluate("()=>[window.__etabli.state.name, __cz.sauve.length]")
+    cz.click('#bFile'); cz.locator('#menuFile .cz-item', has_text='Déposer').click(); cz.wait_for_timeout(1500)
+    cz.click('#bFile'); cz.locator('#menuFile .cz-item', has_text='STL').click(); cz.wait_for_timeout(600)
+    r5 = cz.evaluate("()=>[__cz.depots.map(d=>d.nom+':'+d.type+':'+(d.taille>0)).join(' '), __cz.fichiers.map(f=>f.nom.endsWith('.stl')+':'+f.type).join(' ')]")
+    check('Centrale : déclaration des activités, bouton « Mon code », progression fusionnée, projet du serveur (Annuler revient), activité demandée, sauvegarde',
+          r == ['etabli3d', 39, 39, 'Mon code'] and r2 == ['5A · 07', True, 3, 'de', True, True, 'termine'] and r3 == ['Porte-crayon', 'bois'], [r, r2, r3])
+    check('Centrale : fichier de l’atelier repris, dépôt des sorties (projet, STL, aperçu, résumé), STL envoyé au professeur',
+          r4[0] == 'Support de départ' and r4[1] > n0 and r5 == ['projet.etabli3d.json:application/json:true piece.stl:model/stl:true apercu.png:image/png:true resume.json:application/json:true', 'true:model/stl'], [r4, n0, r5])
+    ver = ctx.new_page(); ver.goto(base + '/dist/outils/verifier-descripteur.html?app=../test.html'); ver.wait_for_function("()=>document.body.dataset.resultat", timeout=30000)
+    vr = ver.evaluate("()=>[document.body.dataset.resultat, [...document.querySelectorAll('#res li.ko')].map(l=>l.textContent)]")
+    check('centrale.json correspond à l’application (outils/verifier-descripteur.html)', vr[0] == 'ok', vr)
+    ctx.close()
 
     check('aucune erreur JavaScript', not errors, errors[:3])
     b.close()

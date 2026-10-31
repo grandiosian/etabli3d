@@ -33,7 +33,7 @@ function stepper(items, done, cur, {onDone, onGo, manual=()=>true}){
 }
 function renderDemo(){
   const el=$('#demo'); if(!el) return;
-  if(demoClosed){ el.hidden=true; $('#bGuide')?.setAttribute('aria-pressed','false'); $('#bGuide')?.classList.remove('on'); applyViewOffset(); return; }
+  if(demoClosed){ el.hidden=true; $('#bGuide')?.setAttribute('aria-pressed','false'); $('#bGuide')?.classList.remove('on'); applyViewOffset(); if(el.classList.contains('docked')) requestAnimationFrame(()=>fitWings()); return; }
   placeDemo(); el.hidden=false; el.classList.toggle('closed',!demoOpen); el.innerHTML='';
   $('#bGuide')?.setAttribute('aria-pressed','true'); $('#bGuide')?.classList.add('on');
   const src=guideSrc(), n=state.note;
@@ -89,11 +89,12 @@ function startLesson(k){
   if(T.start) T.start(); else lessonReset(T.title);
   $('#gallery').hidden=true; SIM_SEEN=false;
   GUIDE.src='tuto'; GUIDE.tuto=k; GUIDE.step=0; GUIDE.done=T.steps.map(()=>false); demoClosed=false; demoOpen=true;
+  PROG.seen[T.type+':'+k]=1; saveProg(); centraleProgres(T.type+':'+k);   // activité ouverte (faites = 0)
   guideCheck(true); renderDemo();
 }
 const startTuto=startLesson;
 /* progression enregistrée : nombre d'étapes faites, puis « terminé » */
-function lessonProgress(){ const k=GUIDE.tuto, T=LESSONS[k]; if(!T) return; const n=GUIDE.done.filter(Boolean).length; PROG.part[k]=Math.max(PROG.part[k]||0, n); saveProg();
+function lessonProgress(){ const k=GUIDE.tuto, T=LESSONS[k]; if(!T) return; const n=GUIDE.done.filter(Boolean).length; const before=PROG.part[k]||0; PROG.part[k]=Math.max(before, n); saveProg(); if(PROG.part[k]>before) centraleProgres(T.type+':'+k);
   if(n===T.steps.length && markDone(T.type+':'+k)) toast(T.type==='exo'? `Exercice « ${T.title} » réussi !` : `Tuto « ${T.title} » terminé, bravo !`, 3200); }
 /* the tutorial steps tick themselves: checked twice a second, a step once done stays done */
 function guideCheck(quiet=false){

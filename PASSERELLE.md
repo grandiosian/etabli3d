@@ -1,130 +1,186 @@
-# Passerelle — contrat de connexion
+# Passerelle Établi 3D ↔ Centrale
 
-Ce document décrit comment une **application centralisatrice** (ENT, portail de classe, tableau de bord du professeur…) et une **application cible** (ici Établi 3D) se connectent. Il sert de descripteur commun : chaque côté le respecte, et une nouvelle app cible peut s'y brancher en publiant son propre manifeste.
+Ce document est le contrat entre **la Centrale** (application centralisatrice : connexion des élèves, sauvegarde, progression, portail, parcours, suivi) et **Établi 3D** (application cible). Il résume les structures de données d’Établi 3D, la façon dont elles sont gérées, et ce que chaque côté s’engage à respecter.
 
-| Fichier | Rôle |
-|---|---|
-| `passerelle/manifest.json` | Carte d'identité de l'app cible : formats, unités, requêtes, événements, sécurité. Injecté dans l'app par `build.py`. |
-| `passerelle/etabli3d.schema.json` | Schéma JSON (2020-12) du document `etabli3d.project`. |
-| `passerelle/passerelle.js` | Client pour le centralisateur (module ES, sans dépendance). |
-| `passerelle/hub-exemple.html` | Centralisateur d'essai : intègre l'app et appelle chaque requête. |
-| `src/bridge.js` | Implémentation côté Établi 3D. |
+La version lisible par une machine est **[`centrale.json`](centrale.json)**, servi à l’adresse :
 
-En ligne : `https://grandiosian.github.io/etabli3d/passerelle/manifest.json` (et les autres fichiers à côté).
-
-## 1. Principes
-
-- **Transport** : `window.postMessage` entre le centralisateur et l'app ouverte dans une `<iframe>` (ou par `window.open`). Aucun serveur n'est nécessaire.
-- **Le document fait foi** : l'app cible possède son format ; le centralisateur le stocke et le renvoie **sans le modifier** (il conserve les champs qu'il ne connaît pas). Pour ses tableaux de bord, il lit le **résumé** (`summary.get`), calculé par l'app, plutôt que d'interpréter la géométrie lui-même.
-- **Versions** : `protocolVersion` (enveloppe, ici 1) et `formatVersion` (document, ici 2) évoluent séparément. Un ajout de champ facultatif ne change pas la version ; une rupture l'augmente. L'app refuse un document plus récent qu'elle (`too-new`).
-- **Unités et repère** : mm, degrés, N, MPa, g/cm³, g ; Z vers le haut ; rotations d'Euler en ordre XYZ ; chaque pièce a sa base à z = 0 dans son repère.
-
-## 2. Enveloppe des messages
-
-Requête (centralisateur → app) :
-
-```json
-{ "protocol": "passerelle", "v": 1, "id": "h12", "type": "project.get", "data": {} }
+```
+https://grandiosian.github.io/etabli3d/centrale.json
 ```
 
-Réponse (app → centralisateur) :
+Même modèle que NetSim (`passerelle.atelier` v1) : la Centrale lit toutes les applications de la même façon.
 
-```json
-{ "protocol": "passerelle", "v": 1, "app": "etabli3d", "id": "e7", "type": "reply", "replyTo": "h12", "ok": true, "data": { … } }
-{ …, "type": "reply", "replyTo": "h12", "ok": false, "error": { "code": "bad-project", "message": "…" } }
-```
+---
 
-Événement (app → centralisateur, sans `replyTo`) : `{ "protocol": "passerelle", "v": 1, "app": "etabli3d", "type": "project.changed", "data": { … } }`.
+## 1. Le descripteur d’atelier (`passerelle.atelier` v1)
 
-Codes d'erreur : `not-connected`, `refused`, `bad-project`, `too-new`, `empty`, `unknown-type`, `failed` (et `timeout` côté client).
+Un fichier JSON à la racine du site, nommé `centrale.json`.
 
-## 3. Déroulement
-
-1. Le centralisateur ouvre l'app : `https://…/etabli3d/?hub=https://mon-ent.fr` (le paramètre `hub` fixe la seule origine acceptée, sans question à l'élève).
-2. L'app envoie `ready` (avec son manifeste) à cette origine. Sans `?hub=`, elle n'envoie rien d'elle-même et attend `hello`.
-3. Le centralisateur envoie `hello` `{ hub: { name }, protocolVersion }` jusqu'à recevoir la réponse `{ manifest, formatVersion, revision }`.
-4. Il s'abonne : `events.subscribe { events: ["project.changed", …], withProject: true }`.
-5. Il ouvre le travail de l'élève (`project.load`), écoute les changements, récupère le projet, le STL ou une vignette quand il en a besoin.
-
-```js
-import { Passerelle } from './passerelle.js';
-const app = await Passerelle.connect(iframe, { origin: 'https://grandiosian.github.io', hub: { name: 'Mon ENT' } });
-await app.request('project.load', { project: copieEleve });
-app.on('project.changed', ({ revision, project }) => enregistrer(project));
-await app.subscribe(['project.changed', 'project.saved'], { withProject: true });
-const { totals } = await app.request('summary.get');
-```
-
-## 4. Requêtes
-
-| Type | Données envoyées | Réponse |
+| Section | Contenu | Utilisation par la Centrale |
 |---|---|---|
-| `hello` | `{ hub: { name }, protocolVersion }` | `{ manifest, formatVersion, revision }` |
-| `project.get` | — | `{ project, revision }` |
-| `project.load` | `{ project, name? }` | `{ ok, parts, revision }` — historique remis à zéro |
-| `project.new` | `{ name? }` | `{ revision }` |
-| `summary.get` | — | voir § 6 |
-| `export.stl` | `{ selection?: bool }` | `{ name, mime: "model/stl", base64, triangles }` |
-| `view.thumbnail` | `{ width?, height? }` | `{ mime: "image/png", dataUrl, width, height }` |
-| `selection.get` / `selection.set` | — / `{ ids }` | `{ ids }` |
-| `ui.set` | `{ level?: 1\|2\|3, workspace?: "model"\|"check"\|"mech"\|"struct" }` | `{ level, workspace }` |
-| `progress.get` | — | `{ done: { "tuto:k" \| "exo:k" \| "ex:k": horodatage } }` |
-| `events.subscribe` | `{ events: [], withProject?: bool }` | `{ events }` |
+| `format`, `version` | `"passerelle.atelier"`, `1` | Reconnaître le fichier. |
+| `atelier` | `app` (`etabli3d`), `nom`, `description`, `url`, `urls_secours`, `icone`, `classes`, `version` | Remplir l’onglet **Ateliers**. |
+| `centrale` | Module chargé, serveur par défaut, sites à autoriser, connexion, fonctions du module utilisées | Savoir quoi autoriser et ce que l’application prend en charge. |
+| `activites` | 39 activités : tutos (`tuto-…`), exercices (`exo-…`), exemples (`ex-…`), avec `id`, `titre`, `groupe`, `total` et des champs descriptifs | Colonnes du **Suivi**, cartes du **portail**, étapes de **parcours**. |
+| `progression` | Quand l’application envoie la progression, ce que veulent dire `faites`, `total`, `statut` | Interpréter l’avancement. |
+| `donnees` | Une clé : `projet` | Afficher, valider ou exporter le travail de l’élève. |
+| `fichiers` | `recoit` et `produit` : listes de `{ nom, type, description }` | Étapes « reçoit / produit » des ateliers transversaux. |
+| `stockage_local` | Clés `localStorage` | Dépannage sur un poste. |
+| `acces_javascript` | `window.Etabli3D` | Point d’accès unique. |
+| `enums` | Niveaux, catégories, matières (masse volumique), cotes de chaque forme | Libellés. |
+| `$defs` | Schémas JSON 2020-12 : `Projet`, `Piece`, `Matiere`, `Esquisse`, `Liaison`, `Structure`, `Progression`, `Resume`… | Validation. |
 
-Événements : `ready`, `project.changed { revision, project? }` (300 ms après la dernière modification), `project.saved { name }`, `selection.changed { ids }`, `progress.changed { done }`.
+### Règles à respecter
 
-## 5. Le document `etabli3d.project` (format 2)
+**Côté Établi 3D**
+- Les `id` d’activité sont **stables** : `tuto-premiers`, `exo-de`, `ex-maison`… ne sont jamais renommés ; on en ajoute d’autres.
+- `Centrale.init({ activites })` envoie exactement `activites.liste` (champs `id`, `titre`, `groupe`, `total`), dans le même ordre.
+- La valeur passée à `Centrale.sauver('projet', …)` respecte `$defs/Projet`.
+- `atelier.version` (et `ETABLI_VERSION` dans `src/centrale.js`) augmente à chaque changement du descripteur.
+- Établi 3D fonctionne sans la Centrale (le module est facultatif).
 
-```text
-{ app: "etabli3d", version: 2, name, nextId,
-  parts:   [Part],              pièces de premier niveau
-  joints:  [Joint],             liaisons (Mécanique)
-  struct:  Struct | null,       atelier Structures (treillis, maillage)
-  note:    { observe[], try[] } | null,   fiche d'exemple
-  tp:      { title, tasks: [{ t, done }] } | null,   consignes du professeur
-  textures:{ id: { name, src: dataURL } } | null }   images de matière
+**Côté Centrale**
+- L’application est identifiée par `atelier.app` (`etabli3d`).
+- `faites` ne baisse jamais : le meilleur résultat est gardé.
+- Les clés et champs inconnus sont ignorés.
+
+---
+
+## 2. Les données d’Établi 3D
+
+### Vue d’ensemble
+
+```
+                  ┌──────────────── Établi 3D (navigateur de l’élève) ─────────────────┐
+                  │                                                                     │
+  Fichier ▸ Enreg.│   state (projet en cours)  ──► localStorage « etabli3d.autosave »   │
+  Fichier ▸ Ouvrir│     ├─ parts[]    pièces (volumes, esquisses, groupes, perçages)    │
+                  │     │             avec leur matière (mat) et leurs repères          │
+                  │     ├─ joints[]   liaisons, moteurs, transmissions                  │
+                  │     ├─ struct     treillis / maillage (atelier Structures)          │
+                  │     ├─ textures   images de matière                                 │
+                  │     └─ note, tp   fiche d’exemple, consignes du professeur          │
+                  │                                                                     │
+                  │   PROG (avancement) ──► localStorage « etabli3d.progress »          │
+                  │     done[tuto:k | exo:k | ex:k], seen[…], part[k]                   │
+                  │                                                                     │
+                  │   window.Etabli3D  ◄── point d’accès unique                         │
+                  └──────────────┬──────────────────────────────────────────────────────┘
+                                 │ centrale-client.js (si connecté)
+        sauver("projet") ────────┤ charger("projet")
+        progression(id, …) ──────┤ mesProgressions()
+        init({activites}) ───────┤ activiteDemandee()
+        envoyerFichier(stl) ─────┤
+        projet.sauver(sorties) ──┤ projet.charger(entrées)     (ateliers transversaux)
+                                 ▼
+                             Centrale
 ```
 
-**Part** — `{ id, kind, name, params, color, hole, pos[3], rot[3], mat?, children?, hidden?, locked?, valid?, locs? }`
+### Le projet (`projet`)
 
-- `kind` : `box`, `cylinder`, `sphere`, `cone`, `pyramid`, `wedge`, `tube`, `torus`, `text`, `gear`, `rack`, `sketch`, `group`. Les cotes de chaque forme sont dans `params` (liste complète dans le schéma).
-- `hole: true` : perçage ; il retire la matière des solides **du même groupe**. Un `group` porte ses pièces dans `children`, positionnées dans le repère du groupe ; la géométrie du groupe est recalculée par l'app (CSG).
-- `mat` : matière `{ k }` parmi `pla`, `bois`, `mdf`, `carton`, `acier`, `alu`, `laiton`, `plexi`, `caoutchouc`, `beton`, `pierre`, ou `{ k: "image", img, size }` (image de `textures`, projetée sur trois plans, motif de `size` mm). La matière donne l'aspect et la masse volumique.
-- `valid` et `locs` sont produits par l'atelier Valider : à conserver, à ne pas fabriquer.
-- `sketch` : `params = { sk: { pts, lines, circles, beziers, cons }, mode: "extrude"|"revolve", h, plane: "xy"|"xz"|"yz" }`.
-
-**Joint** — `{ id, name, type: "fixe"|"pivot"|"glissiere", child, parent|null, origin[3], axis[3], min, max, motor: { mode: "continu"|"alternatif", speed } | null, driver: { joint, ratio } | null, loc }`. Une pièce mobile n'a qu'une liaison ; `parent: null` = le bâti.
-
-**Identifiants** : entiers partagés par pièces, enfants et liaisons ; `nextId` est le prochain libre. Un centralisateur qui fusionne deux projets doit renuméroter.
-
-## 6. Résumé (`summary.get`)
+Le document est décrit en entier par `$defs/Projet`. Exemple réduit :
 
 ```json
-{ "name": "Porte-crayon", "revision": 3, "level": 1, "workspace": "model",
-  "units": { "length": "mm", "volume": "cm3", "mass": "g" },
-  "parts": [{ "id": 1, "name": "Porte-crayon", "kind": "group", "hole": false, "material": "bois",
-              "size": [60, 60, 90], "volume": 71.71, "mass": 35.86, "validation": "none", "children": 2 }],
-  "joints": [], "totals": { "parts": 1, "solids": 1, "holes": 0, "joints": 0, "mass": 35.86, "mechReady": false },
-  "struct": { "module": "treillis", "nodes": 0, "bars": 0 } }
+{
+  "app": "etabli3d", "version": 2, "name": "Porte-crayon", "nextId": 4,
+  "parts": [
+    { "id": 1, "kind": "group", "name": "Porte-crayon", "color": "#c8955a", "mat": { "k": "bois" },
+      "hole": false, "pos": [0, 0, 0], "rot": [0, 0, 0], "params": {},
+      "children": [
+        { "id": 2, "kind": "cylinder", "params": { "d": 60, "h": 90 }, "hole": false, "pos": [0, 0, 0], "rot": [0, 0, 0] },
+        { "id": 3, "kind": "cylinder", "params": { "d": 52, "h": 90 }, "hole": true,  "pos": [0, 0, 4], "rot": [0, 0, 0] } ] }
+  ],
+  "joints": [], "struct": null, "note": null,
+  "tp": { "title": "Porte-crayon", "tasks": [{ "t": "Graver ton prénom", "done": false }] },
+  "textures": null
+}
 ```
 
-`validation` : `none` (jamais validée), `stale` (modifiée depuis), `ok`, `warn`, `err`.
+| Champ | Description |
+|---|---|
+| `parts[].kind` | `box`, `cylinder`, `sphere`, `cone`, `pyramid`, `wedge`, `tube`, `torus`, `text`, `gear`, `rack`, `sketch`, `group`. Cotes dans `params` (mm, voir `enums.formes`). |
+| `pos`, `rot` | Position (mm) et rotation (degrés, ordre XYZ) dans le repère du parent. Z vers le haut, base de la pièce à z = 0. |
+| `hole` | Perçage : retire la matière des solides **du même groupe**. |
+| `children` | Pièces d’un groupe ; la forme du groupe est recalculée par l’application. |
+| `mat` | Matière : `pla`, `bois`, `mdf`, `carton`, `acier`, `alu`, `laiton`, `plexi`, `caoutchouc`, `beton`, `pierre`, ou `{ k: "image", img, size }`. Donne l’aspect et la masse volumique. |
+| `textures` | Images de matière utilisées (`{ id: { name, src } }`, JPEG de 512 px au plus). |
+| `valid`, `locs` | Validation et repères calculés dans l’atelier Valider : à conserver, à ne pas fabriquer. |
+| `joints[]` | Liaisons `fixe`, `pivot`, `glissiere` ; `motor`, `driver` (transmission par rapport). |
+| `struct` | Atelier Structures (plan vertical, mm / N / MPa). |
+| `note`, `tp` | Fiche de l’exemple ouvert, consignes du professeur cochées par l’élève. |
 
-## 7. Sécurité
+Ce qui **n’est pas** enregistré : les maillages (recalculés), l’état de la simulation, la vue, les préférences d’affichage.
 
-- L'app n'écoute que sa fenêtre parente (ou d'ouverture) et répond à l'origine exacte de l'expéditeur, jamais à `*`.
-- Origines acceptées : celle passée dans `?hub=` (alors seule acceptée), celles de `security.trustedHubs` du manifeste, celles que l'utilisateur a autorisées (bandeau « Connexion demandée », mémorisé dans le navigateur, clé `etabli3d.hubs`).
-- Avant `hello` accepté, toute requête reçoit `not-connected`. Un projet reçu est vérifié (`id`, `kind`, `pos`, `rot`, `children` des groupes) avant d'être ouvert.
-- Le centralisateur doit lui aussi vérifier `event.origin` et `event.source` (le client `passerelle.js` le fait).
+### La progression
 
-## 8. Brancher une autre app cible
+Dans Établi 3D (`PROG`, clé locale `etabli3d.progress`) :
 
-1. Publier un `manifest.json` de même forme (`protocol`, `protocolVersion`, `app`, `document`, `requests`, `events`, `security`) et le schéma de son document.
-2. Implémenter au minimum `hello`, `project.get`, `project.load`, `summary.get` et l'événement `project.changed`, avec la même enveloppe et les mêmes codes d'erreur.
-3. Donner dans le résumé des grandeurs simples et nommées (unités dans `units`) : c'est ce que le centralisateur affiche.
+```json
+{ "done": { "tuto:premiers": 1761900000000, "ex:maison": 1761900100000 },
+  "seen": { "tuto:premiers": 1, "exo:de": 1, "ex:maison": 1 },
+  "part": { "premiers": 6, "de": 2 } }
+```
 
-## 9. Liste de contrôle
+Envoyée à la Centrale par `Centrale.progression(id, Etabli3D.progression(id))` :
 
-**App cible** : manifeste à jour à chaque nouvelle requête ; `formatVersion` augmenté si le document change de façon incompatible ; tests (`npm test` vérifie la passerelle via `hub-exemple.html`).
+```json
+{ "titre": "Dé à jouer", "faites": 2, "total": 3, "statut": "commence" }
+```
 
-**Centralisateur** : `?hub=` dans l'adresse de l'iframe ; vérifier l'origine ; stocker le document tel quel ; comparer `revision` pour éviter d'écraser une version plus récente ; prévoir `timeout` et les codes d'erreur.
+| Établi 3D | Centrale | Règle |
+|---|---|---|
+| `part[k]` | `faites` | Tuto : étapes réussies ; exercice : critères réussis (vérifiés automatiquement). Jamais diminué. |
+| nombre d’étapes / critères / cases « À essayer » | `total` | |
+| `done["type:k"]` | `statut: "termine"` | Sinon `"commence"`. Un exemple compte 0 puis `total` quand toutes ses cases sont cochées. |
+
+### Les fichiers
+
+Pour les ateliers transversaux (`fichiers` dans `centrale.json`). Établi 3D reconnaît un fichier à son **extension** : le professeur peut nommer les fichiers d’une étape comme il veut.
+
+| Sens | Nom proposé | Type | Contenu |
+|---|---|---|---|
+| reçoit | `projet.etabli3d.json` | `application/json` | Projet de départ (`$defs/Projet`). |
+| produit | `projet.etabli3d.json` | `application/json` | Projet de l’élève. |
+| produit | `piece.stl` | `model/stl` | Maillage en mm des pièces solides, pour l’impression 3D. |
+| produit | `apercu.png` | `image/png` | Image de la vue 3D. |
+| produit | `resume.json` | `application/json` | Résumé : pièces, tailles, volumes, matières, masses, liaisons (`$defs/Resume`). |
+
+### Quand les données circulent
+
+| Moment | Établi 3D fait |
+|---|---|
+| Chargement de la page | Lit `etabli3d.autosave` et `etabli3d.progress` ; charge le module de la Centrale (sans effet s’il est injoignable). |
+| Connexion (« Mon code » ou jeton `#centrale=`) | `mesProgressions()` → fusion (le meilleur gagne) → renvoie ce qui est meilleur localement. `charger("projet")` → remplace le projet local s’il diffère (Annuler pour revenir), sinon `sauver("projet")`. Dans un atelier transversal, si le projet est vide : ouvre l’entrée `.json` de l’étape. Puis ouvre `activiteDemandee()` si l’élève n’y est pas déjà. |
+| Chaque modification (et Annuler / Rétablir) | `etabli3d.autosave` après 400 ms, puis `sauver("projet")` (regroupé par la Centrale). |
+| Ouverture d’un tuto, d’un exercice ou d’un exemple ; étape réussie ; activité terminée | `progression(id, …)`. |
+| Fichier → Envoyer le STL au professeur | `envoyerFichier(stl, nomFichier("stl", nom du projet))`. |
+| Fichier → Reprendre le fichier de l’atelier / Déposer dans le dossier de l’atelier | `projet.charger(entrée)` / `projet.sauver(sortie, fichier)` pour chaque sortie de l’étape. |
+| Déconnexion | Le module envoie ce qui reste ; Établi 3D continue dans le navigateur. |
+
+---
+
+## 3. Point d’accès JavaScript
+
+`window.Etabli3D` est le seul endroit où le code de connexion à la Centrale lit les données d’Établi 3D. Un test, l’outil de vérification ou une autre application s’en servent de la même façon.
+
+| Membre | Rôle |
+|---|---|
+| `Etabli3D.app`, `Etabli3D.version`, `Etabli3D.descripteur` | `"etabli3d"`, la version (identique à `centrale.json`), `"centrale.json"`. |
+| `Etabli3D.activites()` | Liste envoyée à `Centrale.init`. |
+| `Etabli3D.catalogue()` | Catalogue détaillé : type, niveau, catégorie, résumé. |
+| `Etabli3D.progression(id)` | `{titre, faites, total, statut}` ou `null`. |
+| `Etabli3D.fusionnerProgression(serveur)` | Fusionne le résultat de `Centrale.mesProgressions()`. |
+| `Etabli3D.donnees()` | `{projet}`. |
+| `Etabli3D.estProjet(objet)` | Vérifie qu’un objet est un projet chargeable. |
+| `Etabli3D.ouvrirProjet(objet)` | Ouvre un projet (l’ancien reste dans Annuler). |
+| `Etabli3D.resume()` | Résumé calculé. |
+| `Etabli3D.fichier(nom)` | `Promise<Blob>` du fichier produit d’après l’extension. |
+
+---
+
+## 4. Faire évoluer Établi 3D sans casser la Centrale
+
+1. Ajouter un tuto, un exercice ou un exemple : nouvelle clé dans `LESSONS` ou `SAMPLES`, jamais réutilisée.
+2. Ouvrir [`outils/verifier-descripteur.html`](outils/verifier-descripteur.html) (en ligne : `…/etabli3d/outils/verifier-descripteur.html`) : la page compare `centrale.json` avec l’application et donne la liste à jour à coller dans `activites.liste`. `npm test` fait la même vérification.
+3. Augmenter `atelier.version` et `ETABLI_VERSION` (`src/centrale.js`).
+4. Changer la forme du projet : mettre à jour `$defs/Projet`, augmenter `PROJET_FORMAT`, et garder la lecture de l’ancienne forme (les élèves ont du travail enregistré).

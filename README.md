@@ -52,7 +52,7 @@ Un exemple d'un niveau supérieur fait passer automatiquement à ce niveau.
 - **Arborescence** (avancé) : vue par pièces (groupes dépliables) ou par liaisons (arbre cinématique), masquer, verrouiller, renommer.
 - **Apparence** : rendu (plein, arêtes, fil de fer, rayons X), éclairage, ombres, thème auto / clair / sombre, couleur principale, couleur du plan de travail, arborescence (réductible et déplaçable).
 - **Fichiers** : projet en `.json` (Enregistrer / Ouvrir), export `.stl` pour l'impression 3D. Sauvegarde automatique dans le navigateur.
-- **Passerelle** : une application centralisatrice (ENT, tableau de bord du professeur) peut intégrer Établi 3D, lui envoyer un projet et récupérer le travail, un résumé (volumes, masses), le STL ou une vignette. Voir [PASSERELLE.md](PASSERELLE.md).
+- **Centrale de la classe** : avec le bouton **Mon code**, l'élève se connecte au serveur de la classe ; son projet et son avancement (tutos, exercices, exemples) y sont enregistrés, il les retrouve sur n'importe quel ordinateur et le professeur suit sa progression. Le menu Fichier propose alors d'envoyer le STL au professeur et, dans un atelier transversal, de reprendre ou déposer les fichiers de l'étape. Sans connexion, rien ne change. Contrat : [PASSERELLE.md](PASSERELLE.md) et [centrale.json](centrale.json).
 
 ## Bibliothèque : tutos, exercices, exemples
 
@@ -73,7 +73,7 @@ Trois objets connus qui se suivent en taille, en gris, sont posés loin derrièr
 
 Dans **Apparence** : affichage des pièces (plein, **texture** — impression 3D avec ses couches, bois, métal, damier —, arêtes, fil de fer, rayons X), **qualité haute** (image plus fine, reflets, plus lent), éclairage (atelier, doux, contrasté, soleil) et ombres portées.
 
-Les petits panneaux (navigation, grille) peuvent se **plaquer** à gauche ou à droite de la barre d'édition : glissez-les vers un côté, leur emplacement apparaît en pointillé, ils prennent sa hauteur et son biais. Plusieurs panneaux peuvent se ranger du même côté. La barre d'édition reste centrée et tout s'adapte à la place : les panneaux passent en icônes, puis la barre se resserre ; si la fenêtre est vraiment trop étroite, un panneau retourne sur la vue et revient de lui-même quand la place le permet. Glissez leur poignée pour les décrocher.
+Les panneaux de la vue (cube de vue, guide, propriétés, navigation, grille) peuvent se **plaquer** à gauche ou à droite de la barre d'édition : glissez-les vers un côté, leur emplacement apparaît en pointillé. Les petits prennent la hauteur et le biais de la barre ; les grands s'accrochent en haut, leur coin suit le bord oblique et ils descendent sur la vue. Plusieurs panneaux peuvent se ranger du même côté. La barre d'édition reste centrée et tout s'adapte à la place : les panneaux passent en icônes, puis la barre se resserre ; si la fenêtre est vraiment trop étroite, le panneau plaqué depuis le plus longtemps retourne sur la vue et revient de lui-même quand la place le permet. Glissez leur poignée (ou l'en-tête des propriétés) pour les décrocher ; hors de Modéliser, ils reprennent leur place sur la vue.
 
 ## Matières
 
@@ -113,9 +113,10 @@ src/outliner.js  arborescence des objets (niveau avancé)
 src/bubble.js    bulle de simulation et étiquettes de liaison
 src/workspace.js navigation dans la démarche (boutons contextuels)
 src/panels.js    panneaux déplaçables et réductibles, disposition mémorisée
-src/bridge.js    passerelle avec une application centralisatrice (postMessage)
+src/centrale.js  connexion à la Centrale de la classe, point d'accès window.Etabli3D
 src/init.js      exemples, raccourcis clavier, démarrage
-passerelle/      contrat de la passerelle : manifeste, schéma JSON, client, page d'essai
+centrale.json    descripteur lu par la Centrale (passerelle.atelier v1)
+outils/          verifier-descripteur.html : compare centrale.json et l'application
 build.py         assemble src/ en une seule page dans dist/
 ```
 

@@ -100,14 +100,21 @@ button{cursor:pointer}
   background:var(--ed-bg);clip-path:polygon(0 0,100% 0,calc(100% - 26px) 100%,26px 100%)}
 /* ailes : panneaux plaqués contre un côté oblique de la languette, même hauteur, bords parallèles ; plusieurs par côté */
 .ed-wing{pointer-events:auto;display:flex;align-items:stretch;background:var(--ed-rim);padding:0 2.5px 2.5px;overflow:hidden;min-width:0;max-width:calc(100% + 22px)}
-.ed-wing:not(:has(> .float:not(.nav-off), > .dock-ghost)){display:none}
+.ed-wing:not(:has(> .float:not(.nav-off), > .dock-ghost, > .dock-sp:not([hidden]))){display:none}
 .ed-wing[data-side="L"]{grid-column:1;justify-self:end;margin-right:-22px;clip-path:polygon(0 0,calc(100% - 27px) 0,100% 100%,27px 100%)}
 .ed-wing[data-side="R"]{grid-column:3;justify-self:start;margin-left:-22px;clip-path:polygon(27px 0,100% 0,calc(100% - 27px) 100%,0 100%)}
 .ed-wing > .float.docked,.ed-wing > .dock-ghost{position:static!important;transform:none!important;flex:none;display:flex;align-items:center;gap:6px;border:0;border-radius:0;box-shadow:none!important;padding:3px 32px!important;background:var(--ed-bg)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;opacity:1}
 .ed-wing[data-side="L"] > :is(.float.docked,.dock-ghost){clip-path:polygon(0 0,calc(100% - 26px) 0,100% 100%,26px 100%)}
 .ed-wing[data-side="R"] > :is(.float.docked,.dock-ghost){clip-path:polygon(26px 0,100% 0,calc(100% - 26px) 100%,0 100%)}
 /* deux panneaux du même côté : ils s'emboîtent, séparés par un liseré oblique */
-.ed-wing > :is(.float.docked,.dock-ghost) + :is(.float.docked,.dock-ghost){margin-left:-23px}
+.ed-wing > :is(.float.docked,.dock-ghost,.dock-sp:not([hidden])) + :is(.float.docked,.dock-ghost,.dock-sp:not([hidden])){margin-left:-23px}
+/* grand panneau plaqué (cube de vue, guide, propriétés) : une cale dans l'aile, le panneau posé dessus, son coin du haut suit l'oblique */
+.ed-wing > .dock-sp{flex:none;align-self:stretch;background:transparent}
+#app > .docked-tall{position:absolute!important;z-index:33!important;transform:none!important;margin:0}
+#app > .docked-tall:not(#views)[data-side="L"]{clip-path:polygon(0 0,calc(100% - 26px) 0,100% var(--band,64px),100% 100%,0 100%);border-top-right-radius:0}
+#app > .docked-tall:not(#views)[data-side="R"]{clip-path:polygon(26px 0,100% 0,100% 100%,0 100%,0 var(--band,64px));border-top-left-radius:0}
+#app > .docked-tall:not(#views)[data-side="L"] :is(.demo-head,.insp-head){padding-right:30px}
+#app > .docked-tall:not(#views)[data-side="R"] :is(.demo-head,.insp-head){padding-left:30px}
 .ed-wing > .float.docked.nav-off + .float.docked{margin-left:0}
 .ed-wing > .float.docked .pgrip{background:transparent}
 /* place réduite : les panneaux plaqués passent en icônes, puis la languette se resserre (fitWings) */
@@ -122,7 +129,7 @@ button{cursor:pointer}
 .ed-row.ed-tight2 .ed-shape{padding-left:30px;padding-right:30px}
 /* pendant le glisser d'un panneau : l'emplacement qu'il prendra apparaît, le côté visé s'éclaire */
 .ed-wing > .dock-ghost{min-height:36px;flex:0 1 auto;min-width:64px;background:repeating-linear-gradient(-60deg,color-mix(in srgb,var(--accent) 22%,transparent) 0 6px,color-mix(in srgb,var(--accent) 8%,transparent) 6px 12px)!important}
-.float.lifted{position:fixed!important;z-index:1000!important}
+.lifted{position:fixed!important;z-index:1000!important}
 .ed-row.snap-L .ed-rim,.ed-row.snap-R .ed-rim,.ed-row.snap-L #edWingL,.ed-row.snap-R #edWingR{background:var(--accent)}
 #tools .tool:disabled svg{color:var(--ink-2)}
 #tools{display:flex;align-items:stretch;gap:8px}
@@ -837,7 +844,8 @@ html[data-glass="opaque"]{--insp-a:100%}
   #sk{grid-template-columns:minmax(0,1fr);grid-template-rows:auto 1fr auto auto;grid-template-areas:"skbar" "skcanvas" "skhint" "skside"}
   #skSide{border-left:0;border-top:1px solid var(--line);max-height:38vh}
 }
-.bridge-ask{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:2000;display:flex;align-items:center;gap:10px;max-width:calc(100vw - 32px);padding:10px 12px;border-radius:12px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);font-size:13.5px}
-.bridge-ask > div{display:flex;flex-wrap:wrap;gap:4px}
+.cz-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:18px 20px;width:min(420px,100%);display:flex;flex-direction:column;gap:10px}
+.cz-head{display:flex;align-items:center;justify-content:space-between} .cz-head b{font-family:var(--f-display);font-size:19px}
+.cz-card > p{margin:0;color:var(--ink-2);font-size:13.5px;line-height:1.45}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>

@@ -15,10 +15,22 @@ function setPos(el,x,y){ el.style.left=x+'px'; el.style.top=y+'px'; el.style.rig
 function clearPos(el){ for(const k of ['left','top','right','bottom','transform']) el.style[k]=''; }
 /* panneaux qui peuvent se plaquer contre un côté oblique de la languette d'édition (Modéliser, grand écran).
    La rangée .ed-row est une grille à trois colonnes : aile gauche | languette | aile droite ; la languette reste
-   centrée, chaque aile prend la place libre de son côté. Plusieurs panneaux par côté (LAYOUT[id].order), et
-   fitWings() les adapte à la place : complet → compact (icônes) → languette resserrée (ed-tight : icônes seules, ed-tight2 : sans titres) → retour sur la vue. */
-const DOCKABLE=['navBar','snapBox'];
-const dockOn=()=> ws==='model' && WIDE.matches;
+   centrée, chaque aile prend la place libre de son côté. Plusieurs panneaux par côté (LAYOUT[id].order).
+   - petits panneaux (navigation, grille) : rangés dans l'aile, même hauteur que la languette, bords obliques ;
+   - grands panneaux (TALL : cube de vue, guide, propriétés) : une cale .dock-sp leur réserve la place dans l'aile,
+     le panneau lui-même est posé dans #app au même endroit (placeTall), son coin du haut suit l'oblique et il
+     descend sur la vue à sa hauteur naturelle.
+   fitWings() adapte à la place : complet → compact (icônes) → languette resserrée (ed-tight : icônes seules,
+   ed-tight2 : sans titres) → le panneau plaqué depuis le plus longtemps revient sur la vue (data-noroom, LAYOUT[id].t), et revient quand la place le permet. */
+const DOCKABLE=['navBar','snapBox','views','demo','insp'];
+const TALL=['views','demo','insp'];
+const isTall=id=>TALL.includes(id);
+const dockOn=()=> ws==='model' && WIDE.matches && !!$('#sk')?.hidden;
+const homeOf=id=> id==='insp'? $('#app') : id==='demo' && !$('#sk').hidden? $('#skCanvasWrap') : $('#stage');
+const panelShown=el=> !!el && !el.hidden && !el.classList.contains('nav-off') && getComputedStyle(el).display!=='none';
+const PANEL_NAME={navBar:'Navigation', snapBox:'Grille', views:'Cube de vue', demo:'Guide', insp:'Propriétés'};
+const itemId=c=> c.dataset.for || c.id;
+const wingItems=w=> [...w.children].filter(c=>c.classList.contains('docked') || c.classList.contains('dock-sp'));
 function dockTarget(r){   // côté où un panneau de rectangle r se plaquerait, ou null
   const tb=$('#toolbar'), ed=$('.ed-wrap'); if(!tb || !ed || !ed.offsetParent || !dockOn()) return null;
   const t=tb.getBoundingClientRect(), e=ed.getBoundingClientRect(); if(r.top > t.bottom+80 || r.bottom < t.top-30) return null;
@@ -27,18 +39,45 @@ function dockTarget(r){   // côté où un panneau de rectangle r se plaquerait,
   if(cx > e.right-q) return 'R';
   return null;
 }
-function dockIndex(w, cx, skip){   // rang d'insertion dans l'aile, de gauche à droite
-  return [...w.children].filter(c=>c!==skip && c.classList.contains('docked')).filter(c=>{ const b=c.getBoundingClientRect(); return (b.left+b.right)/2 < cx; }).length;
+function dockIndex(w, cx){   // rang d'insertion dans l'aile, de gauche à droite
+  return wingItems(w).filter(c=>{ const b=c.getBoundingClientRect(); return (b.left+b.right)/2 < cx; }).length;
 }
-function sortWing(w){ const kids=[...w.children].filter(c=>c.classList.contains('docked')); kids.sort((a,b)=>(LAYOUT[a.id]?.order??0)-(LAYOUT[b.id]?.order??0)); for(const k of kids) w.append(k); }
+function sortWing(w){ const kids=wingItems(w); kids.sort((a,b)=>(LAYOUT[itemId(a)]?.order??0)-(LAYOUT[itemId(b)]?.order??0)); for(const k of kids) w.append(k); }
+function undockEl(el, id){   // retire un panneau de l'aile (sans toucher à LAYOUT)
+  $('#dsp-'+id)?.remove();
+  if(!el.classList.contains('docked')) return;
+  const tall=el.classList.contains('docked-tall'); el.classList.remove('docked','docked-tall');
+  if(tall){ delete el.dataset.side; for(const k of ['width','maxHeight']) el.style[k]=''; el.style.removeProperty('--band'); }
+  homeOf(id).append(el);
+}
 function applyLayout(id){
   const el=$('#'+id); if(!el) return; const L=LAYOUT[id];
   const dock= DOCKABLE.includes(id) && L?.dock && dockOn() && !el.dataset.noroom ? L.dock : null;
-  if(dock){ const w=$('#edWing'+dock); if(el.parentElement!==w) w.append(el); el.classList.add('docked'); clearPos(el); el.classList.toggle('collapsed', !!L?.c); sortWing(w); return; }
-  if(el.classList.contains('docked')){ $('#stage').append(el); el.classList.remove('docked'); }
+  if(dock){ const w=$('#edWing'+dock);
+    if(isTall(id)){   // grand panneau : une cale dans l'aile, le panneau posé par-dessus dans #app
+      let sp=$('#dsp-'+id); if(!sp) sp=h('div',{class:'dock-sp',id:'dsp-'+id,'data-for':id,'aria-hidden':'true'});
+      if(sp.parentElement!==w) w.append(sp);
+      if(id!=='views') sp.style.width=(L.w||300)+'px';
+      if(el.parentElement!==$('#app')) $('#app').append(el);
+      el.classList.add('docked','docked-tall'); el.dataset.side=dock; clearPos(el);
+      if(id==='views') el.classList.toggle('collapsed', !!L?.c);
+      sortWing(w); placeTall(); return; }
+    if(el.parentElement!==w) w.append(el); el.classList.add('docked'); clearPos(el); el.classList.toggle('collapsed', !!L?.c); sortWing(w); return; }
+  undockEl(el, id);
+  if(id==='insp'){ placeInsp(); return; }
+  if(id==='demo' && !$('#sk').hidden) return;   // pendant une esquisse, le guide est posé par placeDemo()
   if(L && L.x!=null){ const st=$('#stage').getBoundingClientRect(); if(st.width>2){ const w=el.offsetWidth||80, hh=el.offsetHeight||30; setPos(el, clamp(L.x,0,Math.max(0,st.width-Math.min(w,st.width))), clamp(L.y,0,Math.max(0,st.height-Math.min(hh,st.height)))); } }
   else clearPos(el);
   if(id!=='demo') el.classList.toggle('collapsed', !!L?.c);
+}
+/* les grands panneaux plaqués suivent leur cale */
+function placeTall(){
+  const app=$('#app'); if(!app) return; const a=app.getBoundingClientRect(), band=$('.ed-wrap')?.getBoundingClientRect().height||64;
+  for(const id of TALL){ const el=$('#'+id), sp=$('#dsp-'+id); if(!el?.classList.contains('docked-tall') || !sp) continue;
+    if(id==='views') sp.style.width=el.offsetWidth+'px';
+    const r=sp.getBoundingClientRect(); el.style.left=Math.round(r.left-a.left)+'px'; el.style.top=Math.round(r.top-a.top)+'px'; el.style.right='auto'; el.style.bottom='auto';
+    if(id!=='views') el.style.width=Math.round(r.width)+'px';
+    el.style.maxHeight=Math.max(120, Math.round(a.bottom-r.top-10))+'px'; el.style.setProperty('--band', Math.round(band)+'px'); }
 }
 /* adapte les ailes à la place disponible ; appelé après placeViews() (le cube de vue peut monter à droite) */
 let fitting=false;
@@ -47,53 +86,63 @@ function fitWings(keep){
   try{
     const W={L:$('#edWingL'), R:$('#edWingR')};
     for(const id of DOCKABLE){ const el=$('#'+id); if(el?.dataset.noroom){ delete el.dataset.noroom; applyLayout(id); } }
+    for(const id of TALL){ const sp=$('#dsp-'+id); if(sp) sp.hidden=!panelShown($('#'+id)); }
     row.classList.remove('ed-tight','ed-tight2'); for(const k in W){ W[k].dataset.fit='full'; W[k].style.maxWidth=''; }
     if(!dockOn() || !row.offsetParent) return;
     // à droite, le cube de vue remonté dans la rangée réserve sa place
-    const v=$('#views'), up= v && v.offsetParent && !v.hidden && v.style.top && LAYOUT.views?.x==null;
+    const v=$('#views'), up= v && v.offsetParent && !v.hidden && v.style.top && LAYOUT.views?.x==null && !v.classList.contains('docked');
     const capR=()=>{ if(!up) return; const e=$('.ed-wrap').getBoundingClientRect(), vr=v.getBoundingClientRect(); W.R.style.maxWidth=Math.max(0, vr.left-10-(e.right-22))+'px'; };
     capR();
-    const live=w=>[...w.children].filter(c=>c.classList.contains('docked') && !c.classList.contains('nav-off'));
+    const live=w=>wingItems(w).filter(c=> c.classList.contains('dock-sp')? !c.hidden : !c.classList.contains('nav-off'));
     const over=w=> live(w).length>0 && w.scrollWidth > w.clientWidth+1;
     for(const k in W) if(over(W[k])) W[k].dataset.fit='compact';
     if(over(W.L) || over(W.R)){ row.classList.add('ed-tight'); capR(); }
     if(over(W.L) || over(W.R)){ row.classList.add('ed-tight2'); capR(); }
     for(const k in W){   // toujours trop étroit : les panneaux les plus éloignés de la languette reviennent sur la vue
-      let guard=4; while(over(W[k]) && guard--){ const kids=live(W[k]); const pool= kids.length>1? kids.filter(c=>c.id!==keep) : kids; const out= k==='L'? pool[0] : pool[pool.length-1]; if(!out) break; out.dataset.noroom='1'; applyLayout(out.id); }
+      let guard=6; while(over(W[k]) && guard--){ const kids=live(W[k]); const pool=[...kids].sort((x,y)=>(LAYOUT[itemId(x)]?.t||0)-(LAYOUT[itemId(y)]?.t||0)); const out=pool[0]; if(!out || (kids.length>1 && itemId(out)===keep)) break;   // le plus anciennement plaqué cède sa place
+        const oid=itemId(out); $('#'+oid).dataset.noroom='1'; applyLayout(oid); }
     }
-  } finally { fitting=false; }
+  } finally { fitting=false; placeTall(); }
+}
+/* pendant le glisser : le côté visé s'éclaire et l'emplacement apparaît en pointillé */
+function dockFeedback(D, rr){
+  D.side=dockTarget(rr); D.row?.classList.toggle('snap-L', D.side==='L'); D.row?.classList.toggle('snap-R', D.side==='R');
+  if(!D.side){ D.ghost.remove(); return; }
+  const w=$('#edWing'+D.side); D.ghost.remove(); D.idx=dockIndex(w, (rr.left+rr.right)/2); const ref=wingItems(w)[D.idx]||null; w.insertBefore(D.ghost, ref);
+}
+function dockStart(id, r){ const ghost=h('div',{class:'dock-ghost','aria-hidden':'true'}); ghost.style.width=Math.round(Math.min(r.width, 360))+'px'; return {id, row:$('.ed-row'), ghost, side:null, idx:0, w:Math.round(r.width)}; }
+function dockEnd(D){ D.row?.classList.remove('snap-L','snap-R'); D.ghost.remove(); }
+/* le panneau lâché sur un côté : il s'y range à la place montrée */
+function dockCommit(D){
+  const id=D.id, el=$('#'+id), w=$('#edWing'+D.side), ids=wingItems(w).map(itemId).filter(k=>k!==id); ids.splice(D.idx,0,id);
+  ids.forEach((k,i)=>{ LAYOUT[k]={...LAYOUT[k], order:i}; });
+  LAYOUT[id]={c:LAYOUT[id]?.c, dock:D.side, order:D.idx, w:D.w, t:Date.now()}; saveLayout(); applyLayout(id);
+  placeViews(); fitWings(id); placeInsp(); fitWings(id); applyViewOffset();
+  const out=DOCKABLE.filter(k=>k!==id && $('#'+k)?.dataset.noroom).map(k=>PANEL_NAME[k]||k);
+  toast(el.dataset.noroom? 'Pas assez de place à côté de la barre d’édition : le panneau y reviendra quand la fenêtre sera plus large.'
+    : out.length? `Panneau plaqué. Faute de place, « ${out.join(', ')} » revient sur la vue (il se replacera quand la place le permettra).`
+    : 'Panneau plaqué contre la barre d’édition : il s’adapte à la place disponible. Glissez sa poignée pour le décrocher.');
 }
 function startPanelDrag(e, el, id){
   if(e.button!==0 || e.target.closest('button,select,input')) return;
   e.preventDefault(); e.stopPropagation();
   const st=$('#stage').getBoundingClientRect();
-  if(el.classList.contains('docked')){ const r0=el.getBoundingClientRect(); delete LAYOUT[id].dock; $('#stage').append(el); el.classList.remove('docked'); setPos(el, r0.left-st.left, Math.max(0, r0.top-st.top)); fitWings(); }   // décroché : il repart de là où il était
+  if(el.classList.contains('docked')){ const r0=el.getBoundingClientRect(); delete LAYOUT[id].dock; undockEl(el, id); setPos(el, r0.left-st.left, Math.max(0, r0.top-st.top)); fitWings(); }   // décroché : il repart de là où il était
   delete el.dataset.noroom;
   const r=el.getBoundingClientRect(); const ox=e.clientX-r.left, oy=e.clientY-r.top;
-  el.classList.add('dragging'); if(DOCKABLE.includes(id)){ document.body.append(el); el.classList.add('lifted'); }
-  const row=$('.ed-row'), canDock=DOCKABLE.includes(id); let side=null, idx=0;
-  const ghost=h('div',{class:'dock-ghost','aria-hidden':'true'}); ghost.style.width=Math.round(r.width)+'px';
-  const move=ev=>{ const up0= canDock && ws==='model'? Math.max(0, st.top-($('#toolbar').getBoundingClientRect().top||st.top)) : 0;   // on peut monter dans la rangée de la languette pour s'y plaquer
-    const x=clamp(ev.clientX-st.left-ox,0,Math.max(0,st.width-r.width)), y=clamp(ev.clientY-st.top-oy,-up0,Math.max(0,st.height-r.height));
+  const canDock=DOCKABLE.includes(id) && dockOn();
+  el.classList.add('dragging'); if(canDock){ document.body.append(el); el.classList.add('lifted'); }
+  const D=canDock? dockStart(id, r) : null;
+  const move=ev=>{ const up0= canDock? Math.max(0, st.top-($('#toolbar').getBoundingClientRect().top||st.top)) : 0;   // on peut monter dans la rangée de la languette pour s'y plaquer
+    const x=clamp(ev.clientX-st.left-ox,0,Math.max(0,st.width-r.width)), y=clamp(ev.clientY-st.top-oy,-up0,Math.max(0,st.height-Math.min(r.height,80)));
     if(el.classList.contains('lifted')) setPos(el, x+st.left, y+st.top); else setPos(el, x, y);
-    if(!canDock) return;
-    const rr=el.getBoundingClientRect(); side=dockTarget(rr);
-    row?.classList.toggle('snap-L', side==='L'); row?.classList.toggle('snap-R', side==='R');
-    if(side){ const w=$('#edWing'+side); idx=dockIndex(w, (rr.left+rr.right)/2, ghost); const ref=[...w.children].filter(c=>c!==ghost && c.classList.contains('docked'))[idx]||null; if(ghost.parentElement!==w || ghost.nextSibling!==ref) w.insertBefore(ghost, ref); }
-    else ghost.remove(); };
-  const up=()=>{ window.removeEventListener('pointermove',move); window.removeEventListener('pointerup',up); el.classList.remove('dragging'); row?.classList.remove('snap-L','snap-R'); ghost.remove();
-    if(el.classList.contains('lifted')){ const b=el.getBoundingClientRect(); el.classList.remove('lifted'); $('#stage').append(el); setPos(el, b.left-st.left, Math.max(0, b.top-st.top)); }
-    if(side){ const w=$('#edWing'+side), kids=[...w.children].filter(c=>c.classList.contains('docked')); kids.splice(idx,0,el);
-      kids.forEach((k,i)=>{ LAYOUT[k.id]={...LAYOUT[k.id], order:i}; });
-      LAYOUT[id]={c:LAYOUT[id]?.c, dock:side, order:idx}; saveLayout(); applyLayout(id);
-      placeViews(); fitWings(id); placeInsp(); fitWings(id);
-      const out=DOCKABLE.filter(k=>$('#'+k)?.dataset.noroom).map(k=>FLOATS.find(f=>f[0]===k)?.[1]||k);
-      toast(el.dataset.noroom? 'Pas assez de place à côté de la barre d’édition : le panneau y reviendra quand la fenêtre sera plus large.'
-        : out.length? `Panneau plaqué. Faute de place, « ${out.join(', ')} » revient sur la vue (il se replacera quand la place le permettra).`
-        : 'Panneau plaqué contre la barre d’édition : il s’adapte à la place disponible. Glissez sa poignée pour le décrocher.'); return; }
+    if(D) dockFeedback(D, el.getBoundingClientRect()); };
+  const up=()=>{ window.removeEventListener('pointermove',move); window.removeEventListener('pointerup',up); el.classList.remove('dragging'); if(D) dockEnd(D);
+    if(el.classList.contains('lifted')){ const b=el.getBoundingClientRect(); el.classList.remove('lifted'); homeOf(id).append(el); setPos(el, b.left-st.left, Math.max(0, b.top-st.top)); }
+    if(D?.side){ dockCommit(D); return; }
     const rr=el.getBoundingClientRect(); LAYOUT[id]={...LAYOUT[id], x:Math.round(rr.left-st.left), y:Math.max(0,Math.round(rr.top-st.top))}; saveLayout(); applyLayout(id);
     if(id==='bubble') el.dataset.side='';
-    if(id==='views') placeInsp();
+    if(id==='views'){ placeInsp(); fitWings(); }
     if(id==='demo'){ applyViewOffset(); if(ws==='struct'){ ST.fitted=false; stFit(); stDraw(); } } };
   window.addEventListener('pointermove',move); window.addEventListener('pointerup',up);
 }
@@ -130,14 +179,17 @@ function applyDock(){
    Its header drags it (LAYOUT.insp, in #app coordinates); the arrow folds it; the round arrow puts it back. */
 /* le cube de vue remonte juste sous la barre de création, à droite de la languette d'édition (si la place le permet) */
 function placeViews(){
-  const v=$('#views'); if(!v) return; if(!WIDE.matches || LAYOUT.views?.x!=null){ if(LAYOUT.views?.x==null) v.style.top=''; return; }
+  const v=$('#views'); if(!v || v.classList.contains('docked')) return; if(!WIDE.matches || LAYOUT.views?.x!=null){ if(LAYOUT.views?.x==null){ v.style.top=''; v.style.right=''; } return; }
+  const st=$('#stage').getBoundingClientRect(), ins=$('#insp');   // propriétés plaquées à droite : le cube se met à leur gauche
+  v.style.right= ins?.classList.contains('docked-tall') && ins.dataset.side==='R'? Math.max(10, Math.round(st.right-ins.getBoundingClientRect().left+10))+'px' : '';
   const tb=$('#toolbar'), th= tb && tb.offsetParent? tb.offsetHeight : 0; if(!th){ v.style.top=''; return; }
-  const ed=$('.ed-wrap')?.getBoundingClientRect(), st=$('#stage').getBoundingClientRect(), left=st.right-10-v.offsetWidth;
+  const ed=$('.ed-wrap')?.getBoundingClientRect(), left=st.right-10-v.offsetWidth;
   const wingR= dockOn() && DOCKABLE.some(k=>LAYOUT[k]?.dock==='R' && !$('#'+k)?.classList.contains('nav-off'));   // un panneau plaqué à droite garde sa place : le cube reste sur la vue
   v.style.top= (ed && ed.right+8<left && !wingR)? (2-th)+'px' : '';   // la poignée est posée dans les coins : le cube monte d'autant
 }
 function placeInsp(){
   const el=$('#insp'); if(!el) return; placeViews(); fitWings();
+  if(el.classList.contains('docked')) return;   // plaqué contre la languette : placé par placeTall()
   if(!WIDE.matches){ for(const k of ['left','top','maxHeight']) el.style[k]=''; return; }
   const app=$('#app').getBoundingClientRect(), st=$('#stage').getBoundingClientRect(), w=el.offsetWidth||300, L=LAYOUT.insp; let x, y;
   if(L && L.x!=null){ x=L.x; y=L.y; }
@@ -148,9 +200,14 @@ function placeInsp(){
 }
 function startInspDrag(e){
   if(e.button!==0 || e.target.closest('button,select,input') || !WIDE.matches) return; e.preventDefault();
-  const el=$('#insp'), r=el.getBoundingClientRect(), a=$('#app').getBoundingClientRect(), ox=e.clientX-r.left, oy=e.clientY-r.top; el.classList.add('dragging');
-  const mv=ev=>{ LAYOUT.insp={x:ev.clientX-a.left-ox, y:ev.clientY-a.top-oy}; placeInsp(); };
-  const up=()=>{ window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up); el.classList.remove('dragging'); const rr=el.getBoundingClientRect(); LAYOUT.insp={x:Math.round(rr.left-a.left), y:Math.round(rr.top-a.top)}; saveLayout(); applyViewOffset(); };
+  const el=$('#insp'), a=$('#app').getBoundingClientRect();
+  if(el.classList.contains('docked')){ const r0=el.getBoundingClientRect(); LAYOUT.insp={x:Math.round(r0.left-a.left), y:Math.round(r0.top-a.top)}; delete el.dataset.noroom; applyLayout('insp'); fitWings(); }
+  const r=el.getBoundingClientRect(), ox=e.clientX-r.left, oy=e.clientY-r.top; el.classList.add('dragging');
+  const D= dockOn()? dockStart('insp', r) : null;
+  const mv=ev=>{ LAYOUT.insp={x:ev.clientX-a.left-ox, y:ev.clientY-a.top-oy}; placeInsp(); if(D) dockFeedback(D, el.getBoundingClientRect()); };
+  const up=()=>{ window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up); el.classList.remove('dragging'); if(D) dockEnd(D);
+    if(D?.side){ dockCommit(D); return; }
+    const rr=el.getBoundingClientRect(); LAYOUT.insp={x:Math.round(rr.left-a.left), y:Math.round(rr.top-a.top)}; saveLayout(); applyViewOffset(); };
   window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up);
 }
 /* ---- arborescence : réduire (rail étroit), déplacer (flottante au-dessus de la vue), remettre à gauche */
@@ -171,9 +228,12 @@ function startTreeDrag(e){
   window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up);
 }
 /* width kept free on the right of the view for the properties panel when it sits at its place */
-function rightReserve(){ const el=$('#insp'); if(!WIDE.matches || !el || LAYOUT.insp?.x!=null || LAYOUT.inspMin) return 0; return el.offsetWidth+20; }
+function rightReserve(){ const el=$('#insp'); if(!WIDE.matches || !el || LAYOUT.insp?.x!=null || LAYOUT.inspMin || el.classList.contains('docked')) return 0; return el.offsetWidth+20; }
 /* the guide floats at the left of the view (just right of the tree), or over the sketch canvas while sketching */
-function placeDemo(){ const d=$('#demo'); if(!d) return; const host= !$('#sk').hidden? $('#skCanvasWrap') : $('#stage');
+function placeDemo(){ const d=$('#demo'); if(!d) return;
+  if(dockOn() && LAYOUT.demo?.dock && !d.dataset.noroom){ applyLayout('demo'); requestAnimationFrame(()=>fitWings()); return; }   // plaqué contre la languette
+  if(d.classList.contains('docked')) undockEl(d, 'demo');
+  const host= !$('#sk').hidden? $('#skCanvasWrap') : $('#stage');
   if(d.parentElement!==host){ host.append(d); d.style.transform=''; } d.classList.toggle('in-sk', host.id==='skCanvasWrap'); }
 /* the panels around the view (creation bar on top, settings and tree on the sides) are see-through on wide
    screens: the canvas extends under them by OVR.t / OVR.l / OVR.r px, measured from the actual layout */
@@ -190,6 +250,7 @@ function updateOverlay(){
 }
 function resetLayout(){
   LAYOUT={}; saveLayout();
+  for(const id of DOCKABLE){ const el=$('#'+id); if(el){ delete el.dataset.noroom; applyLayout(id); } }
   for(const [id] of FLOATS){ const el=$('#'+id); if(el){ applyLayout(id); clearPos(el); el.classList.remove('collapsed'); } }
   clearPos($('#demo')); if(ws==='mech') buildJointLabels(); if(!$('#bubble').hidden) placeBubble(BUB.x,BUB.y); applyDock(); applyViewOffset(); if(ws==='struct'){ ST.fitted=false; stResize(); }
   toast('Disposition des panneaux réinitialisée.');
