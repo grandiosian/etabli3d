@@ -145,3 +145,19 @@ Les tests sont rangés par domaine dans `tests/domaines/` ; chaque domaine part 
 
 Chaque `push` sur `main` reconstruit la page et la publie sur GitHub Pages (`.github/workflows/pages.yml`).
 Première fois seulement : *Settings → Pages → Build and deployment → Source : GitHub Actions*.
+
+Le même `push` copie aussi le projet ailleurs (`.github/workflows/miroirs.yml`) ; chaque copie est sautée tant que ses réglages ne sont pas remplis.
+Les réglages se mettent sur GitHub : *Settings → Secrets and variables → Actions*, onglet **Secrets** ou **Variables**.
+
+**Forge GitLab de l'Éducation** (le dépôt entier, avec l'historique) :
+1. Sur la forge, dans le dépôt : *Paramètres → Jetons d'accès* (ou *Préférences → Jetons d'accès* du compte), créer un jeton avec le droit `write_repository`.
+2. Sur GitHub : variable `FORGE_REPO` = adresse du dépôt (ex. `https://forge.apps.education.fr/mon-compte/etabli3d.git`), variable `FORGE_USER` = nom d'utilisateur sur la forge, secret `FORGE_TOKEN` = le jeton.
+3. Si le dépôt de la forge a été créé avec un README, la première copie est refusée : supprimez ce README sur la forge (ou recréez le dépôt vide).
+
+**technoversailles.alwaysdata.net** (le site construit, pour les élèves) :
+1. Sur votre Mac, créer une clé réservée à cet envoi : `ssh-keygen -t ed25519 -N "" -f ~/.ssh/etabli3d_alwaysdata`.
+2. Ajouter la clé publique sur alwaysdata : `ssh-copy-id -i ~/.ssh/etabli3d_alwaysdata.pub technoversailles@ssh-technoversailles.alwaysdata.net` (l'accès SSH doit être activé dans l'administration alwaysdata : *Accès distant → SSH*).
+3. Sur GitHub : secret `AD_SSH_KEY` = tout le contenu de `~/.ssh/etabli3d_alwaysdata` (la clé privée, sans `.pub`).
+4. Facultatif : variables `AD_USER` (par défaut `technoversailles`), `AD_HOST` (par défaut `ssh-technoversailles.alwaysdata.net`), `AD_DIR` (par défaut `www/etabli3d`, soit https://technoversailles.alwaysdata.net/etabli3d/). Ce dossier est entièrement remplacé à chaque envoi : il doit être réservé à Établi 3D.
+
+Pour relancer les copies sans rien changer : onglet *Actions* → « Copier sur la forge et sur alwaysdata » → *Run workflow*.

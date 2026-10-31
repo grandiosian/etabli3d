@@ -1,0 +1,80 @@
+name: Copier sur la forge et sur alwaysdata
+
+# À chaque push sur main :
+#  1. le dépôt (avec son historique) est poussé sur la forge GitLab de l'Éducation ;
+#  2. le site construit (dist/) est envoyé sur technoversailles.alwaysdata.net.
+# Chaque copie ne se fait que si ses réglages sont remplis (voir « Mise en ligne » dans README.md) ;
+# sinon l'étape est simplement sautée, sans erreur.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: miroirs
+  cancel-in-progress: false
+
+jobs:
+  forge:
+    name: Forge GitLab
+    runs-on: ubuntu-latest
+    env:
+      FORGE_REPO: ${{ vars.FORGE_REPO }}        # ex. https://forge.apps.education.fr/mon-compte/etabli3d.git
+      FORGE_USER: ${{ vars.FORGE_USER }}        # nom d'utilisateur sur la forge
+      FORGE_TOKEN: ${{ secrets.FORGE_TOKEN }}   # jeton d'accès, droit write_repository
+    steps:
+      - name: Réglages présents ?
+        id: cfg
+        run: |
+          if [ -n "$FORGE_REPO" ] && [ -n "$FORGE_USER" ] && [ -n "$FORGE_TOKEN" ]; then echo "ok=1" >> "$GITHUB_OUTPUT"
+          else echo "::notice::Copie sur la forge sautée : FORGE_REPO, FORGE_USER ou FORGE_TOKEN manquant."; fi
+      - uses: actions/checkout@v4
+        if: steps.cfg.outputs.ok
+        with:
+          fetch-depth: 0          # tout l'historique, pour une vraie copie du dépôt
+      - name: Pousser sur la forge
+        if: steps.cfg.outputs.ok
+        run: |
+          url="https://${FORGE_USER}:${FORGE_TOKEN}@${FORGE_REPO#https://}"
+          git push "$url" HEAD:refs/heads/main
+          git push "$url" --tags
+
+  alwaysdata:
+    name: Site sur alwaysdata
+    runs-on: ubuntu-latest
+    env:
+      AD_KEY: ${{ secrets.AD_SSH_KEY }}                                   # clé SSH privée (sa clé publique est dans ~/.ssh/authorized_keys sur alwaysdata)
+      AD_HOST: ${{ vars.AD_HOST || 'ssh-technoversailles.alwaysdata.net' }}
+      AD_USER: ${{ vars.AD_USER || 'technoversailles' }}
+      AD_DIR: ${{ vars.AD_DIR || 'www/etabli3d' }}                         # dossier d'arrivée, relatif au compte
+    steps:
+      - name: Réglages présents ?
+        id: cfg
+        run: |
+          if [ -n "$AD_KEY" ]; then echo "ok=1" >> "$GITHUB_OUTPUT"
+          else echo "::notice::Envoi sur alwaysdata sauté : secret AD_SSH_KEY manquant."; fi
+      - uses: actions/checkout@v4
+        if: steps.cfg.outputs.ok
+      - uses: actions/setup-python@v5
+        if: steps.cfg.outputs.ok
+        with:
+          python-version: '3.12'
+      - name: Assembler la page
+        if: steps.cfg.outputs.ok
+        run: |
+          python3 build.py
+          rm -f dist/artifact.html
+      - name: Envoyer sur alwaysdata
+        if: steps.cfg.outputs.ok
+        run: |
+          case "$AD_DIR" in ""|"/"|"."|"www"|"www/") echo "::error::AD_DIR doit être un dossier réservé à Établi 3D (ex. www/etabli3d)"; exit 1;; esac
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$AD_KEY" > ~/.ssh/id_ad && chmod 600 ~/.ssh/id_ad
+          ssh-keyscan -H "$AD_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh -i ~/.ssh/id_ad "$AD_USER@$AD_HOST" "mkdir -p '$AD_DIR'"
+          rsync -az --delete -e "ssh -i ~/.ssh/id_ad" dist/ "$AD_USER@$AD_HOST:$AD_DIR/"
+          echo "Site à jour : https://technoversailles.alwaysdata.net/${AD_DIR#www/}/"
