@@ -50,10 +50,10 @@ f.addEventListener('load',async()=>{
   ok&=line(!miss.length,'Sections obligatoires présentes',miss.length?'manquantes : '+miss.join(', '):'');
   ok&=line(D.atelier.app===A.app,`Identifiant d’atelier : ${D.atelier.app}`,D.atelier.app===A.app?'':`application : ${A.app}`);
   ok&=line(D.atelier.version===A.version,`Version : ${D.atelier.version}`,D.atelier.version===A.version?'':`application : ${A.version}`);
-  const liste=A.catalogue().map(({id,titre,groupe,total,type,niveau,categorie,resume})=>({id,titre,groupe,total,type,niveau,categorie,resume}));
+  const liste=A.catalogue().map(({id,titre,groupe,total,competences,type,niveau,categorie,resume})=>({id,titre,groupe,total,competences,type,niveau,categorie,resume}));
   const same=JSON.stringify(D.activites.liste)===JSON.stringify(liste);
   ok&=line(same,`Activités : ${D.activites.liste.length} dans le descripteur, ${liste.length} dans l’application`,same?'':diff(D.activites.liste,liste));
-  const act=A.activites();ok&=line(JSON.stringify(act)===JSON.stringify(liste.map(({id,titre,groupe,total})=>({id,titre,groupe,total}))),'activites() envoie id, titre, groupe, total dans le même ordre');
+  const act=A.activites();ok&=line(JSON.stringify(act)===JSON.stringify(liste.map(({id,titre,groupe,total,competences})=>({id,titre,groupe,total,competences}))),'activites() envoie id, titre, groupe, total, competences dans le même ordre');
   const d=A.donnees();ok&=line(Object.keys(d).every(k=>k in D.donnees)&&Object.keys(D.donnees).every(k=>k in d),'Clés de données décrites : '+Object.keys(d).join(', '));
   ok&=line(A.estProjet(d.projet),'Le projet courant est reconnu par estProjet()');
   const mats=(D.enums?.matieres||[]).map(m=>m.k).join(','),mp=(D.$defs?.Matiere?.properties?.k?.enum||[]).join(',');

@@ -134,6 +134,26 @@ Envoyée à la Centrale par `Centrale.progression(id, Etabli3D.progression(id))`
 | nombre d’étapes / critères / cases « À essayer » | `total` | |
 | `done["type:k"]` | `statut: "termine"` | Sinon `"commence"`. Un exemple compte 0 puis `total` quand toutes ses cases sont cochées. |
 
+### Les compétences
+
+Établi 3D s’appuie sur le référentiel de la Centrale (`/passerelle/competences.json`, codes `OST…`, `SFC…`, `CCRI…`).
+
+- **Déclaration** : chaque activité de `activites()` porte `competences`, les capacités qu’elle travaille (5e, 4e, 3e), d’après sa catégorie (`COMP_CAT` dans `centrale.js`, recopié dans `centrale.competences.par_categorie` du descripteur) : modéliser et esquisser → `CCRI16.x.1` ; mouvement → `SFC11` + `CCRI16` ; structures → `CCRI21.x.1`.
+- **Constats** : à la réussite d’un tuto ou d’un exercice (une fois par session), la progression envoyée contient `constats` : une ligne par capacité **du niveau de l’élève** (chiffre au début de sa classe, 5e par défaut).
+
+```json
+{ "titre": "Plaque percée", "faites": 3, "total": 3, "statut": "termine",
+  "constats": [{ "competence": "CCRI16.5.1", "reussi": true, "indices": 1, "essais": 1,
+                 "preuve": "Exercice « Plaque percée » : 3/3" }] }
+```
+
+| Situation | `indices` | Niveau calculé par la Centrale |
+|---|---|---|
+| Exercice réussi sans ouvrir « Un indice ? » | 0 | 4 (très bonne maîtrise) |
+| Exercice réussi après l’indice, ou tuto guidé terminé | 1 | 3 (maîtrise satisfaisante) |
+
+Les exemples n’envoient pas de constat (rien n’y est vérifié). Le bilan (moyenne haute de tous les constats et des notes du professeur) est calculé par la Centrale.
+
 ### Les fichiers
 
 Pour les ateliers transversaux (`fichiers` dans `centrale.json`). Établi 3D reconnaît un fichier à son **extension** : le professeur peut nommer les fichiers d’une étape comme il veut. Le descripteur déclare donc des **motifs** (`nom`), avec un `nom_conseille` ; la Centrale vérifie l’enchaînement des étapes avec ces motifs.
@@ -171,7 +191,7 @@ Pour les ateliers transversaux (`fichiers` dans `centrale.json`). Établi 3D rec
 | `Etabli3D.app`, `Etabli3D.version`, `Etabli3D.descripteur` | `"etabli3d"`, la version (identique à `centrale.json`), `"centrale.json"`. |
 | `Etabli3D.activites()` | Liste envoyée à `Centrale.init`. |
 | `Etabli3D.catalogue()` | Catalogue détaillé : type, niveau, catégorie, résumé. |
-| `Etabli3D.progression(id)` | `{titre, faites, total, statut}` ou `null`. |
+| `Etabli3D.progression(id)` | `{titre, faites, total, statut}` ou `null` (les `constats` sont ajoutés à l’envoi). |
 | `Etabli3D.fusionnerProgression(serveur)` | Fusionne le résultat de `Centrale.mesProgressions()`. |
 | `Etabli3D.donnees()` | `{projet}`. |
 | `Etabli3D.estProjet(objet)` | Vérifie qu’un objet est un projet chargeable. |

@@ -23,3 +23,8 @@ Notes détaillées pour Claude (voir la carte dans `CLAUDE.md`). Le contrat lui-
 - `commit()` / `restore()` appellent `centraleTravail()` ; `markDone`, `lessonProgress`, `startLesson`, `loadExample` appellent `centraleProgres('type:clé')`.
 - **Après tout ajout de tuto, exercice ou exemple** : mettre à jour `activites.liste` (`outils/verifier-descripteur.html` donne la liste, le domaine de test `centrale` vérifie) et augmenter `atelier.version` = `ETABLI_VERSION`.
 - Format du projet : `PROJET_FORMAT` (2).
+
+## Compétences
+- `COMP_CAT` (catégorie → capacités par niveau) donne `competences` de chaque activité ; à changer aussi dans `centrale.competences.par_categorie` de `centrale.json` (le vérificateur compare les listes).
+- `centraleProgres` ajoute `constats` (via `constatsActivite`) quand un tuto ou un exercice vient d'être terminé : capacités du niveau de la classe (`niveauEleve()`), `indices` = 1 si « Un indice ? » a été ouvert (`CZ.indices`) ou pour un tuto, une seule fois par session (`CZ.constate`).
+- Test : domaine `centrale` (« constats envoyés à la réussite »).

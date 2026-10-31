@@ -5,8 +5,20 @@
    - le module de la Centrale (js/centrale-client.js) est chargé à la fin du démarrage ; s'il est injoignable,
      Établi 3D fonctionne seul (enregistrement dans le navigateur).
    ========================================================= */
-const ETABLI_VERSION='1.1.0';   // = atelier.version de centrale.json
+const ETABLI_VERSION='1.2.0';   // = atelier.version de centrale.json
 const PROJET_FORMAT=2;          // version du document « projet » (2 : matières p.mat et images textures)
+
+/* ---- compétences (référentiel de la Centrale : /passerelle/competences.json, programme de technologie cycle 4)
+   capacités travaillées par catégorie d'activité, pour chaque niveau (la capacité envoyée suit la classe de l'élève) */
+const COMP_CAT={
+  model:  {5:['CCRI16.5.1'], 4:['CCRI16.4.1'], 3:['CCRI16.3.1']},                         // modélisation et fabrication
+  sketch: {5:['CCRI16.5.1'], 4:['CCRI16.4.1'], 3:['CCRI16.3.1']},
+  move:   {5:['SFC11.5.1','CCRI16.5.1'], 4:['SFC11.4.2','CCRI16.4.1'], 3:['SFC11.3.1','CCRI16.3.1']},   // chaîne d'énergie, transmission de mouvement
+  struct: {5:['CCRI21.5.1'], 4:['CCRI21.4.1'], 3:['CCRI21.3.1']},                         // tenue mécanique par simulation
+};
+const competencesCat=c=>[...new Set([5,4,3].flatMap(n=>(COMP_CAT[c]||{})[n]||[]))];   // ordre 5e, 4e, 3e
+/* niveau de l'élève connecté d'après sa classe (« 5A », « 4C-LHA ») ; 5 par défaut */
+const niveauEleve=()=>{ const m=/^\s*([3-6])/.exec(window.Centrale?.session?.()?.classe||''); return m? +m[1] : 5; };
 
 /* ---- activités : tutos, exercices et exemples (identifiants stables : tuto-<clé>, exo-<clé>, ex-<clé>) */
 const actKey=id=>{ const m=/^(tuto|exo|ex)-(.+)$/.exec(id||''); return m? m[1]+':'+m[2] : null; };   // id d'activité → clé de PROG
@@ -14,9 +26,9 @@ const catTitle=c=>(LCATS.find(x=>x[0]===c)||[c,c])[1];
 function etabliCatalogue(){
   const L=Object.entries(LESSONS), out=[];
   for(const type of ['tuto','exo']) for(const [k,T] of L) if(T.type===type)
-    out.push({id:`${type}-${k}`, titre:T.title, groupe:catTitle(T.cat), total:T.steps.length, type, niveau:T.level, categorie:T.cat, resume:T.desc||(T.brief||'').replace(/<[^>]+>/g,'')});
+    out.push({id:`${type}-${k}`, titre:T.title, groupe:catTitle(T.cat), total:T.steps.length, competences:competencesCat(T.cat), type, niveau:T.level, categorie:T.cat, resume:T.desc||(T.brief||'').replace(/<[^>]+>/g,'')});
   for(const [k,S] of Object.entries(SAMPLES))
-    out.push({id:`ex-${k}`, titre:S.title, groupe:catTitle(S.cat), total:Math.max(1, S.note?.try?.length||0), type:'exemple', niveau:S.level, categorie:S.cat, resume:S.desc||''});
+    out.push({id:`ex-${k}`, titre:S.title, groupe:catTitle(S.cat), total:Math.max(1, S.note?.try?.length||0), competences:competencesCat(S.cat), type:'exemple', niveau:S.level, categorie:S.cat, resume:S.desc||''});
   return out;
 }
 function etabliProgression(id){
@@ -77,7 +89,7 @@ window.Etabli3D=Object.freeze({
   version:ETABLI_VERSION,
   descripteur:'centrale.json',
   /** Activités déclarées à la Centrale (colonnes du suivi) : [{id, titre, groupe, total}]. */
-  activites:()=>etabliCatalogue().map(({id,titre,groupe,total})=>({id,titre,groupe,total})),
+  activites:()=>etabliCatalogue().map(({id,titre,groupe,total,competences})=>({id,titre,groupe,total,competences})),
   /** Catalogue détaillé (champs de activites.liste dans centrale.json). */
   catalogue:etabliCatalogue,
   /** Progression d'une activité au format de la Centrale, ou null si jamais ouverte. */
@@ -100,7 +112,7 @@ window.Etabli3D=Object.freeze({
    Connexion à la Centrale (facultative) : bouton « Mon code », sauvegarde du projet, progression,
    activité demandée par le portail, fichiers de l'élève et dossier de projet des ateliers.
    ========================================================= */
-const CZ={pret:false, bouton:null, fenetre:null, serveur:''};
+const CZ={pret:false, bouton:null, fenetre:null, serveur:'', constate:new Set(), indices:{}};
 function centraleInit(){
   CZ.serveur=window.CENTRALE_URL||'https://technoversailles.alwaysdata.net/';
   const js=document.createElement('script'); js.src=CZ.serveur+'js/centrale-client.js'; js.onload=centraleDemarrer;   // injoignable : rien ne change
@@ -227,4 +239,16 @@ function centraleMenu(){
 }
 /* appelés par Établi 3D : le projet a changé (commit), une activité a avancé (PROG) */
 function centraleTravail(){ if(CZ.pret && window.Centrale?.connecte()) Centrale.sauver('projet', etabliProjet()); }
-function centraleProgres(key){ if(!CZ.pret || !window.Centrale?.connecte()) return; const id=key.replace(':','-'), p=Etabli3D.progression(id); if(p) Centrale.progression(id, p); }
+function centraleProgres(key){ if(!CZ.pret || !window.Centrale?.connecte()) return; const id=key.replace(':','-'), p=Etabli3D.progression(id); if(!p) return;
+  const c=constatsActivite(key); if(c.length) p.constats=c; Centrale.progression(id, p); }
+/* Constats de compétences, une fois par activité terminée dans cette session : tuto réussi (guidé : compte comme 1 indice),
+   exercice réussi (indices = « Un indice ? » ouverts). Les exemples n'en envoient pas (on y observe, on n'y est pas évalué). */
+function constatsActivite(key){
+  const [type,k]=key.split(':'); if(!PROG.done[key] || type==='ex' || CZ.constate.has(key)) return [];
+  const T=LESSONS[k]; const codes=(COMP_CAT[T?.cat]||{})[niveauEleve()]||[]; if(!codes.length) return [];
+  CZ.constate.add(key);
+  const indices= type==='tuto'? 1 : (CZ.indices[k]||0);
+  return codes.map(competence=>({competence, reussi:true, indices, essais:1, preuve:`${type==='tuto'?'Tuto':'Exercice'} « ${T.title} » : ${T.steps.length}/${T.steps.length}`}));
+}
+/* « Un indice ? » ouvert pendant un exercice : compté dans son constat */
+document.addEventListener('toggle', e=>{ if(e.target.matches?.('details.gd-tips') && e.target.open && GUIDE.tuto) CZ.indices[GUIDE.tuto]=1; }, true);

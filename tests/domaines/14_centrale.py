@@ -42,6 +42,16 @@ def run(t):
           r == ['etabli3d', 39, 39, 'Mon code'] and r2 == ['5A · 07', True, 3, 'de', True, True, 'termine'] and r3 == ['Support de départ', 'Porte-crayon', 'bois'], [r, r2, r3])
     check('Centrale : fichier de l’atelier repris, dépôt des sorties (projet, STL, aperçu, résumé), STL envoyé au professeur',
           r4[0] == 'Support de départ' and r4[1] > n0 and r5 == ['projet.etabli3d.json:application/json:true resume.json:application/json:true piece.stl:model/stl:true apercu.png:image/png:true', 'true:model/stl'], [r4, n0, r5])
+    # Constats de compétences : exercice réussi après « Un indice ? », tuto terminé (classe 5A → capacités de 5e)
+    rc = cz.evaluate("""async ()=>{ const E=window.__etabli; E.startLesson('plaque'); await new Promise(r=>setTimeout(r,200));
+      const d=document.querySelector('details.gd-tips'); d.open=true; await new Promise(r=>setTimeout(r,100));
+      E.markDone('exo:plaque'); E.markDone('tuto:premiers');
+      const c=id=>(__cz.progres.filter(([i])=>i===id).pop()||[])[1]?.constats||[];
+      const ce=c('exo-plaque'), ct=c('tuto-premiers');
+      return [ce.map(x=>x.competence+':'+x.reussi+':'+x.indices+':'+x.essais).join(' '), ct.map(x=>x.competence+':'+x.indices).join(' '),
+              Etabli3D.activites().find(a=>a.id==='exo-plaque').competences.join(' ')]; }""")
+    check('Centrale : constats envoyés à la réussite (capacités du niveau de la classe, indices comptés)',
+          rc == ['CCRI16.5.1:true:1:1', 'CCRI16.5.1:1', 'CCRI16.5.1 CCRI16.4.1 CCRI16.3.1'], rc)
     ver = ctx.new_page(); ver.goto(base + '/dist/outils/verifier-descripteur.html?app=../test.html'); ver.wait_for_function("()=>document.body.dataset.resultat", timeout=30000)
     vr = ver.evaluate("()=>[document.body.dataset.resultat, [...document.querySelectorAll('#res li.ko')].map(l=>l.textContent)]")
     check('centrale.json correspond à l’application (outils/verifier-descripteur.html)', vr[0] == 'ok', vr)
