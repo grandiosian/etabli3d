@@ -128,7 +128,7 @@ function undo(){ if(hist.idx>0){ hist.idx--; restore(hist.stack[hist.idx]); } }
 function redo(){ if(hist.idx<hist.stack.length-1){ hist.idx++; restore(hist.stack[hist.idx]); } }
 function updateUndo(){ $('#bUndo').disabled=hist.idx<=0; $('#bRedo').disabled=hist.idx>=hist.stack.length-1; }
 let saveTimer=0;
-function autosave(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>{ try{ localStorage.setItem('etabli3d.autosave', snapshot()); }catch(e){} }, 400); }
+function autosave(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>{ try{ localStorage.setItem('etabli3d.autosave', snapshot()); }catch(e){} czTravail(); }, 400); }
 function loadProject(obj, push=true){
   if(!obj || !Array.isArray(obj.parts)) throw new Error('format');
   state.name=obj.name||'Projet'; state.parts=obj.parts; state.joints=obj.joints||[]; state.nextId=obj.nextId|| (maxId(obj.parts)+1); state.note=obj.note||null; state.tp=obj.tp||null; state.struct=obj.struct||null; state.edit=obj.edit||null; state.textures=obj.textures||{}; demoClosed=false; GUIDE.src=null;

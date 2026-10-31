@@ -140,3 +140,20 @@ npm test
 
 Chaque `push` sur `main` reconstruit la page et la publie sur GitHub Pages (`.github/workflows/pages.yml`).
 Première fois seulement : *Settings → Pages → Build and deployment → Source : GitHub Actions*.
+
+## Centrale élèves (facultatif)
+
+Établi 3D peut se connecter à la **Centrale élèves** de la classe (`src/centrale.js`). Sans connexion, ou si le serveur ne répond pas, rien ne change : tout reste dans le navigateur.
+
+- **Bouton « Mon code »** (barre du haut) : l'élève tape son code personnel.
+  - Son projet est enregistré sur le serveur et il le retrouve sur n'importe quel ordinateur.
+  - Ses tutos et exercices réussis apparaissent dans le suivi du professeur.
+- **Atelier transversal** : Établi 3D est alors ouvert depuis une étape d'un parcours du portail.
+  - Le projet de départ vient du dossier de projet de l'élève ou de son équipe : ce qui a déjà été déposé à cette étape, sinon le projet reçu de l'étape précédente ou fourni par le professeur.
+  - La consigne de l'étape arrive dans **Guide → Mon TP**.
+  - Un panneau **Atelier** (en bas à gauche) montre les fichiers reçus (avec « Voir » pour ceux qui ne sont pas des projets 3D) et les fichiers à déposer.
+  - Fichiers à déposer :
+    - un `.json` est le projet. Il est déposé automatiquement quelques secondes après chaque modification ;
+    - un `.stl` est l'export pour l'impression. Il est déposé avec le bouton **Déposer dans le dossier**.
+  - En équipe, si un coéquipier a modifié le projet entre-temps, le panneau propose de prendre sa version ou de garder la sienne.
+
