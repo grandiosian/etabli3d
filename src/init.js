@@ -3,7 +3,7 @@
    Wiring
    ========================================================= */
 hydrateIcons();
-for(const [host,list] of [['#rackBasic',[...BASIC,...MECA]]]){   // roues dentées et crémaillère à la suite des volumes (niveau 3)
+for(const [host,list] of [['#rackBasic',BASIC],['#rackMeca',MECA]]){
   for(const k of list){ const b=h('button',{class:'shape',title:`Ajouter : ${KINDS[k].label}`,'data-min':KIND_LVL[k]>1?String(KIND_LVL[k]):null}, svgIcon(k), KINDS[k].label);
     b.addEventListener('pointerdown',e=>{ if(e.button!==0) return; e.preventDefault(); startPaletteDrag(k,e); });
     b.addEventListener('click',e=>{ if(e.detail===0) addPart(k); });
@@ -11,9 +11,9 @@ for(const [host,list] of [['#rackBasic',[...BASIC,...MECA]]]){   // roues denté
 }
 initPlanes();
 /* onglets de la barre de création : Volumes / Simulation mécanique */
-/* onglets de la barre de création : Volumes / Simulation mécanique ; l'onglet Simulation n'affiche que le bouton
+/* onglets de la barre de création : Volumes / Création mécanique (niveau 3) / Simulation mécanique ; l'onglet Simulation n'affiche que le bouton
    « Valider pour simulation » (rendu par updateSteps) et grise le reste (esquisses, barre d'édition) */
-function setRackTab(k){ if(!['vol','sim'].includes(k)) k='vol'; $$('#rack [data-rtab]').forEach(b=>b.setAttribute('aria-selected', String(b.dataset.rtab===k)));
+function setRackTab(k){ if(!['vol','meca','sim'].includes(k) || (k==='meca' && !lv(3))) k='vol'; $$('#rack [data-rtab]').forEach(b=>b.setAttribute('aria-selected', String(b.dataset.rtab===k)));
   $$('#rack [data-rpane]').forEach(p=>p.hidden= p.dataset.rpane!==k); $('#app').classList.toggle('tab-sim', k==='sim'); LAYOUT.rackTab=k; saveLayout(); }
 $$('#rack [data-rtab]').forEach(b=>b.onclick=()=>setRackTab(b.dataset.rtab));
 setRackTab('vol');   // au démarrage : Volumes
@@ -44,6 +44,12 @@ function renderLook(){
   const acc=h('div',{class:'look-sw'}, ...Object.entries(ACCENTS).map(([k,A])=>h('button',{'aria-pressed':String(prefs.accent===k),onclick:()=>{ prefs.accent=k; savePrefs(); applyTheme(); renderLook(); afterLook(); }}, h('i',{style:`background:${A.light[0]}`}), A.name)));
   const mats=h('div',{class:'look-sw'}, ...Object.entries(MATS).map(([k,M])=>h('button',{'aria-pressed':String(prefs.mat===k),onclick:()=>{ prefs.mat=k; savePrefs(); refreshMat(); renderLook(); }}, h('i',{style:`background:${M.fill}`}), M.name)));
   const axs=h('div',{class:'look-sw'}, ...Object.entries(AXCOL_SETS).map(([k,A])=>h('button',{'aria-pressed':String(prefs.axes===k),onclick:()=>{ prefs.axes=k; savePrefs(); renderLook(); rebuildLocators(); buildJointLabels(); }}, h('i',{style:`background:linear-gradient(90deg,${A.x} 0 33%,${A.y} 33% 66%,${A.z} 66%)`}), A.name)));
+  const segOf=(list,cur,set)=>h('div',{class:'seg'}, ...list.map(([v,l])=>h('button',{class:'btn'+(cur===v?' on':''),'aria-pressed':String(cur===v),onclick:()=>{ set(v); savePrefs(); applyRender(); renderLook(); }}, l)));
+  const rend=h('div',{class:'look-rend'}, h('h4',{},'Rendu des pièces'),
+    segOf(RMODES, prefs.rmode, v=>prefs.rmode=v),
+    h('h4',{},'Éclairage'), segOf(Object.entries(LIGHTS).map(([k,L])=>[k,L.name]), prefs.light, v=>prefs.light=v),
+    h('h4',{},'Ombres'), segOf([[false,'Sans'],[true,'Avec']], !!prefs.shadows, v=>prefs.shadows=v));
+  m.append(rend);
   m.append(h('div',{}, h('h4',{},'Thème'), seg), h('div',{}, h('h4',{},'Couleur principale'), acc), h('div',{}, h('h4',{},'Plan de travail'), mats), h('div',{}, h('h4',{},'Couleurs des axes X Y Z'), axs),
     h('div',{}, h('h4',{},'Panneaux'), h('div',{class:'seg',style:'margin-bottom:6px'}, ...[['transparent','Transparents'],['leger','Peu transparents'],['opaque','Opaques']].map(([v,l])=>h('button',{class:'btn'+(prefs.glass===v?' on':''),'aria-pressed':String(prefs.glass===v),onclick:()=>{ prefs.glass=v; savePrefs(); applyGlass(); renderLook(); }}, l))), h('button',{class:'btn',style:'width:100%;justify-content:center',onclick:()=>{ resetLayout(); $('#menuLook').hidden=true; }}, svgIcon('reset'),'Remettre les panneaux à leur place')),
     lv(3)? h('div',{}, h('h4',{},'Arborescence (à gauche)'), h('div',{class:'seg'}, ...[[true,'Affichée'],[false,'Masquée']].map(([v,l])=>{ const on=$('#app').classList.contains('with-tree')===v; return h('button',{class:'btn'+(on?' on':''),'aria-pressed':String(on),onclick:()=>{ setTreeOpen(v); renderLook(); }}, l); }))) : null,
@@ -62,6 +68,7 @@ $('#tSolid').onclick=()=>setHole(false); $('#tHole').onclick=()=>setHole(true);
 $('#tGroup').onclick=groupSel; $('#tUngroup').onclick=ungroupSel; $('#tDup').onclick=duplicateSel; $('#tDrop').onclick=dropSel; $('#tDel').onclick=deleteSel;
 $$('#views [data-view], #navBar [data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
 if(prefs.ortho) setOrtho(true, true);
+applyRender();
 $('#refBtn').onclick=e=>{ e.stopPropagation(); openRefMenu($('#refBtn')); };
 /* boutons du cube de vue rangés en cercle autour de lui (en partant du haut, dans le sens des aiguilles d'une montre) */
 function layoutCubeRing(){ const w=$('#views .vc-wrap'); if(!w) return; const order=['orthoBtn','fit','refBtn','lmbBtn','sel','iso'];
@@ -180,4 +187,4 @@ function loop(now){
   updateBubbleLink();
 }
 requestAnimationFrame(loop);
-window.__etabli={state, pivot, TG, guides, enterGroupEdit, finishGroupEdit, pickAll, setLmb, openCtxMenu, HOV, groupSel, prefs, orbit_:()=>orbit, SAMPLES, LAYOUT:()=>LAYOUT, resetLayout, togglePanel, CHK, startLocTest, stopLocTest, openStructBubble, openMechBubble, closeBubble, BUB, stAnimPlay, locEdit, locFrame, LOCV, applyStruct3DK, camera, orbit, structGroup, struct3DHit, renderer, ampFactor, structBox, stDraw, arrowHits:()=>stArrowHits, setWs, ws:()=>ws, validateAll, validatePart, vState, mechReady, setJointLoc, ST, SD, computeStruct, solveTruss, buildMesh, solvePlane, beamTheory, makeProxy, getProxyGeo, locGroup, loadExample, openGallery, addPart, groupSel, openSketch, closeSketch, SK, skSolve, LESSONS, startLesson, PROG, LIB, setRef, REF, refAuto, partsBox, cam:()=>camera, setOrtho, NAV, setNavLock, zoomBy, applyNavBar, tgSnapAngle, setRackTab, GUIDE, startTuto, openPlanePicker, closePlanePicker, choosePlane, PP, planeRot, bzSetType, bzSetInterp, sim, simToggle, simReset, exportStl, stlBinary, zipStore, meshes, selection:()=>selection, setSel:(ids)=>{selection=ids; sync(); renderInspector();}, setTab, openJointForm, saveJoint, jf:()=>jf, skProfiles, getGeometry};
+window.__etabli={state, pivot, TG, guides, enterGroupEdit, finishGroupEdit, pickAll, setLmb, openCtxMenu, HOV, groupSel, prefs, orbit_:()=>orbit, SAMPLES, LAYOUT:()=>LAYOUT, resetLayout, togglePanel, CHK, startLocTest, stopLocTest, openStructBubble, openMechBubble, closeBubble, BUB, stAnimPlay, locEdit, locFrame, LOCV, applyStruct3DK, camera, orbit, structGroup, struct3DHit, renderer, ampFactor, structBox, stDraw, arrowHits:()=>stArrowHits, setWs, ws:()=>ws, validateAll, validatePart, vState, mechReady, setJointLoc, ST, SD, computeStruct, solveTruss, buildMesh, solvePlane, beamTheory, makeProxy, getProxyGeo, locGroup, loadExample, openGallery, addPart, groupSel, openSketch, closeSketch, SK, skSolve, applyRender, edgeLineMat, refSeries, setRackTab, applyTree, LESSONS, startLesson, PROG, LIB, setRef, REF, refAuto, partsBox, cam:()=>camera, setOrtho, NAV, setNavLock, zoomBy, applyNavBar, tgSnapAngle, setRackTab, GUIDE, startTuto, openPlanePicker, closePlanePicker, choosePlane, PP, planeRot, bzSetType, bzSetInterp, sim, simToggle, simReset, exportStl, stlBinary, zipStore, meshes, selection:()=>selection, setSel:(ids)=>{selection=ids; sync(); renderInspector();}, setTab, openJointForm, saveJoint, jf:()=>jf, skProfiles, getGeometry};

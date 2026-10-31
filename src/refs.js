@@ -1,13 +1,15 @@
 /* =========================================================
-   Repères d'échelle : un objet connu posé à côté des pièces (pomme, canette,
-   voiture, immeuble, avion) pour se rendre compte des tailles réelles.
+   Repères d'échelle : trois objets connus qui se suivent en taille (pièce, pomme, canette,
+   personne, voiture, immeuble, avion) pour se rendre compte des tailles réelles.
    « Auto » choisit l'objet d'après la taille des pièces (plus grand si le modèle
    est plus grand). Ils sont en gris, loin derrière le plan de travail, toujours au même endroit, avec une
    plaque au sol « Référence d'échelle ». Ni cliquables, ni exportés, ni enregistrés.
    ========================================================= */
 const REFS={
+  piece:  {name:'Pièce de 1 €', size:'2,3 cm', dim:23},
   pomme:  {name:'Pomme',   size:'8 cm',   dim:80},
   canette:{name:'Canette', size:'12 cm',  dim:115},
+  personne:{name:'Personne', size:'1,70 m', dim:1700},
   voiture:{name:'Voiture', size:'4,2 m',  dim:4200},
   immeuble:{name:'Immeuble', size:'12 m (4 étages)', dim:12000},
   avion:  {name:'Avion de ligne', size:'38 m', dim:37600},
@@ -17,6 +19,15 @@ REF.group.visible=false; scene.add(REF.group);
 
 const refMat=(c,o={})=>new THREE.MeshStandardMaterial({color:c, roughness:.6, metalness:0, ...o});
 const refBuild={
+  piece(){ const g=new THREE.Group(); const m=refMat(0xb8a24a,{metalness:.4,roughness:.35});
+    const c=new THREE.Mesh(new THREE.CylinderGeometry(11.6,11.6,2.3,48), m); c.rotation.x=Math.PI/2; c.position.z=1.15; g.add(c);
+    const r=new THREE.Mesh(new THREE.TorusGeometry(8.2,0.5,8,48), refMat(0x8c8f93,{metalness:.4})); r.position.z=2.3; g.add(r); return g; },
+  personne(){ const g=new THREE.Group(), M=refMat(0x8a9296), add=(geo,x,y,z,rx=Math.PI/2)=>{ const m=new THREE.Mesh(geo,M); m.rotation.x=rx; m.position.set(x,y,z); g.add(m); };
+    for(const x of [-95,95]) add(new THREE.CylinderGeometry(70,60,820,16), x,0,410);
+    add(new THREE.CapsuleGeometry(190,330,6,16), 0,0,1150); 
+    for(const x of [-255,255]) add(new THREE.CylinderGeometry(50,45,620,12), x,0,1080);
+    add(new THREE.CylinderGeometry(55,55,80,12), 0,0,1460); add(new THREE.SphereGeometry(115,24,16), 0,0,1585,0);
+    g.children[2].scale.set(1,1,.62); return g; },
   pomme(){ const g=new THREE.Group();
     const b=new THREE.Mesh(new THREE.SphereGeometry(40,32,20), refMat(0xd64035)); b.scale.set(1,1,.9); b.position.z=36; g.add(b);
     const s=new THREE.Mesh(new THREE.CylinderGeometry(2,2.5,14,8), refMat(0x6b4a2b)); s.rotation.x=Math.PI/2; s.position.set(0,0,74); g.add(s);
@@ -49,7 +60,10 @@ const refBuild={
     return g; },
 };
 /* the object that fits the size of the model (largest dimension D, in mm) */
-function refAuto(D){ return D<100? 'pomme' : D<600? 'canette' : D<8000? 'voiture' : D<25000? 'immeuble' : 'avion'; }
+const REF_ORDER=['piece','pomme','canette','personne','voiture','immeuble','avion'];
+function refAuto(D){ return D<40? 'piece' : D<100? 'pomme' : D<600? 'canette' : D<2500? 'personne' : D<8000? 'voiture' : D<25000? 'immeuble' : 'avion'; }
+/* trois objets qui se suivent en taille, autour de celui choisi (rapports d'échelle) */
+function refSeries(k){ const i=REF_ORDER.indexOf(k), s=clamp(i-1, 0, REF_ORDER.length-3); return REF_ORDER.slice(s, s+3); }
 function partsBox(){ const b=new THREE.Box3(); for(const [id,r] of meshes){ if(r.mesh.visible) b.union(new THREE.Box3().setFromObject(r.mesh)); } return b; }
 /* en gris : l'objet repère ne se confond pas avec les pièces */
 function refGrey(o){ o.traverse(m=>{ if(!m.isMesh) return; for(const M of [].concat(m.material)){ if(M.map){ M.color.set(0xffffff); continue; } const c=M.color, l=0.2126*c.r+0.7152*c.g+0.0722*c.b; const g=0.42+0.42*Math.min(1,l*1.6); c.setRGB(g,g,g); M.metalness=0; } }); }
@@ -61,35 +75,42 @@ function refPlaque(k, w){
   const t=new THREE.CanvasTexture(cv); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=8;
   const m=new THREE.Mesh(new THREE.PlaneGeometry(w, w/4), new THREE.MeshBasicMaterial({map:t, transparent:true, depthWrite:false})); m.renderOrder=2; return m;
 }
-/* posé loin du plan de travail, derrière lui, toujours au même endroit (il ne suit pas les pièces) */
+/* un objet repère avec sa plaque et son ombre : centré en X, son devant à y = 0, la plaque devant lui (y < 0) */
+function refItem(k){
+  let o=REF.objs[k]; if(o) return o;
+  const obj=refBuild[k](); refGrey(obj); obj.updateMatrixWorld(true); const ob=new THREE.Box3().setFromObject(obj), ow=ob.max.x-ob.min.x, od=ob.max.y-ob.min.y;
+  obj.position.set(-(ob.max.x+ob.min.x)/2, -ob.min.y, 0);
+  const pw=Math.max(ow, 70), ph=pw/4, pl=refPlaque(k, pw); pl.position.set(0, -ph/2-0.12*ph, 0.2);
+  const big=Math.max(ow,od), sh=new THREE.Mesh(new THREE.CircleGeometry(0.62*big,48), new THREE.MeshBasicMaterial({color:0x000000, transparent:true, opacity:.1, depthWrite:false}));
+  sh.scale.y=od/big; sh.position.set(0, od/2, 0.1);   // ombre au sol : l'objet est posé, pas en l'air
+  o=REF.objs[k]=new THREE.Group(); o.add(obj, pl, sh); o.userData={w:Math.max(ow,pw), front:ph*1.15};
+  o.traverse(m=>{ if(m.isMesh) m.userData.ref=true; }); REF.group.add(o); return o;
+}
+/* la série de trois repères, loin derrière le plan de travail, rangés du plus petit au plus grand ;
+   toujours au même endroit pour une série donnée (ne suit pas les pièces) */
 function refUpdate(){
   const mode=prefs.ref||'auto', show= mode!=='aucun' && ws==='model' && $('#sk').hidden;
   const b=partsBox(), D= b.isEmpty()? 50 : Math.max(b.max.x-b.min.x, b.max.y-b.min.y, b.max.z-b.min.z);
-  const k= !show? null : mode==='auto'? refAuto(D) : mode;
+  const k= !show? null : (mode==='auto' || !REFS[mode])? refAuto(D) : mode;
   REF.group.visible=!!k; REF.kind=k; if(!k) return;
-  for(const [kk,o] of Object.entries(REF.objs)) o.visible= kk===k;
-  let o=REF.objs[k];
-  if(!o){ const obj=refBuild[k](); refGrey(obj); obj.traverse(m=>{ if(m.isMesh) m.userData.ref=true; });
-    obj.updateMatrixWorld(true); const ob=new THREE.Box3().setFromObject(obj), dim=REFS[k].dim, gap=Math.max(40, 0.3*dim), w=Math.max(ob.max.x-ob.min.x, 90);
-    obj.position.set(-(ob.max.x+ob.min.x)/2, MAT/2+gap-ob.min.y, 0);   // centré en X, derrière le plan de travail
-    const pl=refPlaque(k, w); pl.position.set(0, MAT/2+gap*0.45, 0.2); pl.userData.ref=true;
-    const sh=new THREE.Mesh(new THREE.CircleGeometry(0.62*Math.max(ob.max.x-ob.min.x, ob.max.y-ob.min.y),48), new THREE.MeshBasicMaterial({color:0x000000, transparent:true, opacity:.1, depthWrite:false}));
-    sh.scale.y=(ob.max.y-ob.min.y)/Math.max(ob.max.x-ob.min.x, ob.max.y-ob.min.y); sh.position.set(0, MAT/2+gap+(ob.max.y-ob.min.y)/2, 0.1); sh.userData.ref=true;   // ombre au sol : l'objet est posé, pas en l'air
-    o=REF.objs[k]=new THREE.Group(); o.add(obj, pl, sh); REF.group.add(o); }
+  const ser=refSeries(k); REF.series=ser;
+  for(const [kk,o] of Object.entries(REF.objs)) o.visible= ser.includes(kk);
+  const items=ser.map(refItem), gaps=items.slice(1).map((o,i)=>0.3*Math.max(o.userData.w, items[i].userData.w));
+  const total=items.reduce((s,o)=>s+o.userData.w,0)+gaps.reduce((s,g)=>s+g,0), y0=MAT/2+30+Math.max(...items.map(o=>o.userData.front));
+  let x=-total/2; items.forEach((o,i)=>{ o.visible=true; o.position.set(x+o.userData.w/2, y0, 0); x+=o.userData.w+(gaps[i]||0); });
 }
 function refTick(){}   // le texte est maintenant une plaque au sol (refPlaque)
 function setRef(mode){
   prefs.ref=mode; savePrefs(); refUpdate(); closeRefMenu();
-  if(mode!=='aucun' && mode!=='auto' && REF.group.visible){ const b=partsBox().union(new THREE.Box3().setFromObject(REF.group)); frameBox(b, 30); }   // un objet choisi à la main : on le montre avec les pièces
-  const R=REFS[REF.kind]; toast(mode==='aucun'? 'Repère d’échelle masqué.' : `Repère d’échelle : ${R? R.name.toLowerCase()+' ('+R.size+')' : ''}${mode==='auto'?' — choisi selon la taille des pièces':''}.`);
+  toast(mode==='aucun'? 'Repères d’échelle masqués.' : `Repères d’échelle : ${(REF.series||[]).map(k=>REFS[k].name.toLowerCase()).join(', ')}${mode==='auto'?' — choisis selon la taille des pièces':''}. Ils sont derrière le plan de travail.`, 3200);
 }
 function closeRefMenu(){ const m=$('#refMenu'); if(m) m.hidden=true; }
 function openRefMenu(btn){
   let m=$('#refMenu'); if(!m){ m=h('div',{id:'refMenu',class:'ctx',role:'menu','aria-label':'Repère d’échelle',hidden:true}); document.body.append(m); }   // hors de la vue : passe au-dessus des panneaux
   if(!m.hidden){ closeRefMenu(); return; }
   const cur=prefs.ref||'auto'; m.innerHTML='';
-  m.append(h('h5',{},'Repère d’échelle'));
-  for(const [k,l] of [['auto','Automatique (selon la taille)'], ...Object.entries(REFS).map(([k,R])=>[k,`${R.name} · ${R.size}`]), ['aucun','Aucun']])
+  m.append(h('h5',{},'Repères d’échelle (3 objets)'));
+  for(const [k,l] of [['auto','Automatique (selon la taille des pièces)'], ...REF_ORDER.map(k=>[k,`Autour de : ${REFS[k].name} · ${REFS[k].size}`]), ['aucun','Aucun']])
     m.append(h('button',{role:'menuitemradio','aria-checked':String(cur===k),onclick:()=>setRef(k)}, h('span',{},l)));
   m.hidden=false; const r=btn.getBoundingClientRect();
   m.style.left=clamp(r.left-m.offsetWidth-6, 4, innerWidth-m.offsetWidth-4)+'px'; m.style.top=clamp(r.top, 4, innerHeight-m.offsetHeight-4)+'px';

@@ -88,9 +88,12 @@ button{cursor:pointer}
 .rack-row{display:flex;flex-direction:row;align-items:stretch;gap:2px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;min-height:60px}
 #toolbar{grid-area:tools;display:flex;justify-content:center;padding:0 8px;background:transparent!important;border:0!important;pointer-events:none;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 /* barre d'édition centrée, bords obliques \ … / (trapèze plus large en haut) */
-.ed-wrap{pointer-events:auto;max-width:100%;filter:drop-shadow(0 0 .6px var(--ink-2)) drop-shadow(0 4px 8px rgba(20,40,32,.14))}
+.ed-wrap{pointer-events:auto;max-width:100%;filter:drop-shadow(0 4px 8px rgba(20,40,32,.18))}
+/* liseré blanc : un trapèze blanc un peu plus grand derrière la barre */
+.ed-rim{background:#fff;padding:0 2.5px 2.5px;clip-path:polygon(0 0,100% 0,calc(100% - 27px) 100%,27px 100%)}
 .ed-shape{display:flex;align-items:stretch;gap:10px;padding:3px 34px 4px;overflow-x:auto;scrollbar-width:none;
   background:color-mix(in srgb,var(--panel) var(--insp-a,94%),transparent);clip-path:polygon(0 0,100% 0,calc(100% - 26px) 100%,26px 100%)}
+html[data-theme="dark"] .ed-rim{background:#e8eeeb}
 #tools{display:flex;align-items:stretch;gap:8px}
 /* barre d'édition : boutons plus grands, rangés par famille, actifs selon la sélection */
 .ed-head{display:flex;flex-direction:column;justify-content:center;min-width:118px;padding:0 6px 0 2px;border-right:1px solid var(--line)}
@@ -249,7 +252,8 @@ html[data-level="2"] [data-max="1"], html[data-level="3"] [data-max="1"], html[d
 .lvl .s,.lvl .m{display:none}
 @media (max-width: 1600px){ .lvl .l{display:none} .lvl .m{display:inline} .lvl button{padding:5px 7px} #projName{width:130px} .brand span{display:none} }
 @media (max-width: 1500px){ .flow .btn:not(.primary) > span:not(.flow-b){display:none} .flow-t b{display:none} #top{gap:6px} .tb-sep{display:none} }
-.menu.look{left:auto;right:0;min-width:280px;padding:12px;gap:12px}
+.menu.look{left:auto;right:0;min-width:300px;padding:12px;gap:12px;max-height:calc(100vh - 70px);overflow-y:auto}
+.look-rend{display:flex;flex-direction:column;gap:6px} .look-rend h4{margin:4px 0 0!important} .look-rend .seg .btn{flex:1;justify-content:center;padding:5px 6px;font-size:12.5px}
 .look h4{margin:0 0 6px;font-family:var(--f-display);font-weight:600;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
 .look .seg{display:flex}
 .look .seg .btn{flex:1;justify-content:center;padding:6px 8px}
@@ -265,6 +269,16 @@ html[data-level="3"] #app.with-tree #outliner{display:flex}
 .tree-head>svg{width:18px;height:18px;color:var(--accent)}
 .tree-head b{flex:1;font-family:var(--f-display);font-weight:600;font-size:15px}
 #treeClose{display:none}
+/* arborescence : réduite en rail (treeMin) ou flottante, déplacée par son en-tête (LAYOUT.tree) */
+.tree-head{cursor:grab;touch-action:none;user-select:none}
+.tree-grip{margin-left:-6px}
+.tree-tool svg{width:16px;height:16px} #treeMin svg{transform:rotate(-90deg)} #treeDock{display:none}
+#app.tree-min #outliner{width:46px} #app.tree-min #outliner .tree-mode,#app.tree-min #outliner .tree-count,#app.tree-min #treeBody,#app.tree-min #outliner .tree-head b,#app.tree-min .tree-grip{display:none}
+#app.tree-min .tree-head{flex-direction:column;padding:10px 4px;gap:6px} #app.tree-min #treeMin svg{transform:rotate(90deg)}
+#app.tree-float #outliner{position:absolute;z-index:32;height:min(560px,calc(100% - 140px));border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+#app.tree-float #treeDock{display:inline-flex}
+#app.tree-float.tree-min #outliner{width:260px;height:auto} #app.tree-float.tree-min .tree-head{flex-direction:row;padding:8px 8px 8px 12px} #app.tree-float.tree-min .tree-head b,#app.tree-float.tree-min .tree-grip{display:inline-flex}
+#outliner.dragging{opacity:.92}
 .tree-mode{margin:0 12px;display:flex}
 .tree-mode .btn{flex:1;justify-content:center;padding:5px 6px;font-size:12.5px}
 .tree-mode .btn.on{background:var(--accent-soft);color:var(--ink)}

@@ -40,10 +40,12 @@
   <nav id="rack" data-ws="model" aria-label="Créer">
     <div class="rack-tabs" role="tablist" aria-label="Créer">
       <button role="tab" class="rack-tab" data-rtab="vol" aria-selected="true" title="Volumes simples à poser sur le plan de travail"><svg data-i="cube"></svg><span>Volumes</span></button>
+      <button role="tab" class="rack-tab" data-rtab="meca" data-min="3" aria-selected="false" title="Pièces de mécanique : roues dentées et crémaillère"><svg data-i="meca"></svg><span>Création mécanique</span></button>
       <button role="tab" class="rack-tab" data-rtab="sim" aria-selected="false" title="Contrôler les pièces, puis simuler le mouvement ou la déformation"><svg data-i="pivot"></svg><span id="simTabLbl">Simulation mécanique</span></button>
     </div>
     <div class="rack-row">
       <div id="rackBasic" class="rack-pane" data-rpane="vol" role="tabpanel" aria-label="Volumes"></div>
+      <div id="rackMeca" class="rack-pane" data-rpane="meca" role="tabpanel" aria-label="Création mécanique" hidden></div>
       <div id="rackSim" class="rack-pane" data-rpane="sim" role="tabpanel" aria-label="Simulation" hidden></div>
       <div class="rack-title rack-sk" data-min="2">Esquisse</div>
       <button class="shape sk-tool" data-min="2" id="bSketch" data-sktool="sketch" title="Nouvelle esquisse : choisir le plan, puis dessiner et coter"><svg data-i="k_sketch"></svg>Esquisse</button>
@@ -54,7 +56,7 @@
       <button class="rackmin-btn" id="rackMin" title="Réduire la barre des formes" aria-label="Réduire la barre des formes"><svg data-i="chevUp"></svg></button>
     </div>
   </nav>
-  <nav id="toolbar" data-ws="model" aria-label="Édition de la sélection"><div class="ed-wrap"><div class="ed-shape">
+  <nav id="toolbar" data-ws="model" aria-label="Édition de la sélection"><div class="ed-wrap"><div class="ed-rim"><div class="ed-shape">
     <div class="ed-head"><b>Édition</b><small id="edSel">Rien de choisi</small></div>
     <div id="tools" data-ws="model" role="toolbar" aria-label="Outils d’édition">
       <div class="ed-grp"><div class="ed-btns">
@@ -71,11 +73,14 @@
         <button class="btn tool danger" id="tDel" title="Supprimer (Suppr)"><svg data-i="trash"></svg><span>Supprimer</span></button>
       </div><small>Pièce</small></div>
     </div>
-  </div></div>
+  </div></div></div>
   </nav>
 
   <aside id="outliner" data-ws="model check mech" aria-label="Arborescence">
-    <div class="tree-head"><svg data-i="tree"></svg><b>Arborescence</b><button class="btn icon ghost" id="treeClose" title="Fermer l’arborescence" aria-label="Fermer l’arborescence"><svg data-i="close"></svg></button></div>
+    <div class="tree-head" title="Glisser pour déplacer l’arborescence"><span class="pgrip tree-grip"><svg data-i="dots"></svg></span><svg data-i="tree"></svg><b>Arborescence</b>
+      <button class="btn icon ghost tree-tool" id="treeDock" title="Remettre l’arborescence à gauche" aria-label="Remettre l’arborescence à sa place"><svg data-i="reset"></svg></button>
+      <button class="btn icon ghost tree-tool" id="treeMin" title="Réduire l’arborescence" aria-label="Réduire l’arborescence"><svg data-i="chevUp"></svg></button>
+      <button class="btn icon ghost" id="treeClose" title="Fermer l’arborescence" aria-label="Fermer l’arborescence"><svg data-i="close"></svg></button></div>
     <div class="seg tree-mode" id="treeMode"><button class="btn" data-mode="parts">Pièces</button><button class="btn" data-mode="kin">Liaisons</button></div>
     <div class="tree-count" id="treeCount"></div>
     <div id="treeBody" role="tree" aria-label="Objets de la scène"></div>

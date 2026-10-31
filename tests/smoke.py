@@ -48,7 +48,7 @@ with sync_playwright() as p:
     check('arborescence à gauche, propriétés à droite sous le cube de vue', r == [True, True], r)
     r = pg.evaluate("()=>{const d=document.querySelector('#demo').getBoundingClientRect(), o=document.querySelector('#outliner').getBoundingClientRect(); return [!document.querySelector('#demo').hidden, d.left>=o.right-1 && d.left<o.right+40, document.querySelector('#demo').parentElement.id]}")
     check('guide à gauche de la vue, à droite de l’arborescence', r == [True, True, 'stage'], r)
-    check('barre de création à onglets en haut (Volumes, Simulation), roues dentées avec les volumes ; menu Fichier', pg.locator('#rack [data-rtab]').count() == 2 and pg.locator('#rackBasic .shape', has_text='Roue dentée').count() == 1 and pg.is_hidden('#bNew') and pg.locator('#bTree').count() == 0 and pg.evaluate("()=>{const t=document.querySelector('.rack-tabs').getBoundingClientRect(), r=document.querySelector('.rack-row').getBoundingClientRect(); return t.bottom<=r.top+1}"))
+    check('barre de création à onglets en haut (Volumes, Simulation), roues dentées avec les volumes ; menu Fichier', pg.locator('#rack [data-rtab]').count() == 3 and pg.locator('#rackMeca .shape', has_text='Roue dentée').count() == 1 and pg.locator('#rackBasic .shape', has_text='Roue dentée').count() == 0 and pg.is_hidden('#bNew') and pg.locator('#bTree').count() == 0 and pg.evaluate("()=>{const t=document.querySelector('.rack-tabs').getBoundingClientRect(), r=document.querySelector('.rack-row').getBoundingClientRect(); return t.bottom<=r.top+1}"))
     pg.click('#bFile'); pg.wait_for_timeout(100)
     r = pg.evaluate("()=>[!document.querySelector('#menuFile').hidden, [...document.querySelectorAll('#menuFile button')].map(b=>b.id).join(',')]")
     pg.click('#bFile'); pg.wait_for_timeout(100)
@@ -538,6 +538,21 @@ with sync_playwright() as p:
     check('barre d’édition : sélection résumée, gros boutons actifs selon la sélection', r[0] == '2 pièces choisies' and r[1] is False and r[2] >= 44 and r[3] >= 26, r)
     pg.evaluate(f"()=>{E}.setSel([])")
 
+    # Options de rendu : arêtes, fil de fer, rayons X, ombres, éclairage
+    pg.evaluate(f"()=>{E}.loadExample('maison')"); pg.wait_for_timeout(400)
+    pg.click('#bLook'); pg.wait_for_timeout(100)
+    pg.locator('#menuLook .look-rend button', has_text='Fil de fer').click(); pg.wait_for_timeout(100)
+    a = pg.evaluate(f"()=>[...{E}.meshes.values()].every(r=>r.mesh.material.wireframe)")
+    pg.locator('#menuLook .look-rend button', has_text='Arêtes').click(); pg.wait_for_timeout(100)
+    bb_ = pg.evaluate(f"()=>[...{E}.meshes.values()].every(r=>r.line && r.line.material==={E}.edgeLineMat && !r.mesh.material.wireframe)")
+    pg.locator('#menuLook .look-rend button', has_text='Rayons X').click(); pg.wait_for_timeout(100)
+    c = pg.evaluate(f"()=>[...{E}.meshes.values()].every(r=>r.mesh.material.transparent && r.mesh.material.opacity<0.5)")
+    pg.locator('#menuLook .look-rend button', has_text='Avec').click(); pg.locator('#menuLook .look-rend button', has_text='Contrasté').click(); pg.wait_for_timeout(300)
+    d = pg.evaluate(f"()=>[{E}.renderer.shadowMap.enabled, [...{E}.meshes.values()].every(r=>r.mesh.castShadow), {E}.prefs.light]")
+    pg.screenshot(path=os.path.join(OUT, 'rendu.png'))
+    pg.locator('#menuLook .look-rend button', has_text='Plein').click(); pg.locator('#menuLook .look-rend button', has_text='Sans').click(); pg.locator('#menuLook .look-rend button', has_text='Atelier').click(); pg.click('#bLook')
+    check('rendu : fil de fer, arêtes, rayons X, ombres et éclairage', a and bb_ and c and d == [True, True, 'contraste'], [a, bb_, c, d])
+
     # Perçage hachuré, Guide : tuto pas à pas et consignes du TP
     pg.evaluate("()=>document.querySelector('#bNew').click()"); pg.wait_for_timeout(200)
     r = pg.evaluate(f"()=>{{const E={E}; const c=E.addPart('cylinder'); c.hole=true; E.setSel([]); const m=E.meshes.get(c.id).mesh.material; return [!!m.defines && 'HATCH' in m.defines, m.transparent]}}")
@@ -556,6 +571,24 @@ with sync_playwright() as p:
     check('consignes du TP en pas à pas, cochées et enregistrées avec le projet', r == [3, True, 1, 3] and 'null' not in pg.inner_text('#demo'), r)
     pg.screenshot(path=os.path.join(OUT, 'guide-tp.png'))
 
+    # Onglet Création mécanique, cube de vue remonté, liseré de la languette
+    pg.evaluate(f"()=>{E}.setWs('model')"); pg.click('#rack [data-rtab="meca"]'); pg.wait_for_timeout(100)
+    r = pg.evaluate("()=>[document.querySelector('#rackMeca').hidden, document.querySelectorAll('#rackMeca .shape').length, document.querySelector('#rackBasic').hidden]")
+    pg.click('#rack [data-rtab="vol"]')
+    check('onglet « Création mécanique » : roue dentée et crémaillère', r == [False, 2, True], r)
+    r = pg.evaluate("()=>{const v=document.querySelector('#views').getBoundingClientRect(), k=document.querySelector('#rack').getBoundingClientRect(), t=document.querySelector('#toolbar').getBoundingClientRect(); return [v.top < t.bottom, v.top >= k.bottom-1, getComputedStyle(document.querySelector('.ed-rim')).backgroundColor]}")
+    check('cube de vue juste sous la barre de création ; languette liserée de blanc', r[0] and r[1] and r[2] in ('rgb(255, 255, 255)','rgb(232, 238, 235)'), r)
+    # Arborescence : réduire, déplacer, remettre
+    pg.evaluate(f"()=>{E}.LAYOUT().tree=null"); 
+    w0 = pg.evaluate("()=>document.querySelector('#outliner').getBoundingClientRect().width")
+    pg.click('#treeMin'); pg.wait_for_timeout(200)
+    w1 = pg.evaluate("()=>[document.querySelector('#outliner').getBoundingClientRect().width, getComputedStyle(document.querySelector('#treeBody')).display]")
+    pg.click('#treeMin'); pg.wait_for_timeout(200)
+    hb = pg.locator('#outliner .tree-head b').bounding_box(); pg.mouse.move(hb['x']+10, hb['y']+8); pg.mouse.down(); pg.mouse.move(hb['x']+400, hb['y']+120, steps=8); pg.mouse.up(); pg.wait_for_timeout(300)
+    r = pg.evaluate(f"()=>{{const o=document.querySelector('#outliner').getBoundingClientRect(), s=document.querySelector('#stage').getBoundingClientRect(); return [document.querySelector('#app').classList.contains('tree-float'), o.left>300, s.left<5, !!{E}.LAYOUT().tree]}}")
+    pg.click('#treeDock'); pg.wait_for_timeout(300)
+    r2 = pg.evaluate("()=>[document.querySelector('#app').classList.contains('tree-float'), document.querySelector('#outliner').getBoundingClientRect().left]")
+    check('arborescence : réduite en rail, déplacée sur la vue, remise à gauche', w0 > 200 and w1[0] < 60 and w1[1] == 'none' and r == [True, True, True, True] and r2 == [False, 0], [w0, w1, r, r2])
     # Repères d'échelle
     pg.evaluate(f"()=>{E}.loadExample('maison')"); pg.wait_for_timeout(500)
     r = pg.evaluate(f"""()=>{{const E={E}; E.setRef('auto'); const b=new (E.camera.position.constructor)(); const B=E.state.parts.length;
@@ -563,8 +596,15 @@ with sync_playwright() as p:
       return [E.REF.kind===E.refAuto(D), E.REF.group.visible, [...E.meshes.values()].every(m=>!m.mesh.userData.ref), Math.abs(rb.min.z)<1];}}""")
     pg.wait_for_timeout(100); r.append(pg.evaluate(f"()=>{{const E={E}; const b=new (E.partsBox().constructor)().setFromObject(E.REF.group); return b.min.y>100 && E.REF.group.children.some(o=>o.visible && o.children.length===3)}}"))
     check('repère d’échelle automatique, loin derrière le plan de travail, avec sa plaque, hors des pièces', all(r), r)
-    r = pg.evaluate(f"()=>[{E}.refAuto(60), {E}.refAuto(300), {E}.refAuto(3000), {E}.refAuto(15000), {E}.refAuto(40000)]")
-    check('repère choisi selon la taille : pomme, canette, voiture, immeuble, avion', r == ['pomme','canette','voiture','immeuble','avion'], r)
+    r = pg.evaluate(f"()=>[{E}.refAuto(60), {E}.refAuto(300), {E}.refAuto(3000), {E}.refAuto(15000), {E}.refAuto(40000), {E}.refAuto(20), {E}.refAuto(1500)]")
+    check('repère choisi selon la taille : pièce, pomme, canette, personne, voiture, immeuble, avion', r == ['pomme','canette','voiture','immeuble','avion','piece','personne'], r)
+    r = pg.evaluate(f"""()=>{{const E={E}; E.setRef('pomme'); const vis=E.REF.group.children.filter(o=>o.visible); const xs=vis.map(o=>o.position.x).sort((a,b)=>a-b);
+      const sb=[...E.meshes.values()].reduce((b,r)=>b.union(new (E.partsBox().constructor)().setFromObject(r.mesh)), new (E.partsBox().constructor)());
+      E.setRef('auto'); return [E.refSeries('pomme').join(','), vis.length, xs[0]<xs[1] && xs[1]<xs[2]];}}""")
+    check('série de trois repères côte à côte (pièce, pomme, canette)', r == ['piece,pomme,canette', 3, True], r)
+    pg.click('#views [data-view=fit]'); pg.wait_for_timeout(600)
+    r = pg.evaluate(f"()=>{{const E={E}, c=E.cam(), pb=E.partsBox(); return c.position.distanceTo(E.orbit_().target) < 3*pb.getSize(new (c.position.constructor)()).length() + 60}}")
+    check('« Tout voir » cadre les pièces seules, sans les repères d’échelle', r)
     pg.click('#refBtn'); pg.wait_for_timeout(100); pg.locator('#refMenu button', has_text='Voiture').click(); pg.wait_for_timeout(300)
     r = pg.evaluate(f"()=>[{E}.REF.kind, {E}.prefs.ref, {E}.stlBinary([...{E}.meshes.values()]).length]")
     check('menu du repère : voiture choisie, l’export STL ne la contient pas', r[0] == 'voiture' and r[1] == 'voiture', r)

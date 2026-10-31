@@ -19,7 +19,7 @@ orbit.target.set(0,0,10); orbit.enableDamping=true; orbit.dampingFactor=0.14;
 orbit.mouseButtons={LEFT:THREE.MOUSE.ROTATE, MIDDLE:THREE.MOUSE.PAN, RIGHT:THREE.MOUSE.PAN};
 orbit.screenSpacePanning=true;
 
-scene.add(new THREE.HemisphereLight(0xffffff, 0x8a9690, 1.5));
+const hemi=new THREE.HemisphereLight(0xffffff, 0x8a9690, 1.5); scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xffffff, 1.7); sun.position.set(90,-120,260); scene.add(sun);
 const fill=new THREE.DirectionalLight(0xffffff, 0.55); fill.position.set(-160,140,90); scene.add(fill);
 
@@ -175,12 +175,32 @@ function addPart(kind, at=null, extra={}){
    Scene sync
    ========================================================= */
 const edgeCache=new WeakMap();
-function edgesOf(g, boxOnly=false){ let e=edgeCache.get(g); if(!e){
+const boxEdgeCache=new WeakMap();
+function edgesOf(g, boxOnly=false){ const cache= boxOnly? boxEdgeCache : edgeCache; let e=cache.get(g); if(!e){
   if(boxOnly){ const b=g.boundingBox, n=b.min, x=b.max; const v=[[n.x,n.y,n.z],[x.x,n.y,n.z],[x.x,x.y,n.z],[n.x,x.y,n.z],[n.x,n.y,x.z],[x.x,n.y,x.z],[x.x,x.y,x.z],[n.x,x.y,x.z]];
     const E=[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]]; e=new THREE.BufferGeometry(); e.setAttribute('position',new THREE.Float32BufferAttribute(E.flatMap(([a,c])=>[...v[a],...v[c]]),3)); }
   else e=new THREE.EdgesGeometry(g, 28);
-  edgeCache.set(g,e);} return e; }
+  cache.set(g,e);} return e; }
 const selLineMat=new THREE.LineBasicMaterial({color:0xdf9a00, depthTest:true});
+const edgeLineMat=new THREE.LineBasicMaterial({color:0x1b2421, transparent:true, opacity:.8});
+/* ---- options de rendu (Apparence) : éclairage, ombres, affichage des pièces */
+const LIGHTS={studio:{name:'Atelier', h:1.5, s:1.7, f:.55}, doux:{name:'Doux', h:2.2, s:.9, f:.75}, contraste:{name:'Contrasté', h:.7, s:2.6, f:.18}, soleil:{name:'Soleil', h:1.1, s:2.4, f:.35, warm:true}};
+const RMODES=[['plein','Plein'],['aretes','Arêtes'],['filaire','Fil de fer'],['xray','Rayons X']];
+scene.add(sun.target);
+function applyRender(){
+  const L=LIGHTS[prefs.light]||LIGHTS.studio; hemi.intensity=L.h; sun.intensity=L.s; fill.intensity=L.f; sun.color.set(L.warm? 0xfff1d6 : 0xffffff);
+  const on=!!prefs.shadows; if(renderer.shadowMap.enabled!==on){ renderer.shadowMap.enabled=on; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+    sun.castShadow=on; sun.shadow.mapSize.set(2048,2048); sun.shadow.bias=-0.0004; sun.shadow.normalBias=0.4; mat.receiveShadow=on;
+    for(const r of meshes.values()) r.mesh.material.needsUpdate=true; mat.material.needsUpdate=true; }
+  sync();
+}
+/* la lumière qui fait les ombres suit les pièces : sa caméra d'ombre les englobe juste */
+function fitShadow(){
+  if(!prefs.shadows) return; const b=new THREE.Box3(); for(const r of meshes.values()) if(r.mesh.visible) b.union(new THREE.Box3().setFromObject(r.mesh));
+  if(b.isEmpty()) b.set(new THREE.Vector3(-MAT/2,-MAT/2,0), new THREE.Vector3(MAT/2,MAT/2,10));
+  const c=b.getCenter(new THREE.Vector3()), R=Math.max(30, b.getSize(new THREE.Vector3()).length()*0.6), d=new THREE.Vector3(90,-120,260).normalize();
+  sun.target.position.copy(c); sun.position.copy(c).addScaledVector(d, R*3); const sc=sun.shadow.camera;
+  sc.left=sc.bottom=-R*1.25; sc.right=sc.top=R*1.25; sc.near=R*0.5; sc.far=R*6; sc.updateProjectionMatrix(); }
 /* Perçages : pièce transparente barrée de hachures obliques fixées à l'écran (toujours face à la caméra).
    Même matériau que les solides ; la définition HATCH ajoute les hachures à la fin du rendu. */
 const HATCH={s:{value:9}, w:{value:1.7}, c:{value:new THREE.Color(0x37413e)}};
@@ -218,8 +238,13 @@ function sync(){
     else { mt.color.set(p.color); mt.transparent=false; mt.opacity=1; mt.depthWrite=true; }
     mt.emissive.set(sel? markCol : '#000000'); mt.emissiveIntensity= sel? .16:0;
     r.mesh.renderOrder = p.hole? 2:0;
-    const wantLine = sel || p.hole;
-    if(wantLine){ if(!r.line){ r.line=new THREE.LineSegments(edgesOf(r.mesh.geometry, p.kind==='group'), selLineMat); r.mesh.add(r.line); } r.line.material= sel? selLineMat : holeLineMat; }
+    // rendu choisi dans Apparence : fil de fer, arêtes, rayons X ; ombres
+    const RM=prefs.rmode||'plein'; mt.wireframe= RM==='filaire';
+    if(RM==='xray' && !p.hole){ mt.transparent=true; mt.opacity=.32; mt.depthWrite=false; }
+    r.mesh.castShadow=r.mesh.receiveShadow= !!prefs.shadows && !p.hole;
+    const wantLine = sel || p.hole || RM==='aretes' || RM==='xray', full= RM==='aretes' || RM==='xray' || p.kind!=='group';
+    if(wantLine){ if(!r.line || r.lineFull!==full || r.line.geometry!==edgesOf(r.mesh.geometry, !full)){ if(r.line) r.mesh.remove(r.line); r.line=new THREE.LineSegments(edgesOf(r.mesh.geometry, !full), selLineMat); r.lineFull=full; r.mesh.add(r.line); }
+      r.line.material= sel? selLineMat : p.hole? holeLineMat : edgeLineMat; }
     else if(r.line){ r.mesh.remove(r.line); r.line=null; }
     r.mesh.visible=!isHidden(p) && ws!=='struct' && !(state.edit && ws==='model' && p.inGroup!==state.edit.gid);   // mode édition de groupe : seules ses pièces restent affichées
     if(!simActive()){ partMatrix(p, r.mesh.matrix); r.mesh.matrix.decompose(r.mesh.position, r.mesh.quaternion, r.mesh.scale); }
@@ -228,7 +253,7 @@ function sync(){
   if(simActive()) applyPoses();
   updateGizmo(); updateMarkers(); updateToolButtons();
   rebuildLocators(); updateSteps();
-  renderOutliner(); if(REF_ON) refUpdate();
+  renderOutliner(); if(REF_ON) refUpdate(); fitShadow();
 }
 function updateGizmo(){
   if(ws!=='model' || !selection.length || !GZ.mode || simLocked() || pickMode || selParts().some(isLocked) || (GZ.mode==='scale' && selParts().some(p=>!SCALE_MAP[p.kind]))){ tc.detach(); return; }
@@ -515,7 +540,7 @@ function updateToolButtons(){
 /* =========================================================
    Camera
    ========================================================= */
-function sceneBox(){ const b=new THREE.Box3(); for(const r of meshes.values()) b.union(new THREE.Box3().setFromObject(r.mesh)); if(REF_ON && REF.group.visible && meshes.size) b.union(new THREE.Box3().setFromObject(REF.group));   /* « tout voir » montre aussi le repère d'échelle */ if(b.isEmpty()) b.set(new THREE.Vector3(-40,-40,0), new THREE.Vector3(40,40,20)); return b; }
+function sceneBox(){ const b=new THREE.Box3(); for(const r of meshes.values()) b.union(new THREE.Box3().setFromObject(r.mesh)); if(b.isEmpty()) b.set(new THREE.Vector3(-40,-40,0), new THREE.Vector3(40,40,20)); return b; }
 function setView(kind){
   const b = kind==='fit'||!selection.length ? sceneBox() : selBox();
   const c=new THREE.Vector3(); b.getCenter(c); const s=new THREE.Vector3(); b.getSize(s);

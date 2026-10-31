@@ -45,12 +45,16 @@ function initPanels(){
   $('#insp .insp-head').addEventListener('pointerdown', startInspDrag);
   $('#inspMin').onclick=()=>{ LAYOUT.inspMin=!LAYOUT.inspMin; saveLayout(); applyDock(); };
   $('#rackMin').onclick=()=>{ LAYOUT.rackMin=!LAYOUT.rackMin; saveLayout(); applyDock(); };
+  $('#treeMin').onclick=()=>{ LAYOUT.treeMin=!LAYOUT.treeMin; saveLayout(); treeChanged(); };
+  $('#treeDock').onclick=()=>{ delete LAYOUT.tree; saveLayout(); treeChanged(); };
+  $('#outliner .tree-head').addEventListener('pointerdown', startTreeDrag);
   applyDock();
   new ResizeObserver(()=>updateOverlay()).observe($('#insp')); WIDE.addEventListener('change', updateOverlay);
   new ResizeObserver(()=>{ for(const [id] of FLOATS) if(LAYOUT[id]?.x!=null) applyLayout(id); if(movedDemo()) applyLayout('demo'); if(ws==='mech') layoutJointGroup(); updateOverlay(); placeInsp(); }).observe($('#stage'));
 }
 function applyDock(){
   const app=$('#app'); app.classList.toggle('insp-min', !!LAYOUT.inspMin); app.classList.toggle('rack-min', !!LAYOUT.rackMin);
+  applyTree();
   updateOverlay();
   $('#inspMin').title= LAYOUT.inspMin? 'Agrandir le panneau' : 'Réduire le panneau';
   placeInsp();
@@ -58,8 +62,15 @@ function applyDock(){
 }
 /* ---- the properties panel floats over the view: by default under the view cube, on the right.
    Its header drags it (LAYOUT.insp, in #app coordinates); the arrow folds it; the round arrow puts it back. */
+/* le cube de vue remonte juste sous la barre de création, à droite de la languette d'édition (si la place le permet) */
+function placeViews(){
+  const v=$('#views'); if(!v) return; if(!WIDE.matches || LAYOUT.views?.x!=null){ if(LAYOUT.views?.x==null) v.style.top=''; return; }
+  const tb=$('#toolbar'), th= tb && tb.offsetParent? tb.offsetHeight : 0; if(!th){ v.style.top=''; return; }
+  const ed=$('.ed-wrap')?.getBoundingClientRect(), st=$('#stage').getBoundingClientRect(), left=st.right-10-v.offsetWidth;
+  v.style.top= (ed && ed.right+8<left)? (4-th)+'px' : '';
+}
 function placeInsp(){
-  const el=$('#insp'); if(!el) return;
+  const el=$('#insp'); if(!el) return; placeViews();
   if(!WIDE.matches){ for(const k of ['left','top','maxHeight']) el.style[k]=''; return; }
   const app=$('#app').getBoundingClientRect(), st=$('#stage').getBoundingClientRect(), w=el.offsetWidth||300, L=LAYOUT.insp; let x, y;
   if(L && L.x!=null){ x=L.x; y=L.y; }
@@ -73,6 +84,23 @@ function startInspDrag(e){
   const el=$('#insp'), r=el.getBoundingClientRect(), a=$('#app').getBoundingClientRect(), ox=e.clientX-r.left, oy=e.clientY-r.top; el.classList.add('dragging');
   const mv=ev=>{ LAYOUT.insp={x:ev.clientX-a.left-ox, y:ev.clientY-a.top-oy}; placeInsp(); };
   const up=()=>{ window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up); el.classList.remove('dragging'); const rr=el.getBoundingClientRect(); LAYOUT.insp={x:Math.round(rr.left-a.left), y:Math.round(rr.top-a.top)}; saveLayout(); applyViewOffset(); };
+  window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up);
+}
+/* ---- arborescence : réduire (rail étroit), déplacer (flottante au-dessus de la vue), remettre à gauche */
+function applyTree(){
+  const app=$('#app'), el=$('#outliner'); if(!el) return; const L=LAYOUT.tree, fl= WIDE.matches && L && L.x!=null;
+  app.classList.toggle('tree-min', !!LAYOUT.treeMin); app.classList.toggle('tree-float', !!fl);
+  if(fl){ const a=app.getBoundingClientRect(); el.style.left=clamp(L.x,0,Math.max(0,a.width-80))+'px'; el.style.top=clamp(L.y,0,Math.max(0,a.height-60))+'px'; }
+  else { el.style.left=''; el.style.top=''; }
+  $('#treeMin').title= LAYOUT.treeMin? 'Agrandir l’arborescence' : 'Réduire l’arborescence';
+}
+function treeChanged(){ applyTree(); requestAnimationFrame(()=>{ updateOverlay(); placeInsp(); applyViewOffset(); placeDemo(); }); }
+function startTreeDrag(e){
+  if(e.button!==0 || e.target.closest('button') || !WIDE.matches) return; e.preventDefault();
+  const el=$('#outliner'), r=el.getBoundingClientRect(), a=$('#app').getBoundingClientRect(), ox=e.clientX-r.left, oy=e.clientY-r.top; let moved=false;
+  const mv=ev=>{ if(!moved && Math.hypot(ev.clientX-e.clientX, ev.clientY-e.clientY)<4) return; moved=true; el.classList.add('dragging');
+    LAYOUT.tree={x:Math.round(ev.clientX-a.left-ox), y:Math.round(ev.clientY-a.top-oy)}; applyTree(); };
+  const up=()=>{ window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up); el.classList.remove('dragging'); if(moved){ saveLayout(); treeChanged(); } };
   window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up);
 }
 /* width kept free on the right of the view for the properties panel when it sits at its place */
