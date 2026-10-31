@@ -8,7 +8,7 @@
 const PROG_KEY='etabli3d.progress';
 const PROG=(()=>{ let p={}; try{ p=JSON.parse(localStorage.getItem(PROG_KEY)||'{}')||{}; }catch(e){} return {done:p.done||{}, seen:p.seen||{}, part:p.part||{}}; })();
 function saveProg(){ try{ localStorage.setItem(PROG_KEY, JSON.stringify(PROG)); }catch(e){} }
-function markDone(id){ if(PROG.done[id]) return false; PROG.done[id]=Date.now(); saveProg(); return true; }
+function markDone(id){ if(PROG.done[id]) return false; PROG.done[id]=Date.now(); saveProg(); czProgres(id); return true; }
 function resetProgress(){ PROG.done={}; PROG.seen={}; PROG.part={}; saveProg(); }
 
 const skOpen=()=> !$('#sk').hidden;

@@ -13,7 +13,7 @@ import json, os, shutil, sys
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, 'src')
 DIST = os.path.join(ROOT, 'dist')
-JS_ORDER = ['core.js', 'prefs.js', 'scene.js', 'ui.js', 'sketch.js', 'validate.js', 'struct.js', 'examples.js', 'lessons.js', 'guide.js', 'outliner.js', 'bubble.js', 'workspace.js', 'panels.js', 'hover.js', 'gizmo.js', 'viewcube.js', 'refs.js', 'planes.js', 'bridge.js', 'init.js']
+JS_ORDER = ['core.js', 'prefs.js', 'scene.js', 'ui.js', 'sketch.js', 'validate.js', 'struct.js', 'examples.js', 'lessons.js', 'guide.js', 'outliner.js', 'bubble.js', 'workspace.js', 'panels.js', 'hover.js', 'gizmo.js', 'viewcube.js', 'refs.js', 'planes.js', 'bridge.js', 'init.js', 'centrale.js']
 
 # Pinned library versions (loaded through an import map).
 THREE = '0.180.0'
@@ -82,4 +82,6 @@ if __name__ == '__main__':
         write('index.html', full_page(CDN))
         # la passerelle est publiée à côté de l'application (manifeste, schéma, page d'essai du centralisateur)
         shutil.copytree(PASS, os.path.join(DIST, 'passerelle'), dirs_exist_ok=True)
+        # descripteur lu par la Centrale élèves (format passerelle.atelier), à la racine du site
+        shutil.copy(os.path.join(ROOT, 'centrale.json'), os.path.join(DIST, 'centrale.json'))
         write('artifact.html', read('head.html') + read('body.html') + script(CDN))
