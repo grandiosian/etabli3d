@@ -108,13 +108,25 @@ button{cursor:pointer}
 .ed-wing[data-side="R"] > :is(.float.docked,.dock-ghost){clip-path:polygon(26px 0,100% 0,calc(100% - 26px) 100%,0 100%)}
 /* deux panneaux du même côté : ils s'emboîtent, séparés par un liseré oblique */
 .ed-wing > :is(.float.docked,.dock-ghost,.dock-sp:not([hidden])) + :is(.float.docked,.dock-ghost,.dock-sp:not([hidden])){margin-left:-23px}
-/* grand panneau plaqué (cube de vue, guide, propriétés) : une cale dans l'aile, le panneau posé dessus, son coin du haut suit l'oblique */
+/* grand panneau plaqué (guide, propriétés) : une cale dans l'aile, le panneau posé dessus (2,5 px plus large côté languette,
+   pour recouvrir le liseré de l'aile) ; son coin du haut suit l'oblique, liseré --ed-rim tout autour sauf en haut,
+   le guide garde son liseré jaune à gauche (et sur l'oblique quand il est à droite). Le polygone déborde pour laisser voir l'ombre. */
 .ed-wing > .dock-sp{flex:none;align-self:stretch;background:transparent}
-#app > .docked-tall{position:absolute!important;z-index:33!important;transform:none!important;margin:0}
-#app > .docked-tall:not(#views)[data-side="L"]{clip-path:polygon(0 0,calc(100% - 26px) 0,100% var(--band,64px),100% 100%,0 100%);border-top-right-radius:0}
-#app > .docked-tall:not(#views)[data-side="R"]{clip-path:polygon(26px 0,100% 0,100% 100%,0 100%,0 var(--band,64px));border-top-left-radius:0}
-#app > .docked-tall:not(#views)[data-side="L"] :is(.demo-head,.insp-head){padding-right:30px}
-#app > .docked-tall:not(#views)[data-side="R"] :is(.demo-head,.insp-head){padding-left:30px}
+/* un grand panneau au bout de l'aile la recouvre : l'aile s'arrête droit derrière lui (pas de biais visible en transparence) */
+.ed-wing[data-side="L"]:has(> .dock-sp:first-child:not([hidden])){clip-path:polygon(0 0,calc(100% - 27px) 0,100% 100%,0 100%);padding-left:0}
+.ed-wing[data-side="R"]:has(> .dock-sp:last-child:not([hidden])){clip-path:polygon(27px 0,100% 0,100% 100%,0 100%);padding-right:0}
+#app > .docked-tall{position:absolute!important;z-index:33!important;transform:none!important;margin:0;box-sizing:border-box;min-height:calc(var(--band,64px) + 10px);
+  --dk-rim:var(--ed-rim);--dk-t:2.4px;border:2.5px solid var(--ed-rim)!important;border-top:0!important;border-radius:0 0 12px 12px!important;
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;box-shadow:0 6px 14px var(--ed-shadow)!important}
+#app > #demo.docked-tall{border-left:4px solid var(--mark)!important}
+#app > #demo.docked-tall[data-side="R"]{--dk-rim:var(--mark);--dk-t:3.6px}
+#app > .docked-tall[data-side="L"]{clip-path:polygon(-30px 0,calc(100% - 27px) 0,100% var(--band,64px),calc(100% + 30px) var(--band,64px),calc(100% + 30px) calc(100% + 30px),-30px calc(100% + 30px));
+  background:linear-gradient(to top right,transparent calc(50% - var(--dk-t)),var(--dk-rim) calc(50% - var(--dk-t))) right top/27px var(--band,64px) no-repeat border-box,var(--ed-bg)!important}
+#app > .docked-tall[data-side="R"]{clip-path:polygon(27px 0,calc(100% + 30px) 0,calc(100% + 30px) calc(100% + 30px),-30px calc(100% + 30px),-30px var(--band,64px),0 var(--band,64px));
+  background:linear-gradient(to top left,transparent calc(50% - var(--dk-t)),var(--dk-rim) calc(50% - var(--dk-t))) left top/27px var(--band,64px) no-repeat border-box,var(--ed-bg)!important}
+#app > .docked-tall[data-side="L"] :is(.demo-head,.insp-head){padding-right:32px}
+#app > .docked-tall[data-side="R"] :is(.demo-head,.insp-head){padding-left:32px}
+#app > #insp.docked-tall .insp-head{min-height:var(--band,64px);box-sizing:border-box;background:transparent}
 .ed-wing > .float.docked.nav-off + .float.docked{margin-left:0}
 .ed-wing > .float.docked .pgrip{background:transparent}
 /* place réduite : les panneaux plaqués passent en icônes, puis la languette se resserre (fitWings) */
