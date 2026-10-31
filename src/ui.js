@@ -49,6 +49,45 @@ function colorSec(parts){
   wrap.append(ci);
   return sec('Couleur', wrap);
 }
+/* ---- matière : aspect (motif, finition), couleur naturelle, masse ; image importée projetée sur la pièce */
+const MAT_CHIP={1:'repeating-linear-gradient(0deg,#0000 0 3px,#0002 3px 4px)',2:'repeating-radial-gradient(circle at 20% 120%,#0000 0 3px,#5a32101f 3px 5px)',3:'repeating-linear-gradient(90deg,#fff3 0 1px,#0000 1px 3px)',5:'radial-gradient(#0002 1px,#0000 1.5px) 0 0/5px 5px',6:'radial-gradient(circle at 30% 30%,#0001 0 30%,#0000 31%) 0 0/9px 9px'};
+function matChip(m, color){ const bg=m[5]||color||'#ccc'; return h('span',{class:'mat-chip',style:`background:${MAT_CHIP[m[2]]?MAT_CHIP[m[2]]+',':''}${bg}`+(m[7]<1?';opacity:.6':'')+(m[4]>.5?';box-shadow:inset 0 6px 8px #fff8, inset 0 -4px 6px #0002':'')}); }
+function setMat(parts, k){
+  if(!guard()) return; const M=MATIERES.find(m=>m[0]===k);
+  for(const p of parts){ if(!k){ delete p.mat; continue; } p.mat={...(p.mat?.k==='image' && k==='image'? p.mat : {}), k}; if(M?.[5] && k!=='image') p.color=M[5]; }
+  partChanged(parts[0], true);
+}
+function importTexture(parts){
+  const inp=h('input',{type:'file',accept:'image/*',hidden:true}); document.body.append(inp);
+  inp.onchange=()=>{ const f=inp.files[0]; inp.remove(); if(!f) return;
+    const fr=new FileReader(); fr.onload=()=>{ const im=new Image(); im.onload=()=>{
+      const S=512, k=Math.min(1, S/Math.max(im.width, im.height)), cv=document.createElement('canvas'); cv.width=Math.max(1,Math.round(im.width*k)); cv.height=Math.max(1,Math.round(im.height*k));
+      cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);   // réduite à 512 px pour garder le projet léger
+      const id='t'+Date.now().toString(36); state.textures ||= {}; state.textures[id]={name:f.name.replace(/\.[^.]+$/,'').slice(0,40)||'Image', src:cv.toDataURL('image/jpeg',0.85)};
+      for(const p of parts){ p.mat={k:'image', img:id, size:p.mat?.size||40}; p.color='#ffffff'; }
+      partChanged(parts[0], true); toast('Image appliquée : elle est projetée sur les faces de la pièce. Réglez la taille du motif.'); };
+      im.onerror=()=>toast('Image illisible.'); im.src=fr.result; }; fr.readAsDataURL(f); };
+  inp.click();
+}
+function matSec(parts){
+  const p=parts[0], cur=parts.every(q=>(q.mat?.k||'')===(p.mat?.k||''))? (p.mat?.k||'') : null;
+  const grid=h('div',{class:'mat-grid',role:'radiogroup','aria-label':'Matière'},
+    h('button',{class:'mat-b'+(cur===''?' on':''),role:'radio','aria-checked':String(cur===''),title:'Sans matière : couleur unie',onclick:()=>setMat(parts,null)}, h('span',{class:'mat-chip',style:`background:${p.color}`}), 'Aucune'),
+    ...MATIERES.filter(m=>m[0]!=='image').map(m=>h('button',{class:'mat-b'+(cur===m[0]?' on':''),role:'radio','aria-checked':String(cur===m[0]),title:m[1]+(m[6]?` · ${fmt(m[6],2)} g/cm³`:''),onclick:()=>setMat(parts,m[0])}, matChip(m, p.color), m[1].replace(' (impression 3D)','').replace(' (pin)','').replace('Médium (MDF)','MDF'))));
+  const s=sec('Matière', grid);
+  // image importée : choisir parmi celles du projet, en importer une autre, taille du motif
+  const imgs=Object.entries(state.textures||{});
+  const ib=h('div',{class:'mat-imgs'},
+    ...imgs.map(([id,t])=>h('button',{class:'mat-img'+(p.mat?.k==='image' && p.mat.img===id?' on':''),title:t.name,'aria-label':'Image '+t.name,style:`background-image:url(${t.src})`,onclick:()=>{ if(!guard())return; parts.forEach(q=>{ q.mat={k:'image',img:id,size:q.mat?.size||40}; q.color='#ffffff'; }); partChanged(p,true); }})),
+    h('button',{class:'btn mat-imp',title:'Importer une image (photo de bois, de tissu, logo…) projetée sur les faces de la pièce',onclick:()=>importTexture(parts)}, svgIcon('open'), imgs.length? 'Autre image…' : 'Importer une image…'));
+  s.append(minLvl(h('div',{class:'mat-imgrow'}, h('small',{},'Image'), ib),2));
+  if(p.mat?.k==='image') s.append(row('Taille du motif', numInput('Taille du motif', p.mat.size||40, 'mm', v=>{ if(!guard())return; parts.forEach(q=>{ if(q.mat?.k==='image') q.mat.size=v; }); partChanged(p); }, {min:1,max:5000,step:5})));
+  // masse : volume × masse volumique (pièce seule)
+  const M=matOf(p);
+  if(parts.length===1 && M?.[6] && lv(2)){ const r=meshes.get(p.id), V= r? geoVolume(r.mesh.geometry)/1000 : 0;   // cm³
+    if(V>0) s.append(h('div',{class:'info',html:`Volume ≈ <b>${fmt(V,V<10?2:1)} cm³</b> · masse volumique ${fmt(M[6],2)} g/cm³<br>Masse ≈ <b>${V*M[6]>=1000? fmt(V*M[6]/1000,2)+' kg' : fmt(V*M[6],1)+' g'}</b> <span style="opacity:.7">(m = ρ × V)</span>`})); }
+  return s;
+}
 function modeSec(parts){
   const allHole=parts.every(p=>p.hole), allSolid=parts.every(p=>!p.hole);
   return sec('Type', h('div',{class:'mode2'},
@@ -77,7 +116,7 @@ function renderPart(body){
   let lock=simLocked();
   if(ps.length>1){
     body.append(sec(null, h('div',{class:'kind-head'}, svgIcon('group'), h('div',{style:'font-family:var(--f-display);font-weight:600;font-size:17px'},`${ps.length} pièces sélectionnées`))));
-    body.append(modeSec(ps)); body.append(colorSec(ps));
+    body.append(modeSec(ps)); body.append(colorSec(ps)); if(ps.every(q=>!q.hole)) body.append(matSec(ps));
     const g=h('div',{class:'align-grid'}, h('span'), h('small',{style:'text-align:center;color:var(--ink-2)'},'min'), h('small',{style:'text-align:center;color:var(--ink-2)'},'centre'), h('small',{style:'text-align:center;color:var(--ink-2)'},'max'));
     for(const ax of ['x','y','z']){ g.append(h('b',{class:ax},ax.toUpperCase())); for(const m of ['min','center','max']) g.append(h('button',{class:'btn',onclick:()=>alignSel(ax,m),title:`Aligner sur ${m==='center'?'le centre':m} en ${ax.toUpperCase()}`}, m==='min'?'⇤':m==='max'?'⇥':'⇹')); }
     body.append(minLvl(sec('Aligner', g),2));
@@ -92,7 +131,7 @@ function renderPart(body){
   if(isLocked(p)) body.append(h('div',{class:'info',html:'<b>Pièce verrouillée.</b> Cliquez le cadenas dans l’arborescence pour la modifier.'}));
   else if(lock) body.append(h('div',{class:'info',html:'Simulation en cours : réinitialisez (⟲) pour modifier.'}));
   body.append(modeSec([p]));
-  if(!p.hole) body.append(colorSec([p]));
+  if(!p.hole){ body.append(colorSec([p])); body.append(matSec([p])); }
   // dimensions
   const dims=sec(p.kind==='group'?'Groupe':'Dimensions');
   for(const f of K.fields){
@@ -412,7 +451,7 @@ async function offerFile(filename, data){
   catch(e){ toast('Le téléchargement est bloqué dans cette fenêtre.'); }
 }
 const slug=s=>(s||'projet').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase()||'projet';
-function saveProject(){ if(state.edit) finishGroupEdit(); offerFile(slug(state.name)+'.json', JSON.stringify({app:'etabli3d',version:1,name:state.name,parts:state.parts,joints:state.joints,nextId:state.nextId,note:state.note||null,tp:state.tp||null,struct:state.struct||null})); }
+function saveProject(){ if(state.edit) finishGroupEdit(); bridgeSaved(slug(state.name)+'.json'); offerFile(slug(state.name)+'.json', JSON.stringify({app:'etabli3d',version:BRIDGE_FORMAT,name:state.name,parts:state.parts,joints:state.joints,nextId:state.nextId,note:state.note||null,tp:state.tp||null,struct:state.struct||null,textures:usedTextures()})); }
 function stlBinary(list){
   let tris=0; const geos=list.map(r=>{ const g=r.mesh.geometry; const n=g.index?g.index.count/3:g.attributes.position.count/3; tris+=n; return {g, m:r.mesh.matrixWorld}; });
   const buf=new ArrayBuffer(84+tris*50), dv=new DataView(buf);

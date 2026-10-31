@@ -8,12 +8,12 @@
 The JavaScript files are concatenated in order into ONE module script: they share a single scope,
 so a function defined in core.js is visible in init.js without import/export.
 """
-import json, os, sys
+import json, os, shutil, sys
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, 'src')
 DIST = os.path.join(ROOT, 'dist')
-JS_ORDER = ['core.js', 'prefs.js', 'scene.js', 'ui.js', 'sketch.js', 'validate.js', 'struct.js', 'examples.js', 'lessons.js', 'guide.js', 'outliner.js', 'bubble.js', 'workspace.js', 'panels.js', 'hover.js', 'gizmo.js', 'viewcube.js', 'refs.js', 'planes.js', 'init.js']
+JS_ORDER = ['core.js', 'prefs.js', 'scene.js', 'ui.js', 'sketch.js', 'validate.js', 'struct.js', 'examples.js', 'lessons.js', 'guide.js', 'outliner.js', 'bubble.js', 'workspace.js', 'panels.js', 'hover.js', 'gizmo.js', 'viewcube.js', 'refs.js', 'planes.js', 'bridge.js', 'init.js']
 
 # Pinned library versions (loaded through an import map).
 THREE = '0.180.0'
@@ -47,8 +47,13 @@ def read(name):
         return f.read()
 
 
+PASS = os.path.join(ROOT, 'passerelle')
+
+
 def script(imports):
     js = '\n'.join(read(n) for n in JS_ORDER)
+    with open(os.path.join(PASS, 'manifest.json'), encoding='utf-8') as f:   # le contrat de la passerelle, injecté dans bridge.js
+        js = js.replace('/*@MANIFEST@*/null', json.dumps(json.load(f), ensure_ascii=False))
     return ('<script type="importmap">' + json.dumps({'imports': imports}) + '</script>\n'
             '<script type="module">\n' + js + '\n</script>\n')
 
@@ -75,4 +80,6 @@ if __name__ == '__main__':
         write('test.html', full_page(LOCAL))
     else:
         write('index.html', full_page(CDN))
+        # la passerelle est publiée à côté de l'application (manifeste, schéma, page d'essai du centralisateur)
+        shutil.copytree(PASS, os.path.join(DIST, 'passerelle'), dirs_exist_ok=True)
         write('artifact.html', read('head.html') + read('body.html') + script(CDN))

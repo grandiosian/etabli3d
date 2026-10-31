@@ -52,6 +52,7 @@ Un exemple d'un niveau supérieur fait passer automatiquement à ce niveau.
 - **Arborescence** (avancé) : vue par pièces (groupes dépliables) ou par liaisons (arbre cinématique), masquer, verrouiller, renommer.
 - **Apparence** : rendu (plein, arêtes, fil de fer, rayons X), éclairage, ombres, thème auto / clair / sombre, couleur principale, couleur du plan de travail, arborescence (réductible et déplaçable).
 - **Fichiers** : projet en `.json` (Enregistrer / Ouvrir), export `.stl` pour l'impression 3D. Sauvegarde automatique dans le navigateur.
+- **Passerelle** : une application centralisatrice (ENT, tableau de bord du professeur) peut intégrer Établi 3D, lui envoyer un projet et récupérer le travail, un résumé (volumes, masses), le STL ou une vignette. Voir [PASSERELLE.md](PASSERELLE.md).
 
 ## Bibliothèque : tutos, exercices, exemples
 
@@ -72,7 +73,11 @@ Trois objets connus qui se suivent en taille, en gris, sont posés loin derrièr
 
 Dans **Apparence** : affichage des pièces (plein, **texture** — impression 3D avec ses couches, bois, métal, damier —, arêtes, fil de fer, rayons X), **qualité haute** (image plus fine, reflets, plus lent), éclairage (atelier, doux, contrasté, soleil) et ombres portées.
 
-Les petits panneaux (navigation, grille) peuvent se **plaquer** contre un côté oblique de la barre d'édition : glissez-les près de son bord, ils prennent sa hauteur et son biais ; glissez leur poignée pour les décrocher.
+Les petits panneaux (navigation, grille) peuvent se **plaquer** à gauche ou à droite de la barre d'édition : glissez-les vers un côté, leur emplacement apparaît en pointillé, ils prennent sa hauteur et son biais. Plusieurs panneaux peuvent se ranger du même côté. La barre d'édition reste centrée et tout s'adapte à la place : les panneaux passent en icônes, puis la barre se resserre ; si la fenêtre est vraiment trop étroite, un panneau retourne sur la vue et revient de lui-même quand la place le permet. Glissez leur poignée pour les décrocher.
+
+## Matières
+
+Dans le panneau des propriétés, la rubrique **Matière** donne à chaque pièce son aspect et sa masse volumique : PLA, bois, médium, carton, acier, aluminium, laiton, plexiglas, caoutchouc, béton, pierre. Le motif (veinage, couches d'impression, métal brossé…) est calculé sur la pièce elle-même, il marche donc aussi sur les groupes et les esquisses. Au niveau Intermédiaire, on peut **importer une image** (photo de bois, tissu, logo) projetée sur les faces, avec la taille du motif en mm, et le panneau affiche le **volume et la masse** (m = ρ × V). Les images sont enregistrées dans le projet.
 
 ### Exemples de démonstration
 
@@ -108,7 +113,9 @@ src/outliner.js  arborescence des objets (niveau avancé)
 src/bubble.js    bulle de simulation et étiquettes de liaison
 src/workspace.js navigation dans la démarche (boutons contextuels)
 src/panels.js    panneaux déplaçables et réductibles, disposition mémorisée
+src/bridge.js    passerelle avec une application centralisatrice (postMessage)
 src/init.js      exemples, raccourcis clavier, démarrage
+passerelle/      contrat de la passerelle : manifeste, schéma JSON, client, page d'essai
 build.py         assemble src/ en une seule page dans dist/
 ```
 

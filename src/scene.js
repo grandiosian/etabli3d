@@ -102,24 +102,26 @@ const markers=new THREE.Group(); markers.renderOrder=10; scene.add(markers);
 /* =========================================================
    State, history, autosave
    ========================================================= */
-let state={name:'Mon projet', parts:[], joints:[], nextId:1, note:null};
+let state={name:'Mon projet', parts:[], joints:[], nextId:1, note:null, textures:{}};
 let selection=[];
 let ws='model';   // atelier: model | check | mech | struct
 let selJoint=null;
 const meshes=new Map();
 const hist={stack:[],idx:-1};
-function snapshot(){ return JSON.stringify({name:state.name,parts:state.parts,joints:state.joints,nextId:state.nextId,note:state.note||null,tp:state.tp||null,struct:state.struct||null,edit:state.edit||null}); }
+function snapshot(){ return JSON.stringify({name:state.name,parts:state.parts,joints:state.joints,nextId:state.nextId,note:state.note||null,tp:state.tp||null,struct:state.struct||null,edit:state.edit||null,textures:usedTextures()}); }
+/* seules les images encore utilisées par une pièce sont gardées */
+function usedTextures(){ const all=state.textures||{}, out={}; const walk=ps=>{ for(const p of ps){ const id=p.mat?.k==='image' && p.mat.img; if(id && all[id]) out[id]=all[id]; if(p.children) walk(p.children); } }; walk(state.parts); return Object.keys(out).length? out : null; }
 function commit(){
   const s=snapshot(); if(hist.stack[hist.idx]===s) return;
   hist.stack=hist.stack.slice(0,hist.idx+1); hist.stack.push(s); if(hist.stack.length>80) hist.stack.shift(); hist.idx=hist.stack.length-1;
-  autosave(); updateUndo();
+  autosave(); updateUndo(); bridgeChanged();
 }
 function restore(s, keepSel=true){
-  const o=JSON.parse(s); state.name=o.name||'Mon projet'; state.parts=o.parts||[]; state.joints=o.joints||[]; state.nextId=o.nextId||1; state.note=o.note||null; state.tp=o.tp||null; state.struct=o.struct||null; state.edit=o.edit||null;
+  const o=JSON.parse(s); state.name=o.name||'Mon projet'; state.parts=o.parts||[]; state.joints=o.joints||[]; state.nextId=o.nextId||1; state.note=o.note||null; state.tp=o.tp||null; state.struct=o.struct||null; state.edit=o.edit||null; state.textures={...(state.textures||{}), ...(o.textures||{})};
   $('#projName').value=state.name; updateGroupEditUI();
   selection = keepSel? selection.filter(id=>findPart(id)) : []; renderDemo();
   if(selJoint && !state.joints.find(j=>j.id===selJoint)) selJoint=null;
-  simReset(true); sync(); renderInspector(); autosave(); updateUndo(); updateSteps();
+  simReset(true); sync(); renderInspector(); autosave(); updateUndo(); updateSteps(); bridgeChanged();
   if(ws==='struct'){ computeStruct(); stDraw(); if(ST.mode3d) buildStruct3D(); }
 }
 function undo(){ if(hist.idx>0){ hist.idx--; restore(hist.stack[hist.idx]); } }
@@ -129,7 +131,7 @@ let saveTimer=0;
 function autosave(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>{ try{ localStorage.setItem('etabli3d.autosave', snapshot()); }catch(e){} }, 400); }
 function loadProject(obj, push=true){
   if(!obj || !Array.isArray(obj.parts)) throw new Error('format');
-  state.name=obj.name||'Projet'; state.parts=obj.parts; state.joints=obj.joints||[]; state.nextId=obj.nextId|| (maxId(obj.parts)+1); state.note=obj.note||null; state.tp=obj.tp||null; state.struct=obj.struct||null; state.edit=obj.edit||null; demoClosed=false; GUIDE.src=null;
+  state.name=obj.name||'Projet'; state.parts=obj.parts; state.joints=obj.joints||[]; state.nextId=obj.nextId|| (maxId(obj.parts)+1); state.note=obj.note||null; state.tp=obj.tp||null; state.struct=obj.struct||null; state.edit=obj.edit||null; state.textures=obj.textures||{}; demoClosed=false; GUIDE.src=null;
   $('#projName').value=state.name; selection=[]; selJoint=null; simReset(true); sync(); renderInspector(); renderDemo();
   if(push){ hist.stack=[]; hist.idx=-1; commit(); }
   fitView();
@@ -223,6 +225,39 @@ const HATCH={s:{value:9}, w:{value:1.7}, c:{value:new THREE.Color(0x37413e)}};
    donc il marche aussi sur les groupes et les esquisses. TEXK : 1 impression 3D (couches de 0,6 mm, un peu grossies),
    2 bois (cernes), 3 métal brossé, 4 damier de 5 mm. */
 const TEXK={value:1};
+/* Matières des pièces : p.mat = {k:'bois'} ou {k:'image', img:'t1', size:40} (image importée, côté du motif en mm).
+   [clé, nom, motif (TEXK : 0 lisse, 1 impression, 2 bois, 3 métal brossé, 5 grain fin, 6 pierre), rugosité, métal,
+    couleur naturelle (null : on garde la couleur), masse volumique en g/cm³, opacité] */
+const MATIERES=[
+  ['pla','PLA (impression 3D)',1,.62,.04,null,1.24,1],
+  ['bois','Bois (pin)',2,.72,0,'#c8955a',0.5,1],
+  ['mdf','Médium (MDF)',5,.82,0,'#b5916a',0.75,1],
+  ['carton','Carton',5,.9,0,'#c2a37a',0.7,1],
+  ['acier','Acier',3,.34,.75,'#a7adb2',7.85,1],
+  ['alu','Aluminium',3,.28,.65,'#cfd4d8',2.7,1],
+  ['laiton','Laiton',3,.3,.8,'#cfa64c',8.5,1],
+  ['plexi','Plexiglas',0,.06,0,'#d2ebf6',1.19,.5],
+  ['caoutchouc','Caoutchouc',0,.92,0,'#2f3234',1.1,1],
+  ['beton','Béton',5,.92,0,'#a3a29c',2.4,1],
+  ['pierre','Pierre',6,.86,0,'#b4aa97',2.6,1],
+  ['image','Image importée',0,.55,.02,'#ffffff',null,1],
+];
+const matOf=p=> p?.mat?.k ? MATIERES.find(m=>m[0]===p.mat.k)||null : null;
+/* images de matière du projet : state.textures = {id: {name, src (data URL)}} ; textures three.js en cache */
+const TEXCACHE=new Map();
+function texFor(id){
+  const t=state.textures?.[id]; if(!t?.src) return null;
+  let c=TEXCACHE.get(id); if(c && c.src===t.src) return c.tex;
+  const tex=new THREE.TextureLoader().load(t.src, ()=>{ for(const r of meshes.values()) r.mesh.material.needsUpdate=true; });
+  tex.wrapS=tex.wrapT=THREE.RepeatWrapping; tex.colorSpace=THREE.SRGBColorSpace; tex.anisotropy=Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  TEXCACHE.set(id, {src:t.src, tex}); return tex;
+}
+/* volume d'une géométrie fermée (mm³), par la somme des tétraèdres signés */
+function geoVolume(g){
+  const P=g.attributes.position, I=g.index, n=I? I.count : P.count, a=new THREE.Vector3(), b=new THREE.Vector3(), c=new THREE.Vector3(); let v=0;
+  for(let i=0;i<n;i+=3){ const i0=I? I.getX(i):i, i1=I? I.getX(i+1):i+1, i2=I? I.getX(i+2):i+2; a.fromBufferAttribute(P,i0); b.fromBufferAttribute(P,i1); c.fromBufferAttribute(P,i2); v+=a.dot(b.cross(c)); }
+  return Math.abs(v)/6;
+}
 const TEX_GLSL=`
 float th(vec3 p){ return fract(sin(dot(p, vec3(12.9898,78.233,37.719)))*43758.5453); }
 float tn(vec3 p){ vec3 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
@@ -235,16 +270,25 @@ vec3 texPat(vec3 p, vec3 n, int k){
     float ring=0.5+0.5*sin(r*6.2832); float grain=tn(p*vec3(0.6,0.6,4.0));
     return vec3(0.78+0.16*ring+0.06*grain) * vec3(1.0,0.93,0.82); }
   if(k==3){ float s=tn(p*vec3(0.15,14.0,14.0))*0.6+tn(p*vec3(0.05,40.0,40.0))*0.4; return vec3(0.84+0.2*s); }
+  if(k==0) return vec3(1.0);
+  if(k==5){ float g=tn(p*1.6)*0.5+tn(p*4.5)*0.35+th(floor(p*9.0))*0.15; return vec3(0.86+0.2*g); }
+  if(k==6){ float b=tn(p*0.12)*0.55+tn(p*0.45)*0.3+tn(p*2.5)*0.15; float v=smoothstep(0.47,0.5,abs(tn(p*0.05)-0.5)+0.47)*0.12; return vec3(0.8+0.3*b-v); }
   vec3 c=floor(p/5.0); float ch=mod(c.x+c.y+c.z, 2.0); return vec3(0.72+0.28*ch);
 }`;
+/* image importée : projection sur trois plans (triplanaire) en coordonnées de la pièce, sans UV ; texSize = côté du motif en mm */
+const TEXIMG_GLSL=`
+uniform sampler2D texImg; uniform float texSize;
+vec3 texTri(vec3 p, vec3 n){ vec3 w=pow(abs(n), vec3(4.0)); w/=(w.x+w.y+w.z+1e-5); vec2 o=vec2(0.5);
+  return texture2D(texImg, p.yz/texSize+o).rgb*w.x + texture2D(texImg, p.xz/texSize+o).rgb*w.y + texture2D(texImg, p.xy/texSize+o).rgb*w.z; }`;
 function partMaterial(){
   const m=new THREE.MeshStandardMaterial({roughness:.5,metalness:.04});
+  const u=m.userData.u={texK:{value:0}, texImg:{value:null}, texSize:{value:40}};   // propres à chaque pièce (motif de sa matière)
   m.onBeforeCompile=sh=>{
-    sh.uniforms.hatchS=HATCH.s; sh.uniforms.hatchW=HATCH.w; sh.uniforms.hatchC=HATCH.c; sh.uniforms.texK=TEXK;
+    sh.uniforms.hatchS=HATCH.s; sh.uniforms.hatchW=HATCH.w; sh.uniforms.hatchC=HATCH.c; sh.uniforms.texK=u.texK; sh.uniforms.texImg=u.texImg; sh.uniforms.texSize=u.texSize;
     sh.vertexShader=sh.vertexShader.replace('void main() {','#ifdef TEX\nvarying vec3 vTexP; varying vec3 vTexN;\n#endif\nvoid main() {')
       .replace('#include <begin_vertex>','#include <begin_vertex>\n#ifdef TEX\n vTexP=transformed; vTexN=normalize(objectNormal);\n#endif');
-    sh.fragmentShader=sh.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n#ifdef TEX\n diffuseColor.rgb*=texPat(vTexP, normalize(vTexN), texK);\n#endif')
-    sh.fragmentShader=sh.fragmentShader.replace('void main() {','#ifdef HATCH\nuniform float hatchS; uniform float hatchW; uniform vec3 hatchC;\n#endif\n#ifdef TEX\nuniform int texK; varying vec3 vTexP; varying vec3 vTexN;\n'+TEX_GLSL+'\n#endif\nvoid main() {')
+    sh.fragmentShader=sh.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n#ifdef TEX\n diffuseColor.rgb*=texPat(vTexP, normalize(vTexN), texK);\n#endif\n#ifdef TEXIMG\n diffuseColor.rgb*=texTri(vTexP, normalize(vTexN));\n#endif')
+    sh.fragmentShader=sh.fragmentShader.replace('void main() {','#ifdef HATCH\nuniform float hatchS; uniform float hatchW; uniform vec3 hatchC;\n#endif\n#ifdef TEX\nuniform int texK; varying vec3 vTexP; varying vec3 vTexN;\n'+TEX_GLSL+'\n#endif\n#ifdef TEXIMG\n'+TEXIMG_GLSL+'\n#endif\nvoid main() {')
       .replace('#include <dithering_fragment>', `#include <dithering_fragment>
 #ifdef HATCH
   { float k=mod(gl_FragCoord.x+gl_FragCoord.y, hatchS); float d=min(k, hatchS-k)*0.7071;
@@ -276,8 +320,14 @@ function sync(){
     mt.emissive.set(sel? markCol : '#000000'); mt.emissiveIntensity= sel? .16:0;
     r.mesh.renderOrder = p.hole? 2:0;
     // rendu choisi dans Apparence : fil de fer, arêtes, rayons X ; ombres
-    const RM=prefs.rmode||'plein'; mt.wireframe= RM==='filaire'; setDefine(mt, 'TEX', RM==='texture' && !p.hole);
-    const tx= RM==='texture' && !p.hole ? prefs.tex : null; mt.roughness= tx==='metal'? .32 : tx==='impression'? .62 : .5; mt.metalness= tx==='metal'? .55 : .04;
+    const RM=prefs.rmode||'plein'; mt.wireframe= RM==='filaire';
+    // matière de la pièce (p.mat) : motif, finition, image ; sinon le motif global du mode Texture
+    const M= p.hole? null : matOf(p), img= M?.[0]==='image'? texFor(p.mat.img) : null, u=mt.userData.u;
+    const tx= !M && RM==='texture' && !p.hole ? prefs.tex : null;
+    u.texK.value= M? (img? 0 : M[2]) : tx? TEXK.value : 0; u.texImg.value=img; u.texSize.value=Math.max(1, +p.mat?.size||40);
+    setDefine(mt, 'TEX', !!M || !!tx); setDefine(mt, 'TEXIMG', !!img);
+    if(M){ mt.roughness=M[3]; mt.metalness= prefs.hq? M[4] : Math.min(M[4], .45); if(M[7]<1){ mt.transparent=true; mt.opacity=M[7]; mt.depthWrite=false; } }
+    else { mt.roughness= tx==='metal'? .32 : tx==='impression'? .62 : .5; mt.metalness= tx==='metal'? .55 : .04; }
     if(RM==='xray' && !p.hole){ mt.transparent=true; mt.opacity=.32; mt.depthWrite=false; }
     r.mesh.castShadow=r.mesh.receiveShadow= !!prefs.shadows && !p.hole;
     const wantLine = sel || p.hole || RM==='aretes' || RM==='xray', full= RM==='aretes' || RM==='xray' || p.kind!=='group';
@@ -538,7 +588,7 @@ function groupSel(){
   const n=removeJointsOf(selection);
   const solids=parts.filter(p=>!p.hole);
   const b=selBox((solids.length?solids:parts).map(p=>p.id)); const c=new THREE.Vector3(); b.getCenter(c);
-  const G={id:state.nextId++, kind:'group', name:`Groupe ${state.parts.filter(p=>p.kind==='group').length+1}`, params:{}, color:(solids[0]||parts[0]).color,
+  const G={id:state.nextId++, kind:'group', name:`Groupe ${state.parts.filter(p=>p.kind==='group').length+1}`, params:{}, color:(solids[0]||parts[0]).color, mat:(solids[0]||parts[0]).mat? clone((solids[0]||parts[0]).mat) : undefined,
     hole: solids.length===0, pos:[+c.x.toFixed(3),+c.y.toFixed(3),+b.min.z.toFixed(3)], rot:[0,0,0], children:[]};
   const inv=partMatrix(G).invert();
   for(const p of parts){ const ch=clone(p); delete ch.inGroup; setPartFromMatrix(ch, inv.clone().multiply(partMatrix(p))); G.children.push(ch); }

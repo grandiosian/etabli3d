@@ -103,7 +103,7 @@ function setNavLock(k){ NAV.lock= NAV.lock===k? null : k; $$('#navBar [data-nav]
 /* rapprocher (f < 1) ou éloigner (f > 1) la caméra de la cible ; en orthographique la largeur vue suit la distance */
 function zoomBy(f){ const off=camera.position.clone().sub(orbit.target); const d=clamp(off.length()*f, 5, 15000); camera.position.copy(orbit.target).add(off.setLength(d)); orbit.update(); }
 function navShown(){ return prefs.nav==='show' || (prefs.nav!=='hide' && (matchMedia('(any-pointer: coarse)').matches || navigator.maxTouchPoints>0)); }
-function applyNavBar(){ $('#navBar')?.classList.toggle('nav-off', !navShown()); if(!navShown() && NAV.lock) setNavLock(NAV.lock); }
+function applyNavBar(){ $('#navBar')?.classList.toggle('nav-off', !navShown()); if(!navShown() && NAV.lock) setNavLock(NAV.lock); requestAnimationFrame(()=>fitWings()); }
 (()=>{ const cv=renderer.domElement; let zd=null;
   cv.addEventListener('pointerdown', ev=>{ if(NAV.lock!=='zoom' || (ev.pointerType==='mouse' && ev.button!==0) || !ev.isPrimary) return;
     orbit.enabled=false; zd={y:ev.clientY, off:camera.position.clone().sub(orbit.target)}; cv.setPointerCapture(ev.pointerId); }, true);

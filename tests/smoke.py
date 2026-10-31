@@ -563,6 +563,23 @@ with sync_playwright() as p:
     t2 = pg.evaluate(f"()=>[[...{E}.meshes.values()].some(r=>'TEX' in (r.mesh.material.defines||{{}})), {E}.renderer.toneMapping, !!{E}.scene_().environment]")
     pg.click('#bLook')
     check('mode texture (bois) et haute qualité (environnement, tons film), puis retour', t == [True, 2] and q == [True, True, True] and t2 == [False, 0, False], [t, q, t2])
+    # Matières des pièces : motif propre à chaque pièce, couleur naturelle, masse, image importée, enregistrement
+    pid = pg.evaluate(f"()=>{E}.state.parts.find(p=>p.kind!=='group' && !p.hole).id")
+    pg.evaluate(f"()=>{E}.setSel([{pid}])"); pg.wait_for_timeout(200)
+    pg.locator('#inspBody .mat-b', has_text='Bois').click(); pg.wait_for_timeout(300)
+    r = pg.evaluate(f"()=>{{const p={E}.state.parts.find(p=>p.id==={pid}), m={E}.meshes.get({pid}).mesh.material; return [p.mat && p.mat.k, p.color, 'TEX' in (m.defines||{{}}), m.userData.u.texK.value, /Masse/.test(document.querySelector('#inspBody').textContent)]}}")
+    import base64
+    png = os.path.join(OUT, 'motif.png')
+    with open(png, 'wb') as f: f.write(base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP4z8DAwMDAxMDAwMDAAAANHQEDasKb6QAAAABJRU5ErkJggg=='))
+    with pg.expect_file_chooser() as fc: pg.locator('#inspBody .mat-imp').click()
+    fc.value.set_files(png); pg.wait_for_timeout(800)
+    r2 = pg.evaluate(f"()=>{{const p={E}.state.parts.find(p=>p.id==={pid}), m={E}.meshes.get({pid}).mesh.material, tx={E}.state.textures||{{}}; return [p.mat.k, !!tx[p.mat.img] && tx[p.mat.img].src.startsWith('data:image/'), 'TEXIMG' in (m.defines||{{}}), !!m.userData.u.texImg.value, !!document.querySelector('#inspBody .mat-img.on')]}}")
+    pg.keyboard.press('Control+z'); pg.wait_for_timeout(300)
+    r3 = pg.evaluate(f"()=>{{const p={E}.state.parts.find(p=>p.id==={pid}); return [p.mat && p.mat.k, 'TEXIMG' in ({E}.meshes.get({pid}).mesh.material.defines||{{}})]}}")
+    pg.locator('#inspBody .mat-b', has_text='Aucune').click(); pg.wait_for_timeout(200)
+    r4 = pg.evaluate(f"()=>{{const p={E}.state.parts.find(p=>p.id==={pid}), m={E}.meshes.get({pid}).mesh.material; return [!!p.mat, 'TEX' in (m.defines||{{}})]}}")
+    check('matière par pièce : bois (motif, couleur, masse), image importée projetée, annuler, aucune', r == ['bois', '#c8955a', True, 2, True] and r2 == ['image', True, True, True, True] and r3 == ['bois', False] and r4 == [False, False], [r, r2, r3, r4])
+    pg.keyboard.press('Control+z'); pg.wait_for_timeout(200); pg.keyboard.press('Control+z'); pg.wait_for_timeout(200)
 
     # Perçage hachuré, Guide : tuto pas à pas et consignes du TP
     pg.evaluate("()=>document.querySelector('#bNew').click()"); pg.wait_for_timeout(200)
@@ -605,6 +622,21 @@ with sync_playwright() as p:
     g = pg.locator('#navBar .pgrip').bounding_box(); pg.mouse.move(g['x']+5, g['y']+8); pg.mouse.down(); pg.mouse.move(g['x']+60, g['y']+400, steps=10); pg.mouse.up(); pg.wait_for_timeout(200)
     r = pg.evaluate(f"()=>[document.querySelector('#navBar').parentElement.id, !!({E}.LAYOUT().navBar||{{}}).dock, document.querySelector('#navBar').classList.contains('docked')]")
     check('le panneau se décroche en le glissant', r == ['stage', False, False], r)
+    # Deux panneaux, un de chaque côté : la languette reste centrée et entière, les ailes s'adaptent
+    ed = pg.locator('.ed-wrap').bounding_box(); g = pg.locator('#snapBox .pgrip').bounding_box()
+    pg.mouse.move(g['x']+5, g['y']+8); pg.mouse.down(); pg.mouse.move(ed['x']-40, ed['y']+15, steps=12); pg.wait_for_timeout(50)
+    ghost = pg.evaluate("()=>!!document.querySelector('#edWingL > .dock-ghost')"); pg.mouse.up(); pg.wait_for_timeout(300)
+    ed = pg.locator('.ed-wrap').bounding_box(); g = pg.locator('#navBar .pgrip').bounding_box()
+    pg.mouse.move(g['x']+5, g['y']+8); pg.mouse.down(); pg.mouse.move(ed['x']+ed['width']+20, ed['y']+15, steps=12); pg.mouse.up(); pg.wait_for_timeout(400)
+    r = pg.evaluate("()=>{const s=document.querySelector('.ed-shape'), w=document.querySelector('.ed-wrap').getBoundingClientRect(), t=document.querySelector('#toolbar'), cs=getComputedStyle(t), tl=t.getBoundingClientRect().left+parseFloat(cs.paddingLeft), tr=t.getBoundingClientRect().right-parseFloat(cs.paddingRight), L=document.querySelector('#edWingL').getBoundingClientRect(), R=document.querySelector('#edWingR').getBoundingClientRect(); return [document.querySelector('#snapBox').parentElement.id, document.querySelector('#navBar').parentElement.id, s.scrollWidth<=s.clientWidth+1, Math.abs((w.left+w.right)/2-(tl+tr)/2)<3, L.right>w.left && L.right<w.left+30, R.left<w.right && R.left>w.right-30, L.left>=tl-1, R.right<=tr+1]}")
+    check('deux panneaux plaqués de part et d’autre : languette centrée et entière, ailes dans la place libre (aperçu pendant le glisser)', ghost and r == ['edWingL', 'edWingR', True, True, True, True, True, True], [ghost, r])
+    pg.set_viewport_size({'width': 1000, 'height': 860}); pg.wait_for_timeout(500)
+    r = pg.evaluate("()=>{const s=document.querySelector('.ed-shape'); return [s.scrollWidth<=s.clientWidth+1, document.querySelector('.ed-row').classList.contains('ed-tight'), ['#edWingL','#edWingR'].every(k=>{const w=document.querySelector(k); return !w.offsetParent || w.scrollWidth<=w.clientWidth+1})]}")
+    pg.set_viewport_size({'width': 1400, 'height': 860}); pg.wait_for_timeout(500)
+    r2 = pg.evaluate("()=>[document.querySelector('#snapBox').parentElement.id, document.querySelector('#navBar').parentElement.id]")
+    check('fenêtre étroite : la languette se resserre, rien n’est coupé ; plus large : les panneaux reviennent', r == [True, True, True] and r2 == ['edWingL', 'edWingR'], [r, r2])
+    for k in ('snapBox', 'navBar'):
+        g = pg.locator(f'#{k} .pgrip').bounding_box(); pg.mouse.move(g['x']+5, g['y']+8); pg.mouse.down(); pg.mouse.move(g['x']+60, g['y']+420, steps=10); pg.mouse.up(); pg.wait_for_timeout(200)
     pg.evaluate(f"()=>{{const E={E}; E.prefs.nav='auto'; E.applyNavBar();}}")
     # Arborescence : réduire, déplacer, remettre
     pg.evaluate(f"()=>{E}.LAYOUT().tree=null"); 
@@ -661,6 +693,23 @@ with sync_playwright() as p:
     # chaque tuto et exercice a une scène de départ qui marche
     r = pg.evaluate(f"""()=>{{const E={E}, bad=[]; for(const k of Object.keys(E.LESSONS)){{ try{{ E.startLesson(k); }}catch(e){{ bad.push(k+': '+e.message); }} }} return bad;}}""")
     check('tous les tutos et exercices démarrent', r == [], r)
+
+    # Passerelle : une page « centralisatrice » intègre l'app et dialogue par postMessage
+    hub = b.new_page(viewport={'width': 1400, 'height': 860}); hub.on('pageerror', lambda e: errors.append('hub: ' + str(e)))
+    hub.goto(URL.replace('/dist/test.html', '/passerelle/hub-exemple.html?app=/dist/test.html')); hub.wait_for_function('()=>window.passerelle', timeout=30000)
+    r = hub.evaluate("async()=>{const a=window.passerelle; return [a.manifest.app.id, a.manifest.document.formatVersion]}")
+    hub.click('#bLoad'); hub.wait_for_timeout(1200)
+    s1 = hub.evaluate("async()=>{const s=await window.passerelle.request('summary.get'); const p=s.parts[0]; return [s.parts.length, p.material, Math.round(p.volume), Math.round(p.mass), p.size]}")
+    pj = hub.evaluate("async()=>{const r=await window.passerelle.request('project.get'); return [r.project.app, r.project.version, r.project.parts[0].mat.k, r.project.tp.tasks.length]}")
+    bad = hub.evaluate("async()=>{try{await window.passerelle.request('project.load',{project:{parts:[{id:1,kind:'blob'}]}}); return null}catch(e){return e.code}}")
+    stl = hub.evaluate("async()=>{const r=await window.passerelle.request('export.stl'); return [r.name.endsWith('.stl'), r.triangles>100, atob(r.base64).length===84+50*r.triangles]}")
+    th = hub.evaluate("async()=>{const r=await window.passerelle.request('view.thumbnail',{width:200}); return [r.width, r.dataUrl.startsWith('data:image/png')]}")
+    hub.evaluate("()=>{window.__ev=[]; window.passerelle.on('*',(d,m)=>window.__ev.push(m.type))}")
+    hub.evaluate("()=>{const w=document.querySelector('#app').contentWindow; w.__etabli.setSel([1]);}"); hub.frame_locator('#app').locator('#tDup').click(); hub.wait_for_timeout(1000)
+    ev = hub.evaluate("()=>window.__ev")
+    unk = hub.evaluate("async()=>{try{await window.passerelle.request('nope')}catch(e){return e.code}}")
+    check('passerelle : connexion, ouverture d’un projet, résumé (volume, masse), projet, STL, vignette, événements, erreurs', r == ['etabli3d', 2] and s1 == [1, 'bois', 72, 36, [60, 60, 90]] and pj == ['etabli3d', 2, 'bois', 2] and bad == 'bad-project' and stl == [True, True, True] and th == [200, True] and 'selection.changed' in ev and 'project.changed' in ev and unk == 'unknown-type', [r, s1, pj, bad, stl, th, ev, unk])
+    hub.close()
 
     check('aucune erreur JavaScript', not errors, errors[:3])
     b.close()

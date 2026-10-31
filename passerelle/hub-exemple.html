@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Passerelle – centralisateur d'essai</title>
+<style>
+  :root{--bg:#f4f6f5;--panel:#fff;--ink:#18231f;--ink-2:#5b6b66;--line:#d9e1de;--accent:#1d7656;color-scheme:light}
+  @media (prefers-color-scheme: dark){:root{--bg:#121816;--panel:#1b2320;--ink:#e6ecea;--ink-2:#9aaba5;--line:#2c3733;--accent:#4fbf93;color-scheme:dark}}
+  *{box-sizing:border-box} body{margin:0;font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+  .wrap{display:grid;grid-template-columns:320px 1fr;height:100vh}
+  aside{padding:14px;overflow:auto;border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;gap:10px}
+  h1{font-size:16px;margin:0} h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);margin:8px 0 0}
+  button{font:inherit;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+  button:hover{border-color:var(--accent)} .row{display:flex;flex-wrap:wrap;gap:6px}
+  #state{font-weight:600} #state.ok{color:var(--accent)}
+  pre{margin:0;padding:8px;border-radius:8px;background:var(--bg);border:1px solid var(--line);font-size:11.5px;max-height:240px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+  img{max-width:100%;border-radius:8px;border:1px solid var(--line)} iframe{width:100%;height:100%;border:0}
+  @media (max-width:800px){.wrap{grid-template-columns:1fr;grid-template-rows:auto 70vh}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <aside>
+    <h1>Centralisateur d'essai</h1>
+    <div>État : <span id="state">connexion…</span></div>
+    <h2>Requêtes</h2>
+    <div class="row">
+      <button data-q="summary.get">Résumé</button>
+      <button data-q="project.get">Projet</button>
+      <button data-q="selection.get">Sélection</button>
+      <button data-q="progress.get">Avancement</button>
+      <button id="bThumb">Vignette</button>
+      <button id="bStl">Export STL</button>
+      <button id="bLoad">Ouvrir un projet</button>
+      <button id="bLvl">Niveau avancé</button>
+    </div>
+    <h2>Événements</h2>
+    <pre id="events">(abonné à project.changed, selection.changed, project.saved, progress.changed)</pre>
+    <h2>Réponse</h2>
+    <img id="thumb" alt="" hidden>
+    <pre id="out"></pre>
+  </aside>
+  <iframe id="app" title="Établi 3D"></iframe>
+</div>
+<script type="module">
+  import { Passerelle, stlBlob } from './passerelle.js';
+  // ?app=… pour viser une autre adresse (essais en local) ; par défaut l'application publiée à côté de cette page
+  const appUrl = new URL(new URLSearchParams(location.search).get('app') || '../index.html', location.href);
+  appUrl.searchParams.set('hub', location.origin);   // l'app n'acceptera que cette origine, sans demander
+  const frame = document.getElementById('app'); frame.src = appUrl.href;
+  const $ = s => document.querySelector(s), out = v => $('#out').textContent = JSON.stringify(v, null, 2);
+  const log = (t, d) => { const e = $('#events'); e.textContent = `${new Date().toLocaleTimeString()} ${t} ${JSON.stringify(d).slice(0, 160)}\n` + e.textContent; };
+
+  const app = await Passerelle.connect(frame, { origin: appUrl.origin, hub: { name: 'Centralisateur d’essai' } });
+  window.passerelle = app;   // pour les essais dans la console
+  $('#state').textContent = `connecté à ${app.manifest.app.name} (format ${app.manifest.document.formatVersion})`; $('#state').className = 'ok';
+  for (const ev of ['project.changed', 'selection.changed', 'project.saved', 'progress.changed']) app.on(ev, d => log(ev, d));
+  await app.subscribe(['project.changed', 'selection.changed', 'project.saved', 'progress.changed']);
+
+  for (const b of document.querySelectorAll('[data-q]')) b.onclick = async () => { $('#thumb').hidden = true; out(await app.request(b.dataset.q)); };
+  $('#bThumb').onclick = async () => { const r = await app.request('view.thumbnail', { width: 480 }); $('#thumb').src = r.dataUrl; $('#thumb').hidden = false; out({ ...r, dataUrl: r.dataUrl.slice(0, 40) + '…' }); };
+  $('#bStl').onclick = async () => { const r = await app.request('export.stl'); const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(stlBlob(r)), download: r.name }); a.click(); out({ ...r, base64: r.base64.slice(0, 40) + '…' }); };
+  $('#bLvl').onclick = async () => out(await app.request('ui.set', { level: 3 }));
+  $('#bLoad').onclick = async () => out(await app.request('project.load', { project: {
+    app: 'etabli3d', version: 2, name: 'Porte-crayon (envoyé par le centralisateur)', nextId: 4,
+    parts: [
+      { id: 1, kind: 'group', name: 'Porte-crayon', color: '#c8955a', mat: { k: 'bois' }, hole: false, pos: [0, 0, 0], rot: [0, 0, 0], params: {}, children: [
+        { id: 2, kind: 'cylinder', name: 'Corps', params: { d: 60, h: 90, seg: 64 }, color: '#c8955a', hole: false, pos: [0, 0, 0], rot: [0, 0, 0] },
+        { id: 3, kind: 'cylinder', name: 'Creux', params: { d: 52, h: 90, seg: 64 }, color: '#7b8985', hole: true, pos: [0, 0, 4], rot: [0, 0, 0] } ] } ],
+    joints: [], tp: { title: 'Porte-crayon', tasks: [{ t: 'Graver ton prénom sur le côté', done: false }, { t: 'Exporter en STL', done: false }] } } }));
+</script>
+</body>
+</html>
