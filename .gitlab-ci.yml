@@ -1,0 +1,21 @@
+# Forge des communs numériques éducatifs : publie Établi 3D avec GitLab Pages
+# (adresse affichée dans Déployer → Pages). Le dépôt y est copié depuis GitHub
+# (script techno-publier.sh forge, ou le workflow miroirs.yml si configuré).
+# La page est assemblée depuis src/ par build.py, comme pour GitHub Pages.
+pages:
+  stage: deploy
+  image: python:3.12-alpine
+  script:
+    - python3 build.py
+    - rm -f dist/artifact.html
+    - rm -rf public && mv dist public
+    - touch public/.nojekyll
+    - test -f public/index.html || (echo "public/index.html manquant" && exit 1)
+    - 'echo "Site : $CI_PAGES_URL"'
+  pages: true
+  artifacts:
+    paths:
+      - public
+    expire_in: 1 week
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
