@@ -60,27 +60,31 @@
   </header>
 
 
+  <div id="bars">   <!-- grand écran : création et Édition côte à côte ; plus petit : display:contents -->
   <nav id="rack" data-ws="model" aria-label="Créer">
     <div class="rack-tabs" role="tablist" aria-label="Créer">
       <button role="tab" class="rack-tab" data-rtab="vol" aria-selected="true" title="Volumes simples à poser sur le plan de travail"><svg data-i="cube"></svg><span>Volumes</span></button>
+      <button role="tab" class="rack-tab" data-rtab="sk" data-min="2" aria-selected="false" title="Esquisses : dessiner un profil sur un plan (lignes, rectangle, cercle, Bézier, tôle), puis l’extruder"><svg data-i="k_sketch"></svg><span>Esquisse</span></button>
       <button role="tab" class="rack-tab" data-rtab="meca" data-min="3" aria-selected="false" title="Pièces de mécanique : roues dentées et crémaillère"><svg data-i="meca"></svg><span>Création mécanique</span></button>
       <button role="tab" class="rack-tab" data-rtab="sim" aria-selected="false" title="Contrôler les pièces, puis simuler le mouvement ou la déformation"><svg data-i="pivot"></svg><span id="simTabLbl">Simulation mécanique</span></button>
+      <button type="button" class="ed-toggle" id="edToggle" data-ws="model" aria-expanded="false" aria-controls="toolbar" title="Ouvrir la barre Édition : convertir, grouper, dupliquer, poser, supprimer (elle s’ouvre toute seule quand une pièce est choisie)"><svg data-i="edit"></svg><span>Édition</span><svg data-i="chevDown" class="dd"></svg></button>
     </div>
     <div class="rack-row">
       <div id="rackBasic" class="rack-pane" data-rpane="vol" role="tabpanel" aria-label="Volumes"></div>
       <div id="rackMeca" class="rack-pane" data-rpane="meca" role="tabpanel" aria-label="Création mécanique" hidden></div>
+      <div id="rackSk" class="rack-pane" data-rpane="sk" role="tabpanel" aria-label="Esquisse" hidden>
+        <button class="shape sk-tool" data-min="2" id="bSketch" data-sktool="sketch" title="Nouvelle esquisse : choisir le plan, puis dessiner et coter"><svg data-i="k_sketch"></svg>Esquisse</button>
+        <button class="shape sk-tool" data-min="2" data-sktool="line" title="Esquisse en lignes : choisir le plan, puis tracer"><svg data-i="k_line"></svg>Ligne</button>
+        <button class="shape sk-tool" data-min="2" data-sktool="rect" title="Esquisse en rectangle : choisir le plan, puis tracer"><svg data-i="k_rect"></svg>Rectangle</button>
+        <button class="shape sk-tool" data-min="2" data-sktool="circle" title="Esquisse en cercle : choisir le plan, puis tracer"><svg data-i="k_circle"></svg>Cercle</button>
+        <button class="shape sk-tool" data-min="2" data-sktool="bezier" title="Esquisse en courbe de Bézier : choisir le plan, puis tracer point par point"><svg data-i="k_bez"></svg>Bézier</button>
+        <button class="shape sk-tool" data-min="3" data-sktool="tole" title="Tôle pliée : choisir le plan, puis tracer la ligne médiane (ouverte)"><svg data-i="k_tole"></svg>Tôle</button>
+      </div>
       <div id="rackSim" class="rack-pane" data-rpane="sim" role="tabpanel" aria-label="Simulation" hidden></div>
-      <div class="rack-title rack-sk" data-min="2">Esquisse</div>
-      <button class="shape sk-tool" data-min="2" id="bSketch" data-sktool="sketch" title="Nouvelle esquisse : choisir le plan, puis dessiner et coter"><svg data-i="k_sketch"></svg>Esquisse</button>
-      <button class="shape sk-tool" data-min="2" data-sktool="line" title="Esquisse en lignes : choisir le plan, puis tracer"><svg data-i="k_line"></svg>Ligne</button>
-      <button class="shape sk-tool" data-min="2" data-sktool="rect" title="Esquisse en rectangle : choisir le plan, puis tracer"><svg data-i="k_rect"></svg>Rectangle</button>
-      <button class="shape sk-tool" data-min="2" data-sktool="circle" title="Esquisse en cercle : choisir le plan, puis tracer"><svg data-i="k_circle"></svg>Cercle</button>
-      <button class="shape sk-tool" data-min="2" data-sktool="bezier" title="Esquisse en courbe de Bézier : choisir le plan, puis tracer point par point"><svg data-i="k_bez"></svg>Bézier</button>
-      <button class="shape sk-tool" data-min="3" data-sktool="tole" title="Tôle pliée : choisir le plan, puis tracer la ligne médiane (ouverte)"><svg data-i="k_tole"></svg>Tôle</button>
       <button class="rackmin-btn" id="rackMin" title="Réduire la barre des formes" aria-label="Réduire la barre des formes"><svg data-i="chevUp"></svg></button>
     </div>
   </nav>
-  <nav id="toolbar" data-ws="model" aria-label="Édition de la sélection"><div class="ed-row"><div class="ed-wing" id="edWingL" data-side="L"></div><div class="ed-wrap"><div class="ed-rim"><div class="ed-shape">
+  <nav id="toolbar" class="ed-closed" data-ws="model" aria-label="Édition de la sélection"><div class="ed-bar" id="edBar"><div class="ed-shape">
     <div class="ed-head"><b>Édition</b><small id="edSel">Rien de choisi</small></div>
     <div id="tools" data-ws="model" role="toolbar" aria-label="Outils d’édition">
       <div class="ed-grp"><div class="ed-btns">
@@ -97,8 +101,9 @@
         <button class="btn tool danger" id="tDel" title="Supprimer (Suppr)"><svg data-i="trash"></svg><span>Supprimer</span></button>
       </div><small>Pièce</small></div>
     </div>
-  </div></div></div><div class="ed-wing" id="edWingR" data-side="R"></div></div>
+  </div><button class="btn icon ghost ed-fold" id="edFold" title="Rentrer la barre Édition" aria-label="Rentrer la barre Édition"><svg data-i="chevUp"></svg></button></div>
   </nav>
+  </div>
 
   <aside id="outliner" data-ws="model check mech" aria-label="Arborescence">
     <div class="tree-head" title="Glisser pour déplacer l’arborescence"><span class="pgrip tree-grip"><svg data-i="dots"></svg></span><svg data-i="tree"></svg><b>Arborescence</b>

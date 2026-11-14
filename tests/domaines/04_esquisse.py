@@ -7,7 +7,7 @@ NIVEAU = 3
 def run(t):
     pg, check, E, OUT, URL, b, errors = t.pg, t.check, t.E, t.OUT, t.URL, t.browser, t.errors
     # Sketch: rectangle + dimension typed in the field
-    pg.evaluate("()=>document.querySelector('#bNew').click()"); pg.click('#bSketch'); pg.wait_for_timeout(300)
+    pg.evaluate("()=>document.querySelector('#bNew').click()"); pg.click('#rack [data-rtab="sk"]'); pg.click('#bSketch'); pg.wait_for_timeout(300)
     check('bouton Esquisse enfoncé pendant le choix du plan', pg.evaluate("()=>[...document.querySelectorAll('#rack .shape.on')].map(e=>e.id)") == ['bSketch'])
     check('clic sur Esquisse : choix du plan (3 plans dans la vue)', pg.is_visible('#planePick') and pg.is_hidden('#sk') and pg.evaluate(f"()=>{E}.PP.open && {E}.PP.group.visible && {E}.PP.group.children.length===3"))
     pg.click('#planePick [data-plane="xy"]'); pg.wait_for_timeout(300)
@@ -27,7 +27,7 @@ def run(t):
     pg.click('#skOk'); pg.wait_for_timeout(400)
     check('esquisse extrudée', pg.evaluate(f"()=>{E}.state.parts.some(p=>p.kind==='sketch' && p.params.plane==='xy')"))
     # Plan de face (XZ) choisi en cliquant dans la vue 3D : la pièce est debout
-    pg.evaluate("()=>document.querySelector('#bNew').click()"); pg.click('#rack [data-sktool="circle"]'); pg.wait_for_timeout(700)
+    pg.evaluate("()=>document.querySelector('#bNew').click()"); pg.click('#rack [data-rtab="sk"]'); pg.click('#rack [data-sktool="circle"]'); pg.wait_for_timeout(700)
     pt = pg.evaluate(f"()=>{{const E={E}; const m=E.PP.meshes.xz; const v=new E.camera.position.constructor(0.3,0.75,0).applyMatrix4(m.matrix); const r=E.renderer.domElement.getBoundingClientRect(); v.project(E.camera); return [r.left+(v.x+1)/2*r.width, r.top+(1-v.y)/2*r.height];}}")
     pg.mouse.move(pt[0], pt[1]); pg.wait_for_timeout(100)
     hot = pg.evaluate(f"()=>{E}.PP.hot")
@@ -79,7 +79,7 @@ def run(t):
     pg.screenshot(path=os.path.join(OUT, 'bezier.png'))
     # Bézier commencée dans le vide : le premier point reste et les suivants s'enchaînent
     pg.click('#skCancel'); pg.wait_for_timeout(200)
-    pg.click('#rack [data-sktool="bezier"]'); pg.wait_for_timeout(300); pg.click('#planePick [data-plane="xy"]'); pg.wait_for_timeout(300)
+    pg.click('#rack [data-rtab="sk"]'); pg.click('#rack [data-sktool="bezier"]'); pg.wait_for_timeout(300); pg.click('#planePick [data-plane="xy"]'); pg.wait_for_timeout(300)
     bb = pg.locator('#skCanvas').bounding_box()
     pg.mouse.click(*w2s(10, 0)); pg.wait_for_timeout(50)
     r1 = pg.evaluate(f"()=>[{E}.SK.d.pts.length, !!{E}.SK.pend]")
@@ -107,3 +107,7 @@ def run(t):
         pg.evaluate(f"()=>{E}.loadExample('{k}')"); pg.wait_for_timeout(300)
         n = pg.evaluate(f'()=>{E}.getGeometry({E}.state.parts[0]).attributes.position.count')
         check(f'volume Bézier ({k})', n > 500, n)
+    # un tuto d'esquisse ouvre l'onglet Esquisse de la barre de création
+    pg.click('#rack [data-rtab="vol"]'); pg.evaluate(f"()=>{E}.startLesson('esquisse')"); pg.wait_for_timeout(300)
+    r = pg.evaluate("()=>[document.querySelector('#rack [data-rtab=sk]').getAttribute('aria-selected'), !!document.querySelector('#bSketch').offsetParent]")
+    check('tuto d’esquisse : l’onglet « Esquisse » s’ouvre tout seul', r == ['true', True], r)

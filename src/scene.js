@@ -622,7 +622,7 @@ function updateToolButtons(){
   set('#tSolid',!n||lock); set('#tHole',!n||lock); set('#tGroup',n<2||lock); set('#tUngroup',!ps.some(p=>p.kind==='group')||lock);
   set('#tDup',!n||lock); set('#tDrop',!n||lock); set('#tDel',!n||lock);
   $('#tHole').classList.toggle('on', n>0 && ps.every(p=>p.hole)); $('#tSolid').classList.toggle('on', n>0 && ps.every(p=>!p.hole));
-  $('#toolbar').classList.toggle('has-sel', n>0);
+  $('#toolbar').classList.toggle('has-sel', n>0); edSelChanged(n>0);   // la barre Édition s'ouvre dès qu'une pièce est choisie
   $('#edSel').textContent= !n? 'Choisissez une pièce' : n===1? ps[0].name+(ps[0].hole?' · perçage':'') : `${n} pièces choisies`;
 }
 

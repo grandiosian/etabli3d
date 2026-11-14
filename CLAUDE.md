@@ -18,7 +18,7 @@ Modeleur 3D pour la technologie au collège, dans le navigateur. Ce fichier est 
 
 | Je touche à… | Fichiers | Domaine de test | Notes détaillées |
 |---|---|---|---|
-| Barre du haut, barre de création, languette, panneaux plaqués, arborescence | `panels.js`, `init.js`, `outliner.js`, `head.html` (CSS), `body.html` | `demarrage`, `panneaux`, `demarche` | `docs/interface.md` |
+| Barre du haut, barre de création, barre Édition, panneaux flottants, arborescence | `panels.js`, `init.js`, `outliner.js`, `head.html` (CSS), `body.html` | `demarrage`, `panneaux`, `demarche` | `docs/interface.md` |
 | Cube de vue, rendu, apparence | `viewcube.js`, `scene.js`, `prefs.js` | `manipulation`, `rendu`, `reperes` | `docs/interface.md` |
 | Survol, poignées, groupes, navigation, magnétisme | `hover.js`, `gizmo.js`, `scene.js` | `manipulation` | `docs/modelisation.md` |
 | Esquisses, plans, Bézier | `sketch.js`, `planes.js`, `core.js` | `esquisse` | `docs/modelisation.md` |
@@ -35,7 +35,7 @@ Modeleur 3D pour la technologie au collège, dans le navigateur. Ce fichier est 
 - `core.js` : imports three.js, icônes, `toast`, géométrie des pièces (`getGeometry`, primitives, esquisses, groupes).
 - `prefs.js` : niveau et apparence (`prefs`, enregistrés dans le navigateur) ; `scene.js` : scène, caméra, annuler (`commit`/`undo`), `addPart`, `sync()` (met la vue à jour), matériaux et rendu.
 - `ui.js` : panneau Propriétés (`renderInspector`), liaisons et simulation du mouvement ; `sketch.js` : éditeur d'esquisse ; `tole.js` : tôle pliée ; `validate.js` : atelier Valider ; `patron.js` : patron à imprimer (Valider) ; `struct.js` : atelier Structures.
-- `examples.js` (`SAMPLES`), `lessons.js` (`LESSONS`), `guide.js` (`#demo`), `outliner.js` (arborescence), `bubble.js` (bulle de simulation), `workspace.js` (ateliers), `panels.js` (panneaux flottants et plaqués), `hover.js` (survol, navigation), `gizmo.js` (poignées), `viewcube.js`, `refs.js`, `planes.js`, `centrale.js`, `init.js` (branchements, boucle d'affichage, `window.__etabli` utilisé par les tests).
+- `examples.js` (`SAMPLES`), `lessons.js` (`LESSONS`), `guide.js` (`#demo`), `outliner.js` (arborescence), `bubble.js` (bulle de simulation), `workspace.js` (ateliers), `panels.js` (panneaux flottants, barre Édition rétractable, en colonne à droite de la création sur grand écran), `hover.js` (survol, navigation), `gizmo.js` (poignées), `viewcube.js`, `refs.js`, `planes.js`, `centrale.js`, `init.js` (branchements, boucle d'affichage, `window.__etabli` utilisé par les tests).
 
 ## Conventions transversales
 - **Barre du haut** : elle suit la règle commune aux applications élèves (SPECIFICATION de la Centrale §2.6, NetSim en référence).
@@ -46,7 +46,8 @@ Modeleur 3D pour la technologie au collège, dans le navigateur. Ce fichier est 
 - **Tailles d'écran** :
   - au-dessus de 860 px, grand écran ;
   - de 600 à 860 px, barre sur une ligne avec la création et l'Édition en haut (bloc `@media (min-width: 600px) and (max-width: 860px)` de head.html) ;
-  - sous 600 px, téléphone : barres en bas.
+  - sous 600 px, téléphone : barres en bas, barre du haut sur deux lignes au plus (roue sur la première, activité et démarche sur la seconde) ;
+  - sous 860 px, la barre du haut ne doit jamais élargir la page : on resserre (texte coupé, éléments secondaires masqués), voir `docs/interface.md`.
   - Le JS teste « grand écran » avec `WIDE` (`min-width: 861px`, panels.js).
 - Niveaux : `<html data-level="1|2|3">`. `data-min="2"` / `data-min="3"` réserve un élément à un niveau, `data-max="2"` le masque au-dessus ; en JS, `lv(n)`. Niveau des formes : `KIND_LVL` ; des exemples : `level`.
 - Ateliers : `<html data-ws="model|check|mech|struct">` ; un élément `data-ws="model mech"` n'apparaît que dans ces ateliers. `setWs(k)`, variable `ws`. Navigation dans `#flow` (barre du haut), rendue par `updateSteps()`. La Mécanique exige `mechReady()`.

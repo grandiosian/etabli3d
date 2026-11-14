@@ -9,8 +9,8 @@ def run(t):
     # Démarche : Modéliser -> Valider -> simulations, sans bandeau
     pg.evaluate(f"()=>{E}.loadExample('maison')"); pg.wait_for_timeout(300)
     pg.click('#rack [data-rtab="sim"]'); pg.wait_for_timeout(100)
-    r = pg.evaluate("()=>[document.querySelector('#rackBasic').hidden, getComputedStyle(document.querySelector('.ed-wrap')).pointerEvents, getComputedStyle(document.querySelector('#bSketch')).pointerEvents]")
-    check('onglet Simulation mécanique : seul « Valider pour simulation », le reste grisé', r == [True, 'none', 'none'], r)
+    r = pg.evaluate("()=>[document.querySelector('#rackBasic').hidden, getComputedStyle(document.querySelector('.ed-bar')).pointerEvents, document.querySelector('#rackSk').hidden]")
+    check('onglet Simulation mécanique : seul « Valider pour simulation », le reste grisé ou caché', r == [True, 'none', True], r)
     pg.click('#rackSim [data-go="check"]'); pg.wait_for_timeout(300)
     check('« Valider pour simulation » ouvre la Validation', pg.evaluate(f"()=>{E}.ws()")=='check' and pg.is_hidden('#rack') and pg.is_hidden('#tools'))
     check('Mouvement verrouillé avant validation', pg.evaluate("()=>document.querySelector('#flow [data-go=\"mech\"]').disabled"))

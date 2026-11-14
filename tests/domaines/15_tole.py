@@ -53,7 +53,7 @@ def run(t):
 
     # Interface : bouton Tôle → plan de face → éditeur en mode tôle, outil Ligne
     pg.evaluate("()=>document.querySelector('#bNew').click()")
-    pg.click('#rack [data-sktool="tole"]'); pg.wait_for_timeout(300)
+    pg.click('#rack [data-rtab="sk"]'); pg.click('#rack [data-sktool="tole"]'); pg.wait_for_timeout(300)
     pg.click('#planePick [data-plane="xz"]'); pg.wait_for_timeout(300)
     check('bouton Tôle : éditeur en mode tôle, outil Ligne, plan XZ', pg.evaluate(f"()=>[{E}.SK.mode,{E}.SK.tool,{E}.SK.plane]") == ['tole', 'line', 'xz'])
     bb = pg.locator('#skCanvas').bounding_box()
@@ -74,7 +74,7 @@ def run(t):
     f = pg.locator('#inspBody [aria-label="Rayon de pli"]'); f.fill('2'); f.press('Enter'); pg.wait_for_timeout(300)
     pg.screenshot(path=os.path.join(OUT, 'tole.png'))
     # Ligne Esquisse classique, ligne ouverte, puis mode « Tôle pliée » dans l'éditeur
-    pg.click('#rack [data-sktool="line"]'); pg.click('#planePick [data-plane="xy"]'); pg.wait_for_timeout(300)
+    pg.click('#rack [data-rtab="sk"]'); pg.click('#rack [data-sktool="line"]'); pg.click('#planePick [data-plane="xy"]'); pg.wait_for_timeout(300)
     bb = pg.locator('#skCanvas').bounding_box()
     pg.mouse.click(*w2s(0, 0)); pg.mouse.click(*w2s(30, 0)); pg.mouse.click(*w2s(30, 20)); pg.mouse.click(*w2s(60, 20)); pg.keyboard.press('Escape')
     check('ligne ouverte en mode Extrusion : Valider grisé', not pg.is_enabled('#skOk'))
@@ -105,7 +105,7 @@ def run(t):
     pg.evaluate(f"()=>{E}.openGallery('all')"); pg.wait_for_timeout(200)
     pg.locator('#galleryBody .gal-card[data-k="tuto:tole"]').click(); pg.wait_for_timeout(400)
     done = lambda: pg.evaluate(f"()=>{E}.GUIDE.done.slice()")
-    pg.click('#rack [data-sktool="line"]'); pg.wait_for_timeout(200); pg.click('#planePick [data-plane="xz"]'); pg.wait_for_timeout(700)
+    pg.click('#rack [data-rtab="sk"]'); pg.click('#rack [data-sktool="line"]'); pg.wait_for_timeout(200); pg.click('#planePick [data-plane="xz"]'); pg.wait_for_timeout(700)
     d1 = done()
     bb = pg.locator('#skCanvas').bounding_box()
     pg.mouse.click(*w2s(0, 0)); pg.mouse.click(*w2s(37, 0)); pg.mouse.click(*w2s(37, 28)); pg.keyboard.press('Escape'); pg.wait_for_timeout(700)

@@ -34,7 +34,7 @@ function stepper(items, done, cur, {onDone, onGo, manual=()=>true}){
 function renderDemo(){
   majAtelier();   // la barre du haut suit l'activité du guide
   const el=$('#demo'); if(!el) return;
-  if(demoClosed){ el.hidden=true; $('#bGuide')?.setAttribute('aria-pressed','false'); $('#bGuide')?.classList.remove('on'); applyViewOffset(); if(el.classList.contains('docked')) requestAnimationFrame(()=>fitWings()); return; }
+  if(demoClosed){ el.hidden=true; $('#bGuide')?.setAttribute('aria-pressed','false'); $('#bGuide')?.classList.remove('on'); applyViewOffset(); return; }
   placeDemo(); el.hidden=false; el.classList.toggle('closed',!demoOpen); el.innerHTML='';
   $('#bGuide')?.setAttribute('aria-pressed','true'); $('#bGuide')?.classList.add('on');
   const src=guideSrc(), n=state.note;
@@ -110,6 +110,7 @@ function startLesson(k){
   if(T.level>prefs.level){ setLevel(T.level,true); toast(`Niveau ${LEVELS[T.level-1].name} activé pour ${T.type==='exo'?'cet exercice':'ce tuto'}.`); }
   if(!$('#sk').hidden) closeSketch(false);
   if(T.start) T.start(); else lessonReset(T.title);
+  if(T.cat==='sketch') setRackTab('sk');   // tuto d'esquisse : l'onglet Esquisse est ouvert
   $('#gallery').hidden=true; SIM_SEEN=false;
   GUIDE.src='tuto'; GUIDE.tuto=k; GUIDE.step=0; GUIDE.done=T.steps.map(()=>false); demoClosed=false; demoOpen=true;
   PROG.seen[T.type+':'+k]=1; saveProg(); centraleProgres(T.type+':'+k);   // activité ouverte (faites = 0)

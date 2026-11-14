@@ -155,63 +155,25 @@ button.brand:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 /* ---------- shape rack */
 #rack{grid-area:rack;background:var(--panel);border-bottom:1px solid var(--line);overflow:hidden;padding:0 8px 3px;display:flex;flex-direction:column;align-items:stretch;gap:0}
 .rack-row{display:flex;flex-direction:row;align-items:stretch;gap:2px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;min-height:60px}
-#toolbar{grid-area:tools;display:flex;justify-content:center;padding:0 8px 0 calc(8px + var(--tree-w,0px));z-index:31!important;background:transparent!important;border:0!important;pointer-events:none;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
-/* barre d'édition centrée, bords obliques \ … / (trapèze plus large en haut) */
-:root{--ed-rim:#ffffff;--ed-bg:color-mix(in srgb,var(--panel) var(--insp-a,94%),transparent);--ed-shadow:rgba(20,40,32,.18)}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ed-rim:color-mix(in srgb,var(--ink-2) 55%,var(--panel));--ed-bg:color-mix(in srgb,var(--panel-2) var(--insp-a,94%),transparent);--ed-shadow:rgba(0,0,0,.5)}}
-:root[data-theme="dark"]{--ed-rim:color-mix(in srgb,var(--ink-2) 55%,var(--panel));--ed-bg:color-mix(in srgb,var(--panel-2) var(--insp-a,94%),transparent);--ed-shadow:rgba(0,0,0,.5)}
-/* languette + ailes : une grille à trois colonnes, la languette reste centrée, chaque aile prend la place libre de son côté ; l'ombre portée est commune */
-.ed-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,max-content) minmax(0,1fr);align-items:stretch;width:100%;pointer-events:none;filter:drop-shadow(0 4px 8px var(--ed-shadow))}
-.ed-wrap{grid-column:2;pointer-events:auto;min-width:0;display:flex;position:relative;z-index:1}
-/* liseré : un trapèze un peu plus grand derrière la barre (blanc en clair, gris clair en sombre) */
-.ed-rim{background:var(--ed-rim);padding:0 2.5px 2.5px;clip-path:polygon(0 0,100% 0,calc(100% - 27px) 100%,27px 100%);display:flex;min-width:0}
-.ed-shape{display:flex;align-items:stretch;gap:6px;padding:3px 32px 4px;overflow-x:auto;scrollbar-width:none;min-width:0;
-  background:var(--ed-bg);clip-path:polygon(0 0,100% 0,calc(100% - 26px) 100%,26px 100%)}
-/* ailes : panneaux plaqués contre un côté oblique de la languette, même hauteur, bords parallèles ; plusieurs par côté */
-.ed-wing{pointer-events:auto;display:flex;align-items:stretch;background:var(--ed-rim);padding:0 2.5px 2.5px;overflow:hidden;min-width:0;max-width:calc(100% + 22px)}
-.ed-wing:not(:has(> .float:not(.nav-off), > .dock-ghost, > .dock-sp:not([hidden]))){display:none}
-.ed-wing[data-side="L"]{grid-column:1;justify-self:end;margin-right:-22px;clip-path:polygon(0 0,calc(100% - 27px) 0,100% 100%,27px 100%)}
-.ed-wing[data-side="R"]{grid-column:3;justify-self:start;margin-left:-22px;clip-path:polygon(27px 0,100% 0,calc(100% - 27px) 100%,0 100%)}
-.ed-wing > .float.docked,.ed-wing > .dock-ghost{position:static!important;transform:none!important;flex:none;display:flex;align-items:center;gap:6px;border:0;border-radius:0;box-shadow:none!important;padding:3px 32px!important;background:var(--ed-bg)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;opacity:1}
-.ed-wing[data-side="L"] > :is(.float.docked,.dock-ghost){clip-path:polygon(0 0,calc(100% - 26px) 0,100% 100%,26px 100%)}
-.ed-wing[data-side="R"] > :is(.float.docked,.dock-ghost){clip-path:polygon(26px 0,100% 0,calc(100% - 26px) 100%,0 100%)}
-/* deux panneaux du même côté : ils s'emboîtent, séparés par un liseré oblique */
-.ed-wing > :is(.float.docked,.dock-ghost,.dock-sp:not([hidden])) + :is(.float.docked,.dock-ghost,.dock-sp:not([hidden])){margin-left:-23px}
-/* grand panneau plaqué (guide, propriétés) : une cale dans l'aile, le panneau posé dessus (2,5 px plus large côté languette,
-   pour recouvrir le liseré de l'aile) ; son coin du haut suit l'oblique, liseré --ed-rim tout autour sauf en haut,
-   le guide garde son liseré jaune à gauche (et sur l'oblique quand il est à droite). Le polygone déborde pour laisser voir l'ombre. */
-.ed-wing > .dock-sp{flex:none;align-self:stretch;background:transparent}
-/* un grand panneau au bout de l'aile la recouvre : l'aile s'arrête droit derrière lui (pas de biais visible en transparence) */
-.ed-wing[data-side="L"]:has(> .dock-sp:first-child:not([hidden])){clip-path:polygon(0 0,calc(100% - 27px) 0,100% 100%,0 100%);padding-left:0}
-.ed-wing[data-side="R"]:has(> .dock-sp:last-child:not([hidden])){clip-path:polygon(27px 0,100% 0,100% 100%,0 100%);padding-right:0}
-#app > .docked-tall{position:absolute!important;z-index:33!important;transform:none!important;margin:0;box-sizing:border-box;min-height:calc(var(--band,64px) + 10px);
-  --dk-rim:var(--ed-rim);--dk-t:2.4px;border:2.5px solid var(--ed-rim)!important;border-top:0!important;border-radius:0 0 12px 12px!important;
-  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;box-shadow:0 6px 14px var(--ed-shadow)!important}
-#app > #demo.docked-tall{border-left:4px solid var(--mark)!important}
-#app > #demo.docked-tall[data-side="R"]{--dk-rim:var(--mark);--dk-t:3.6px}
-#app > .docked-tall[data-side="L"]{clip-path:polygon(-30px 0,calc(100% - 27px) 0,100% var(--band,64px),calc(100% + 30px) var(--band,64px),calc(100% + 30px) calc(100% + 30px),-30px calc(100% + 30px));
-  background:linear-gradient(to top right,transparent calc(50% - var(--dk-t)),var(--dk-rim) calc(50% - var(--dk-t))) right top/27px var(--band,64px) no-repeat border-box,var(--ed-bg)!important}
-#app > .docked-tall[data-side="R"]{clip-path:polygon(27px 0,calc(100% + 30px) 0,calc(100% + 30px) calc(100% + 30px),-30px calc(100% + 30px),-30px var(--band,64px),0 var(--band,64px));
-  background:linear-gradient(to top left,transparent calc(50% - var(--dk-t)),var(--dk-rim) calc(50% - var(--dk-t))) left top/27px var(--band,64px) no-repeat border-box,var(--ed-bg)!important}
-#app > .docked-tall[data-side="L"] :is(.demo-head,.insp-head){padding-right:32px}
-#app > .docked-tall[data-side="R"] :is(.demo-head,.insp-head){padding-left:32px}
-#app > #insp.docked-tall .insp-head{min-height:var(--band,64px);box-sizing:border-box;background:transparent}
-.ed-wing > .float.docked.nav-off + .float.docked{margin-left:0}
-.ed-wing > .float.docked .pgrip{background:transparent}
-/* place réduite : les panneaux plaqués passent en icônes, puis la languette se resserre (fitWings) */
-.ed-wing[data-fit="compact"] > .float.docked{padding:3px 29px!important;gap:3px}
-.ed-wing[data-fit="compact"] > .float.docked :is(.btn > span,label){display:none}
-.ed-wing[data-fit="compact"] > .float.docked .btn{padding:6px!important}
-.ed-row.ed-tight #tools .tool > span{display:none}
-.ed-row.ed-tight #tools .tool{min-width:40px!important;padding:4px!important}
-.ed-row.ed-tight .ed-head{min-width:0}
-.ed-row.ed-tight .ed-head small{max-width:96px}
-.ed-row.ed-tight2 .ed-head,.ed-row.ed-tight2 .ed-grp > small{display:none}
-.ed-row.ed-tight2 .ed-shape{padding-left:30px;padding-right:30px}
-/* pendant le glisser d'un panneau : l'emplacement qu'il prendra apparaît, le côté visé s'éclaire */
-.ed-wing > .dock-ghost{min-height:36px;flex:0 1 auto;min-width:64px;background:repeating-linear-gradient(-60deg,color-mix(in srgb,var(--accent) 22%,transparent) 0 6px,color-mix(in srgb,var(--accent) 8%,transparent) 6px 12px)!important}
-.lifted{position:fixed!important;z-index:1000!important}
-.ed-row.snap-L .ed-rim,.ed-row.snap-R .ed-rim,.ed-row.snap-L #edWingL,.ed-row.snap-R #edWingR{background:var(--accent)}
+/* barre Édition : sur grand écran, une colonne à droite de la barre de création (#bars, plus bas) ; plus petit, pleine
+   largeur sous la barre de création. Rentrée (.ed-closed) quand rien n'est choisi, elle s'ouvre dès qu'une pièce est choisie ;
+   l'onglet « Édition » (#edToggle) et la flèche #edFold l'ouvrent ou la rentrent à la main */
+#bars{display:contents}
+#toolbar{grid-area:tools;display:block;min-width:0;z-index:31;background:transparent;border:0}
+#toolbar.ed-closed{display:none}
+.ed-bar{display:flex;align-items:stretch;min-width:0;background:var(--panel);border-bottom:1px solid var(--line);box-shadow:0 4px 10px -6px rgba(20,40,32,.25)}
+.ed-shape{flex:1;display:flex;align-items:stretch;justify-content:safe center;gap:6px;padding:3px 8px 4px;overflow-x:auto;scrollbar-width:none;min-width:0}
+.ed-fold{align-self:center;margin-right:6px;flex:none}
+/* onglet « Édition », au bout des onglets de création */
+.ed-toggle{margin-left:auto;margin-right:8px;display:flex;align-items:center;gap:6px;border:1px solid transparent;border-bottom:0;background:transparent;border-radius:8px 8px 0 0;padding:4px 10px 5px 12px;font:600 12.5px var(--f-display);letter-spacing:.04em;color:var(--ink-2);white-space:nowrap;margin-bottom:-1px;cursor:pointer}
+.ed-toggle svg{width:16px;height:16px;flex:none} .ed-toggle .dd{width:14px;height:14px;transition:transform .15s}
+.ed-toggle:hover{color:var(--ink);background:var(--panel-2)}
+.ed-toggle[aria-expanded="true"]{color:var(--ink)} .ed-toggle[aria-expanded="true"] .dd{transform:rotate(180deg)}
+.ed-bar.ed-tight #tools .tool > span{display:none}
+.ed-bar.ed-tight #tools .tool{min-width:40px!important;padding:4px!important}
+.ed-bar.ed-tight .ed-head{min-width:0}
+.ed-bar.ed-tight .ed-head small{max-width:96px}
+.ed-bar.ed-tight2 .ed-head,.ed-bar.ed-tight2 .ed-grp > small{display:none}
 #tools .tool:disabled svg{color:var(--ink-2)}
 #tools{display:flex;align-items:stretch;gap:8px}
 /* barre d'édition : boutons plus grands, rangés par famille, actifs selon la sélection */
@@ -231,8 +193,6 @@ button.brand:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 #tools .tool:hover:not(:disabled){background:var(--panel-2);border-color:var(--line)}
 #tools .tool.on{background:var(--accent-soft);border-color:var(--accent)}
 #tools .tool:disabled{opacity:.38}
-.rack-title{font-family:var(--f-display);font-weight:600;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);writing-mode:vertical-rl;transform:rotate(180deg);text-align:center;padding:2px 3px;margin-left:6px;border-right:1px solid var(--line)}
-.rack-title:first-child{margin-left:0}
 .rack-tabs{display:flex;gap:2px;padding-top:4px;border-bottom:1px solid var(--line);margin:0 -8px 3px;padding-left:8px}
 .rack-tab{display:flex;align-items:center;gap:6px;border:1px solid transparent;border-bottom:0;background:transparent;border-radius:8px 8px 0 0;padding:4px 12px 5px;font:600 12.5px var(--f-display);letter-spacing:.04em;color:var(--ink-2);white-space:nowrap;margin-bottom:-1px}
 .rack-tab svg{width:16px;height:16px;flex:none}
@@ -243,7 +203,7 @@ button.brand:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .sim-note{align-self:center;max-width:360px;font-size:12.5px;color:var(--ink-2);padding:0 12px}
 #rackSim{align-items:center;padding:2px 4px}
 /* onglet Simulation : seul le bouton de validation est actif, le reste est grisé */
-#app.tab-sim .sk-tool,#app.tab-sim .rack-sk,#app.tab-sim .ed-wrap{opacity:.35;pointer-events:none;filter:grayscale(1)}
+#app.tab-sim .ed-bar{opacity:.35;pointer-events:none;filter:grayscale(1)}
 .rack-pane{display:flex;gap:2px}
 .rack-pane[hidden]{display:none!important}
 .shape{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:60px;border:1px solid transparent;background:transparent;border-radius:9px;padding:3px 4px;font-size:10.5px;white-space:nowrap;line-height:1.15;text-align:center;touch-action:none;user-select:none}
@@ -832,8 +792,7 @@ html:not([data-glass="opaque"]) #bubble .bub-row input[type=range]{background:tr
 #app.rack-min .shape svg{width:26px;height:26px}
 #app.rack-min .rackmin-btn svg{transform:rotate(180deg)}
 .rackmin-btn{margin-top:0!important;margin-left:6px}
-.rack-sk{margin-left:auto!important}
-html[data-level="1"] .rackmin-btn{margin-left:auto}
+.rackmin-btn{margin-left:auto!important}   /* au bout de la rangée */
 .shape.sk-tool svg{color:var(--accent)}
 
 /* ---------- hover: name, manipulation buttons, selection frame, right-click menu */
@@ -900,17 +859,39 @@ html[data-glass="opaque"]{--insp-a:100%}
   #app.insp-min #insp{width:300px} #app.insp-min .insp-head{flex-direction:row;padding:8px 12px;border-bottom:0} #app.insp-min .insp-tt{display:block} #app.insp-min #inspSide{display:inline-flex}
   #insp.dragging{opacity:.92}
   #rack,#toolbar,#outliner{position:relative;z-index:30;}
-  #insp,#rack,#toolbar,#outliner{background:color-mix(in srgb,var(--panel) var(--insp-a),transparent);-webkit-backdrop-filter:blur(8px) saturate(1.15);backdrop-filter:blur(8px) saturate(1.15)}
-  html[data-glass="opaque"] :is(#insp,#rack,#toolbar,#outliner){-webkit-backdrop-filter:none;backdrop-filter:none}
+  /* création et Édition côte à côte : la colonne Édition (en-tête aligné sur les onglets, outils alignés sur les formes)
+     prend sa largeur, jusqu'à 46 % ; la barre de création prend le reste et défile si besoin */
+  #bars{grid-area:rack;display:flex;align-items:stretch;min-width:0;position:relative;z-index:30}
+  #bars > #rack{flex:1 1 0;min-width:0}
+  #bars > #toolbar{flex:0 0 auto;max-width:46%;min-width:0;border-left:1px solid var(--line)}
+  #bars:has(#toolbar:not(.ed-closed)) .ed-toggle{display:none}   /* ouverte : son en-tête remplace l'onglet */
+  .ed-bar{height:100%;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto 1fr;box-shadow:none;padding-bottom:3px}
+  .ed-bar::before{content:'';grid-row:1;grid-column:1 / -1;border-bottom:1px solid var(--line);margin-bottom:3px}
+  .ed-shape{display:contents}
+  /* en-tête : un onglet « Édition » (comme l'onglet de création choisi) suivi de la sélection */
+  .ed-head{grid-row:1;grid-column:1;justify-self:start;flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;min-width:0;max-width:100%;box-sizing:border-box;
+    margin:4px 0 3px 8px;align-self:end;padding:4px 12px 5px;border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;background:var(--panel);box-shadow:inset 0 3px 0 var(--accent)}
+  .ed-head b{font:600 12.5px var(--f-display);letter-spacing:.04em;text-transform:none;color:var(--ink);flex:none}
+  .ed-head small{font-weight:500}
+  .ed-fold{grid-row:1;grid-column:2;width:30px;height:26px;margin:4px 6px 4px 0;align-self:end}
+  #tools{grid-row:2;grid-column:1 / -1;min-width:0;overflow-x:auto;scrollbar-width:none;justify-content:safe center;padding:0 8px}
+  .ed-bar.ed-tight .ed-head small{max-width:none}
+  #bars #tools .tool{padding:1px 6px!important} #bars .ed-grp > small{line-height:11px} #bars #tools .tool svg{width:26px!important;height:26px!important}   /* pas plus haut que les formes */
+  .ed-bar.ed-tight2 .ed-head{display:flex}   /* l'en-tête a sa propre ligne : on le garde */
+  .ed-fold svg{transform:rotate(90deg)}   /* la colonne se rentre vers la droite */
+  #insp,#rack,.ed-bar,#outliner{background:color-mix(in srgb,var(--panel) var(--insp-a),transparent);-webkit-backdrop-filter:blur(8px) saturate(1.15);backdrop-filter:blur(8px) saturate(1.15)}
+  html[data-glass="opaque"] :is(#insp,#rack,.ed-bar,#outliner){-webkit-backdrop-filter:none;backdrop-filter:none}
 }
 
 @media (min-width: 861px){ html[data-ws="struct"] #stage > #demo{top:62px} }
+/* 861 à 1100 px, colonne Édition ouverte : la création est plus étroite, seul l'onglet ouvert garde son nom */
+@media (min-width: 861px) and (max-width: 1100px){ #bars:has(#toolbar:not(.ed-closed)) .rack-tab:not([aria-selected="true"]) span{display:none} }
 
 /* ---------- narrow screens */
 @media (max-width: 860px){
   .ed-head{display:none} .rack-tab span{display:none}
   #app, html[data-level="3"] #app.with-tree{grid-template-columns:1fr;grid-template-rows:auto 1fr auto auto;grid-template-areas:"top" "stage" "tools" "rack"}
-  #toolbar{border-bottom:0;border-top:1px solid var(--line)}
+  .ed-bar{border-bottom:0;border-top:1px solid var(--line);box-shadow:0 -4px 10px -6px rgba(20,40,32,.25)}   /* téléphone : la barre Édition est en bas */
   #insp{width:auto} .insp-tool,.rackmin-btn{display:none!important} #app.insp-min #inspBody{display:flex} #app.insp-min .insp-tt{display:block}
   .flow-t{display:none}
   #rack{width:auto}
@@ -920,7 +901,7 @@ html[data-glass="opaque"]{--insp-a:100%}
   #treeClose{display:inline-flex}
   .tr-btn{opacity:1}
   #rack{border-right:0;border-top:1px solid var(--line);padding:0 8px 4px}
-  .rack-title{display:none}
+
   .shape{min-width:64px}
   .shape svg{width:30px;height:30px}
   #insp{position:fixed;left:0;right:0;bottom:0;height:62%;z-index:20;border-left:0;border-top:1px solid var(--line);box-shadow:var(--shadow);border-radius:14px 14px 0 0;transform:translateY(105%);transition:transform .25s}
@@ -931,7 +912,8 @@ html[data-glass="opaque"]{--insp-a:100%}
   #projName{max-width:130px}
   .hide-narrow{display:none!important}
   /* barre du haut : les trois zones passent à la ligne, l’activité en cours sur sa propre ligne */
-  #top{display:flex;flex-wrap:wrap;gap:6px;padding-inline:max(8px,env(safe-area-inset-left,0px)) max(8px,env(safe-area-inset-right,0px))}
+  #top{display:flex;flex-wrap:wrap;gap:6px;min-width:0;padding-inline:max(8px,env(safe-area-inset-left,0px)) max(8px,env(safe-area-inset-right,0px))}   /* min-width:0 : la barre ne déborde jamais de la page */
+  .tbid{flex:0 1 auto;min-width:0} .tbid #bCentrale{min-width:0} .tbid #bCentrale span{min-width:0;max-width:140px;overflow:hidden;text-overflow:ellipsis}
   .tb-l{flex:0 1 auto;flex-wrap:wrap} .tb-r{flex:1 1 auto;flex-wrap:wrap} .tb-c{order:3;flex:1 1 100%} .tbat{max-width:100%}
   .brand{margin-right:0} .brand span{display:none}
   #snapBox{bottom:62px}
@@ -951,9 +933,30 @@ html[data-glass="opaque"]{--insp-a:100%}
   .tbat{min-width:0;max-width:100%} #projName{min-width:48px;flex:0 1 auto}
   #rack{border-top:0;border-bottom:1px solid var(--line)}
   .rack-tab span{display:inline}
-  #toolbar{border-top:0}
+  .ed-bar{border-top:0;border-bottom:1px solid var(--line);box-shadow:0 4px 10px -6px rgba(20,40,32,.25)}
 }
-@media (min-width: 600px) and (max-width: 720px){ .tbat-prog .nvb{display:none} .tbid #bCentrale span{max-width:120px;overflow:hidden;text-overflow:ellipsis} }
+/* 600 à 760 px : on resserre (widget, barres de difficulté) ; avec la démarche à droite, le type d'activité s'efface aussi (il reste dans l'info-bulle) */
+@media (min-width: 600px) and (max-width: 760px){
+  .tbat-prog .nvb{display:none} .tbid>button{padding:0 10px} .tbid .tbid-ret{padding-right:8px} .tbid #bCentrale span{max-width:84px}
+  .tb-l{gap:4px} .tbat{gap:5px;padding-right:10px} #projName{min-width:36px}
+  #top:has(.flow:not(:empty)) .tbat .tpcn{display:none}
+  .rack-tab:not([aria-selected="true"]) span{display:none}   /* quatre onglets : seul l'onglet ouvert garde son nom */
+}
+@media (min-width: 600px) and (max-width: 680px){ .brand .dd{display:none} button.brand{padding-right:6px} .tbid #bCentrale span{max-width:64px} }
+/* téléphone (sous 600 px) : deux lignes au plus. Ligne 1 : logo, annuler / rétablir, widget de l'élève et la roue à droite ;
+   ligne 2 : l'activité en cours et la démarche */
+@media (max-width: 599px){
+  .tb-l{flex:1 1 calc(100% - 42px);flex-wrap:nowrap;gap:4px;min-width:0}
+  .tb-r{display:contents}
+  .tb-r > .menu-wrap{order:1;flex:none;margin-left:auto}
+  .tb-c{order:2;flex:1 1 0;min-width:0} .tbat{min-width:0;max-width:100%} #projName{min-width:36px;flex:0 1 auto}
+  #flow{order:3;flex:none} #flow:empty{display:none}
+  .tbid>button{padding:0 10px} .tbid .tbid-ret{padding-right:8px} .tbid #bCentrale span{max-width:110px}
+  /* la barre Édition est en bas, au-dessus de la création : elle s'ouvre vers le haut */
+  .ed-fold svg,.ed-toggle .dd{transform:rotate(180deg)} .ed-toggle[aria-expanded="true"] .dd{transform:none}
+}
+@media (max-width: 439px){ #top:has(.flow:not(:empty)) .tbat .tpcn{display:none} }
+@media (max-width: 399px){ .tbat-prog .nvb{display:none} .brand .dd{display:none} .tbid #bCentrale span{max-width:76px} }
 .cz-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:18px 20px;width:min(420px,100%);display:flex;flex-direction:column;gap:10px}
 .cz-head{display:flex;align-items:center;justify-content:space-between} .cz-head b{font-family:var(--f-display);font-size:19px}
 .cz-card > p{margin:0;color:var(--ink-2);font-size:13.5px;line-height:1.45}

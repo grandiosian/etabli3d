@@ -133,9 +133,9 @@ def run(t):
     check('esquisse avec trou : volume correct (trou bien orienté)', abs(v - 2059) < 15, round(v))
 
     # Nouvelle disposition, cube de vue, magnétisme, cadre partiel
-    pg.evaluate(f"()=>{E}.loadExample('maison')"); pg.wait_for_timeout(500)
-    r = pg.evaluate("()=>{const r=document.querySelector('#rack').getBoundingClientRect(), t=document.querySelector('#toolbar').getBoundingClientRect(), i=document.querySelector('#insp').getBoundingClientRect(), v=document.querySelector('#views').getBoundingClientRect(), s=document.querySelector('#stage').getBoundingClientRect(), c=document.querySelector('#stage canvas.gl').getBoundingClientRect(); return [r.width>r.height*4, Math.abs(t.top-r.bottom)<2 && !!document.querySelector('#toolbar #tSolid'), i.right<=s.right+1 && i.right>s.right-40 && i.top>=v.bottom-2, Math.round(s.top-c.top)>20]}")
-    check('barre de création, puis barre d’outils dessous ; propriétés sous le cube de vue ; vue dessous', r == [True, True, True, True], r)
+    pg.evaluate(f"()=>{E}.loadExample('maison')"); pg.evaluate(f"()=>{E}.setEdOpen(true)"); pg.wait_for_timeout(500)
+    r = pg.evaluate("()=>{const r=document.querySelector('#rack').getBoundingClientRect(), t=document.querySelector('#toolbar').getBoundingClientRect(), i=document.querySelector('#insp').getBoundingClientRect(), v=document.querySelector('#views').getBoundingClientRect(), s=document.querySelector('#stage').getBoundingClientRect(), c=document.querySelector('#stage canvas.gl').getBoundingClientRect(); return [r.width>r.height*4, Math.abs(t.top-r.top)<2 && Math.abs(t.left-r.right)<2 && !!document.querySelector('#toolbar #tSolid'), i.right<=s.right+1 && i.right>s.right-40 && i.top>=v.bottom-2, Math.round(s.top-c.top)>20]}")
+    check('barre de création, puis barre d’outils à sa droite ; propriétés sous le cube de vue ; vue dessous', r == [True, True, True, True], r)
     pg.evaluate(f"()=>{{const E={E}; E.camera.position.set(170,-240,180); E.orbit_().target.set(0,0,10); E.orbit_().update();}}"); pg.wait_for_timeout(200)
     c = pg.locator('#vcube').bounding_box(); pg.mouse.move(c['x']+c['width']*0.42, c['y']+c['height']*0.25); pg.wait_for_timeout(100); pg.mouse.down(); pg.mouse.up(); pg.wait_for_timeout(700)
     d = pg.evaluate(f"()=>{{const E={E}; return E.camera.position.clone().sub(E.orbit_().target).normalize().z}}")

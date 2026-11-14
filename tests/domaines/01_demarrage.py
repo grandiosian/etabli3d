@@ -46,10 +46,13 @@ def run(t):
     pg.keyboard.press('Escape'); pg.wait_for_timeout(100)
     check('menu Réglages : interrupteurs Guide et Propriétés (le menu reste ouvert)', g1[0] != g0[0] and g1[1] != g0[1] and g1[2] and p1 == ['false', True] and p2 == ['true', False], [g0, g1, p1, p2])
     check('un menu ouvert ferme l’autre, un clic ailleurs ferme Réglages, « Aide et raccourcis » ouvre l’aide ; plus d’arborescence dans Apparence', all(r), r)
+    pg.click('#rack [data-rtab="sk"]'); pg.wait_for_timeout(100)
     check('intermédiaire : esquisse et bouton « Valider pour simulation »', pg.is_visible('#bSketch') and 'simulation' in pg.evaluate("()=>document.querySelector('#rackSim [data-go=check]').textContent") and not pg.is_visible('#bTree'))
     check('intermédiaire : outil Bézier disponible', pg.is_visible('#rack [data-sktool="bezier"]'))
-    r = pg.evaluate("()=>{const k=[...document.querySelectorAll('#rack [data-sktool]')].filter(e=>e.offsetParent).map(e=>e.getBoundingClientRect()), v=[...document.querySelectorAll('#rackBasic .shape')].map(e=>e.getBoundingClientRect()), rk=document.querySelector('#rack').getBoundingClientRect(); return [k.length, Math.min(...k.map(b=>b.left)) > Math.max(...v.map(b=>b.right)), rk.right-Math.max(...k.map(b=>b.right)) < 60]}")
-    check('icônes de création d’esquisse à droite de la barre', r == [5, True, True], r)
+    r = pg.evaluate("()=>[[...document.querySelectorAll('#rack [data-sktool]')].filter(e=>e.offsetParent).length, document.querySelector('#rackBasic').hidden, document.querySelector('#rack [data-rtab=sk]').getAttribute('aria-selected')]")
+    pg.click('#rack [data-rtab="vol"]'); pg.wait_for_timeout(100)
+    r2 = pg.evaluate("()=>[[...document.querySelectorAll('#rack [data-sktool]')].filter(e=>e.offsetParent).length, !document.querySelector('#rackBasic').hidden]")
+    check('onglet « Esquisse » : les outils d’esquisse dans leur onglet, plus à côté des volumes', r == [5, True, 'true'] and r2 == [0, True], [r, r2])
     check('bouton Esquisse non enfoncé au repos', pg.locator('#rack .shape.on').count() == 0)
     niveau(pg, 3)
     check('avancé : arborescence visible', pg.is_visible('#outliner') and pg.locator('#treeBody .tr').count() == 4)
@@ -63,7 +66,7 @@ def run(t):
     check('arborescence à gauche, propriétés à droite sous le cube de vue', r == [True, True], r)
     r = pg.evaluate("()=>{const d=document.querySelector('#demo').getBoundingClientRect(), o=document.querySelector('#outliner').getBoundingClientRect(); return [!document.querySelector('#demo').hidden, d.left>=o.right-1 && d.left<o.right+40, document.querySelector('#demo').parentElement.id]}")
     check('guide à gauche de la vue, à droite de l’arborescence', r == [True, True, 'stage'], r)
-    check('barre de création à onglets en haut (Volumes, Simulation), roues dentées avec les volumes ; menu Fichier', pg.locator('#rack [data-rtab]').count() == 3 and pg.locator('#rackMeca .shape', has_text='Roue dentée').count() == 1 and pg.locator('#rackBasic .shape', has_text='Roue dentée').count() == 0 and pg.is_hidden('#bNew') and pg.locator('#bTree').count() == 0 and pg.evaluate("()=>{const t=document.querySelector('.rack-tabs').getBoundingClientRect(), r=document.querySelector('.rack-row').getBoundingClientRect(); return t.bottom<=r.top+1}"))
+    check('barre de création à onglets en haut (Volumes, Esquisse, Création mécanique, Simulation), roues dentées à part ; menu Fichier', pg.locator('#rack [data-rtab]').count() == 4 and pg.locator('#rackMeca .shape', has_text='Roue dentée').count() == 1 and pg.locator('#rackBasic .shape', has_text='Roue dentée').count() == 0 and pg.is_hidden('#bNew') and pg.locator('#bTree').count() == 0 and pg.evaluate("()=>{const t=document.querySelector('.rack-tabs').getBoundingClientRect(), r=document.querySelector('.rack-row').getBoundingClientRect(); return t.bottom<=r.top+1}"))
     pg.click('#bFile'); pg.wait_for_timeout(100)
     r = pg.evaluate("()=>[!document.querySelector('#menuFile').hidden, [...document.querySelectorAll('#menuFile button')].map(b=>b.id).join(',')]")
     pg.click('#bFile'); pg.wait_for_timeout(100)
@@ -82,14 +85,15 @@ def run(t):
       const kids=[...document.querySelectorAll('#top .tb-l > *, #top .tb-c > *, #top .tb-r > *')].filter(e=>e.offsetParent).map(e=>e.getBoundingClientRect());
       return [document.querySelector('#bCentrale').textContent.trim(), document.querySelector('#tbType').textContent, document.querySelector('#projName').value,
         !!document.querySelector('#tbProg .nvb'), /^\\d+\\/\\d+$/.test(document.querySelector('#tbProg .tbpct').textContent), Math.abs(mid-innerWidth/2) < 4,
-        kids.every(k=>k.top >= t.top && k.bottom <= t.bottom), Math.round(t.height) === 52, !document.querySelector('#bRetourCentrale')]}""")
+        kids.every(k=>k.top >= t.top && k.bottom <= t.bottom), Math.round(t.height) === 52, !document.querySelector('#bRetourCentrale')?.offsetParent]}""")   # le module récent pose un « ← » caché
     check('barre du haut : « Visiteur », activité au centre (Exemple · Maison, barres, n/total), tout sur une ligne, pas de « ← » hors Centrale',
           tb == ['Visiteur', 'Exemple', 'Maison', True, True, True, True, True, True], tb)
     for w in (1000, 1280, 1920):
         pg.set_viewport_size({'width': w, 'height': 860}); pg.wait_for_timeout(250)
         one = pg.evaluate("(w)=>{const t=document.querySelector('#top').getBoundingClientRect(), a=document.querySelector('#tbAtelier').getBoundingClientRect(); return [Math.round(t.height) === 52, document.querySelector('#top').scrollWidth <= innerWidth + 1, document.querySelector('#bSet').getBoundingClientRect().right <= innerWidth, w < 1280 || Math.abs((a.left+a.right)/2 - innerWidth/2) < 4]}", w)
         check(f'barre du haut sur une ligne à {w} px', all(one), one)
-    # petite fenêtre (600 à 860 px) : barre sur une ligne, création juste dessous, Édition en haut de la vue
+    # petite fenêtre (600 à 860 px) : barre sur une ligne, création juste dessous, Édition (ouverte) en haut de la vue
+    pg.evaluate(f"()=>{E}.setEdOpen(true)")
     for w in (640, 760, 860):
         pg.set_viewport_size({'width': w, 'height': 800}); pg.wait_for_timeout(250)
         one = pg.evaluate("""()=>{const x=s=>document.querySelector(s).getBoundingClientRect(), t=x('#top'), r=x('#rack'), b=x('#toolbar'), st=x('#stage');
@@ -98,9 +102,27 @@ def run(t):
           return [Math.round(t.height) === 52, document.querySelector('#top').scrollWidth <= innerWidth + 1, !chevauche, x('#bSet').right <= innerWidth,
             Math.abs(r.top - t.bottom) < 2, Math.abs(b.top - r.bottom) < 2, Math.abs(st.top - r.bottom) < 2]}""")
         check(f'petite fenêtre {w} px : barre sur une ligne, création juste dessous, Édition en haut de la vue', all(one), one)
+    pg.evaluate(f"()=>{E}.setEdOpen(false)")
+    # cas le plus chargé : élève connecté avec « ← », démarche à droite (Valider) : jamais de débordement, la roue reste visible ;
+    # une ligne de 600 à 860 px, deux lignes au plus sur téléphone
+    pg.evaluate(f"""()=>{{const w=document.querySelector('#widgetCentrale'), r=document.createElement('button'); r.className='tbid-ret'; r.id='bRetourTest';
+      r.innerHTML='<span>←</span><span class="centrale-precedent-txt">Étape précédente</span>'; w.prepend(r);
+      document.querySelector('#bCentrale span').textContent='renard-bleu-42'; document.querySelector('#projName').value='Porte-clés personnalisé'; {E}.setWs('check')}}""")
+    pg.wait_for_timeout(250)
+    for w in (360, 420, 599, 600, 680, 760, 860):
+        pg.set_viewport_size({'width': w, 'height': 800}); pg.wait_for_timeout(250)
+        one = pg.evaluate("""()=>{const x=s=>document.querySelector(s).getBoundingClientRect(), t=x('#top');
+          const kids=[...document.querySelectorAll('#top .tb-l > *, #top .tb-c > *, #top .tb-r > *')].filter(e=>e.offsetParent).map(e=>e.getBoundingClientRect());
+          const chevauche=kids.some((a,i)=>kids.some((c,j)=>j>i && a.left<c.right-1 && c.left<a.right-1 && a.top<c.bottom-1 && c.top<a.bottom-1));
+          return [document.documentElement.scrollWidth <= innerWidth + 1, !chevauche, x('#bSet').right <= innerWidth, x('#bUndo').right <= innerWidth,
+            !!document.querySelector('#flow').children.length, Math.round(t.height) <= (innerWidth < 600 ? 92 : 52), x('#projName').width >= 30]}""")
+        check(f'barre du haut chargée à {w} px (connecté, démarche) : rien ne déborde, roue visible, {"deux lignes" if w < 600 else "une ligne"} au plus', all(one), one)
+    pg.evaluate(f"()=>{{document.querySelector('#bRetourTest').remove(); {E}.setWs('model')}}")
     pg.set_viewport_size({'width': 1400, 'height': 860}); pg.wait_for_timeout(250)
-    ed = pg.evaluate("()=>{const s=document.querySelector('.ed-shape'), r=s.getBoundingClientRect(), st=document.querySelector('#stage').getBoundingClientRect(); return [Math.abs((r.left+r.right)/2-(st.left+st.right)/2)<6, getComputedStyle(s).clipPath.startsWith('polygon')]}")
-    check('barre d’édition centrée sur la vue, aux bords obliques', ed == [True, True], ed)
+    pg.evaluate(f"()=>{E}.setEdOpen(true)"); pg.wait_for_timeout(150)
+    ed = pg.evaluate("()=>{const b=document.querySelector('#edBar'), r=b.getBoundingClientRect(), st=document.querySelector('#stage').getBoundingClientRect(), k=document.querySelector('#rack').getBoundingClientRect(); return [Math.abs(r.left-k.right)<2 && Math.abs(r.right-st.right)<2, Math.abs(r.top-k.top)<2 && Math.abs(r.bottom-k.bottom)<2, getComputedStyle(b).clipPath === 'none' && getComputedStyle(b.querySelector('.ed-shape')).clipPath === 'none']}")
+    pg.evaluate(f"()=>{E}.setEdOpen(false)")
+    check('barre d’édition dans une colonne à droite de la création, même rangée et même hauteur, bords droits', ed == [True, True, True], ed)
     pg.evaluate(f"()=>{E}.setSel([])")
     check('panneau « Propriétés » : invitation à cliquer un objet', pg.inner_text('#inspTitle') == 'Propriétés' and 'Cliquez sur un objet' in pg.inner_text('#inspBody') and 'Pour commencer' not in pg.inner_text('#inspBody'))
     pg.locator('#treeBody .tr').nth(0).locator('.tr-btn').nth(0).click(); pg.wait_for_timeout(200)

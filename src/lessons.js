@@ -50,20 +50,20 @@ const LESSONS={
   ]},
   /* ---------- Esquisser (niveau 2) */
   esquisse:{type:'tuto', cat:'sketch', level:2, title:'Ma première esquisse', desc:'Un rectangle coté avec un trou, extrudé.', steps:[
-    {t:'Cliquez <b>Rectangle</b> à droite de la barre du haut, puis choisissez le plan <b>Dessus</b>.', ok:()=>skOpen()},
+    {t:'Onglet <b>Esquisse</b> de la barre de création : cliquez <b>Rectangle</b>, puis choisissez le plan <b>Dessus</b>.', ok:()=>skOpen()},
     {t:'Tracez un rectangle : un clic pour un coin, un clic pour le coin opposé.', ok:()=>skOpen() && SK.d.lines.length>=4},
     {t:'Prenez <b>Cote</b>, cliquez le bas du rectangle et tapez <b>50</b> puis Entrée.', ok:()=>skOpen() && SK.d.cons.some(c=>['dist','dx'].includes(c.type) && Math.abs(c.value-50)<0.01)},
     {t:'Prenez <b>Cercle</b> et tracez-en un à l’intérieur : il deviendra un trou.', ok:()=>skOpen() && SK.d.circles.length>0},
     {t:'Cliquez <b>Valider l’esquisse</b> : le profil devient un volume.', ok:()=>anyPart(p=>p.kind==='sketch' && (p.params.sk?.circles||[]).length>0)},
   ]},
   debout:{type:'tuto', cat:'sketch', level:2, title:'Esquisser debout', desc:'Dessiner sur le plan de face et extruder vers l’avant.', steps:[
-    {t:'Cliquez <b>Ligne</b> à droite de la barre du haut, puis le plan <b>Face (XZ)</b>.', ok:()=>skOpen() && SK.plane==='xz'},
+    {t:'Onglet <b>Esquisse</b> de la barre de création : cliquez <b>Ligne</b>, puis le plan <b>Face (XZ)</b>.', ok:()=>skOpen() && SK.plane==='xz'},
     {t:'Tracez un <b>L</b> : six lignes, puis revenez cliquer le premier point pour fermer.', ok:()=>skOpen() && SK.d.lines.length>=6 && skProfiles(SK.d).loops.length>0},
     {t:'Cliquez <b>Valider l’esquisse</b> : la pièce est debout.', ok:()=>anyPart(p=>p.kind==='sketch' && p.params.plane==='xz')},
     {t:'<b>Alt</b> + glisser (ou le cube de vue) : regardez-la de côté.', ok:null},
   ]},
   bezier:{type:'tuto', cat:'sketch', level:2, title:'Courbes de Bézier', desc:'Tracer une forme courbe point par point.', steps:[
-    {t:'Cliquez <b>Bézier</b> à droite de la barre du haut, puis le plan <b>Face</b>.', ok:()=>skOpen() && SK.plane==='xz'},
+    {t:'Onglet <b>Esquisse</b> de la barre de création : cliquez <b>Bézier</b>, puis le plan <b>Face</b>.', ok:()=>skOpen() && SK.plane==='xz'},
     {t:'Cliquez une fois sur la grille : c’est le <b>premier point</b> (anguleux).', ok:()=>skOpen() && SK.d.pts.some(p=>!p.origin && p.it)},
     {t:'Plus loin, <b>cliquez et glissez</b> : le point devient lisse et la courbe suit la souris.', ok:()=>skOpen() && SK.d.pts.some(p=>p.it==='bez' && bzOnCurve(p.id))},
     {t:'Posez un ou deux autres points, puis cliquez le <b>premier point</b> pour fermer.', ok:()=>skOpen() && SK.d.beziers.length>=2 && skProfiles(SK.d).loops.some(l=>l.kind==='poly')},
@@ -137,7 +137,7 @@ const LESSONS={
   ]},
   /* Esquisser (niveau 3) : après « vase » */
   tole:{type:'tuto', cat:'sketch', level:3, title:'Une tôle pliée', desc:'Dessiner une ligne médiane, puis la transformer en tôle.', steps:[
-    {t:'Cliquez <b>Ligne</b> dans la barre du haut, puis le plan <b>Face (XZ)</b>.', ok:()=>skOpen() && SK.plane==='xz'},
+    {t:'Onglet <b>Esquisse</b> de la barre de création : cliquez <b>Ligne</b>, puis le plan <b>Face (XZ)</b>.', ok:()=>skOpen() && SK.plane==='xz'},
     {t:'Tracez une ligne en <b>L</b> : trois clics, sans revenir au premier point (ce n’est pas un rectangle), puis <b>Échap</b>.', ok:()=>skOpen() && SK.d.lines.length>=2},
     {t:'Prenez <b>Cote</b> et donnez <b>40</b> au premier segment, <b>30</b> au second.', ok:()=>skOpen() && SK.d.cons.filter(c=>['dist','dx','dy'].includes(c.type)).length>=2},
     {t:'À droite, choisissez <b>Tôle pliée</b>, puis <b>Valider l’esquisse</b> : la ligne devient une pièce pliée.', ok:()=>anyPart(p=>p.kind==='tole')},

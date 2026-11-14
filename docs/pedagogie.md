@@ -12,7 +12,7 @@ Panneau flottant à gauche de la vue, à droite de l'arborescence (au-dessus de 
 - Tutos et exercices : `LESSONS` de lessons.js, étapes ou critères avec `ok()` vérifiée deux fois par seconde, une étape faite le reste ;
 - Mon TP : `state.tp = {title, tasks:[{t, done}]}`, écrit par le professeur, enregistré avec le projet.
 
-État : `GUIDE`, ouverture `demoClosed` / `demoOpen`. Le Guide peut se plaquer contre la languette (voir `docs/interface.md`).
+État : `GUIDE`, ouverture `demoClosed` / `demoOpen`.
 
 ## Tutos et exercices (`src/lessons.js`, `LESSONS`)
 `type` tuto (étapes guidées) ou exo (`brief`, critères `steps` vérifiés tout seuls, `hint`), `cat` (model / sketch / move / struct, `LCATS`), `level`, `start()` facultatif (scène de départ, sinon projet vide `lessonReset`). Lancés par `startLesson(k)` dans le Guide. Avancement dans le navigateur : `PROG` (`etabli3d.progress` : `done['tuto:k'|'exo:k'|'ex:k']`, `seen`, `part`), `lessonProgress()` / `markDone()`.
