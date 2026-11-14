@@ -2,7 +2,7 @@
   "format": "catalogue.ateliers",
   "version": 1,
   "app": "etabli3d",
-  "app_version": "1.3.0",
+  "app_version": "1.4.0",
   "referentiel": "technologie-c4-2024",
   "ateliers": [
     {
@@ -267,6 +267,62 @@
       "etiquettes": [
         "tuto",
         "Simuler la déformation"
+      ]
+    },
+    {
+      "id": "tuto-tole",
+      "titre": "Une tôle pliée",
+      "niveau": "",
+      "resume": "Dessiner une ligne médiane, puis la transformer en tôle.",
+      "competences": [
+        "CCRI16.5.1",
+        "CCRI16.4.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "tuto-tole",
+          "titre": "Une tôle pliée",
+          "total": 7,
+          "competences": [
+            "CCRI16.5.1",
+            "CCRI16.4.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "tuto-tole",
+      "etiquettes": [
+        "tuto",
+        "Esquisser et coter"
+      ]
+    },
+    {
+      "id": "tuto-patron",
+      "titre": "Un patron à imprimer",
+      "niveau": "",
+      "resume": "Déplier une pièce fermée et la préparer à monter.",
+      "competences": [
+        "CCRI16.5.1",
+        "CCRI16.4.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "tuto-patron",
+          "titre": "Un patron à imprimer",
+          "total": 6,
+          "competences": [
+            "CCRI16.5.1",
+            "CCRI16.4.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "tuto-patron",
+      "etiquettes": [
+        "tuto",
+        "Modéliser avec des volumes"
       ]
     },
     {
@@ -674,6 +730,34 @@
       ]
     },
     {
+      "id": "ex-tole",
+      "titre": "Équerre en tôle",
+      "niveau": "",
+      "resume": "Une ligne médiane en L, transformée en tôle pliée de 2 mm.",
+      "competences": [
+        "CCRI16.5.1",
+        "CCRI16.4.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "ex-tole",
+          "titre": "Équerre en tôle",
+          "total": 3,
+          "competences": [
+            "CCRI16.5.1",
+            "CCRI16.4.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "ex-tole",
+      "etiquettes": [
+        "exemple",
+        "Esquisser et coter"
+      ]
+    },
+    {
       "id": "ex-coeur",
       "titre": "Pendentif cœur",
       "niveau": "",
@@ -727,6 +811,34 @@
       "etiquettes": [
         "exemple",
         "Esquisser et coter"
+      ]
+    },
+    {
+      "id": "ex-pyramide",
+      "titre": "Pyramide à monter",
+      "niveau": "",
+      "resume": "Une pyramide fermée : son patron se déplie en un seul morceau à imprimer.",
+      "competences": [
+        "CCRI16.5.1",
+        "CCRI16.4.1",
+        "CCRI16.3.1"
+      ],
+      "activites": [
+        {
+          "id": "ex-pyramide",
+          "titre": "Pyramide à monter",
+          "total": 3,
+          "competences": [
+            "CCRI16.5.1",
+            "CCRI16.4.1",
+            "CCRI16.3.1"
+          ]
+        }
+      ],
+      "ouvrir": "ex-pyramide",
+      "etiquettes": [
+        "exemple",
+        "Modéliser avec des volumes"
       ]
     },
     {

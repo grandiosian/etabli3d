@@ -52,7 +52,7 @@ def run(t):
     r = pg.evaluate(f"()=>{{const S={E}.tgSnapAngle, D=Math.PI/180; return [[44.2,100],[36,200],[37.6,400],[16,100],[44.2,100,true]].map(([a,p,f])=>{{const o=S(a*D,p,!!f); return [Math.round(o.a/D*100)/100, o.lvl];}});}}")
     check('graduations aimantées : 45° fort, 15° moyen, 5° faible, Maj libre', r == [[45, 3], [35, 1], [38, 0], [15, 2], [44, 0]], r)
     x, y = ctr('.tg-corner[data-k="c1"]'); pg.mouse.move(x, y); pg.wait_for_timeout(150)
-    pg.locator('.tg-dimv[data-a="x"]').click(); pg.keyboard.press('Control+a'); pg.keyboard.type('33'); pg.keyboard.press('Enter'); pg.wait_for_timeout(200)
+    pg.locator('.tg-dimv[data-a="x"]').click(); pg.keyboard.press('ControlOrMeta+a'); pg.keyboard.type('33'); pg.keyboard.press('Enter'); pg.wait_for_timeout(200)
     check('cote tapée au clavier', pg.evaluate(f"()=>{E}.state.parts[0].params.L") == 33, pg.evaluate(f"()=>{E}.state.parts[0].params"))
     pg.evaluate(f"()=>{{const E={E}; const q=E.state.parts.find(k=>k.kind==='box'); q.params={{L:40,l:40,h:20}}; q.pos=[0,0,0]; q.rot=[0,0,0]; E.setSel([]);}}"); pg.wait_for_timeout(200)
     pc = proj(0, 0, 20)

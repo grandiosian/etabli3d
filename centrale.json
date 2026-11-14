@@ -6,7 +6,7 @@
   "atelier": {
     "app": "etabli3d",
     "nom": "Établi 3D",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "description": "Modeleur 3D pour la technologie : volumes, perçages, esquisses cotées, matières, liaisons et simulation de mouvements, structures, export STL pour l’impression 3D.",
     "url": "https://grandiosian.github.io/etabli3d/",
     "urls_secours": [],
@@ -295,6 +295,36 @@
         "resume": "Tracer un treillis, poser les appuis et une charge."
       },
       {
+        "id": "tuto-tole",
+        "titre": "Une tôle pliée",
+        "groupe": "Esquisser et coter",
+        "total": 7,
+        "competences": [
+          "CCRI16.5.1",
+          "CCRI16.4.1",
+          "CCRI16.3.1"
+        ],
+        "type": "tuto",
+        "niveau": 3,
+        "categorie": "sketch",
+        "resume": "Dessiner une ligne médiane, puis la transformer en tôle."
+      },
+      {
+        "id": "tuto-patron",
+        "titre": "Un patron à imprimer",
+        "groupe": "Modéliser avec des volumes",
+        "total": 6,
+        "competences": [
+          "CCRI16.5.1",
+          "CCRI16.4.1",
+          "CCRI16.3.1"
+        ],
+        "type": "tuto",
+        "niveau": 3,
+        "categorie": "model",
+        "resume": "Déplier une pièce fermée et la préparer à monter."
+      },
+      {
         "id": "exo-de",
         "titre": "Dé à jouer",
         "groupe": "Modéliser avec des volumes",
@@ -511,6 +541,21 @@
         "resume": "Un demi-profil dessiné à droite de l’axe, tourné sur 360°."
       },
       {
+        "id": "ex-tole",
+        "titre": "Équerre en tôle",
+        "groupe": "Esquisser et coter",
+        "total": 3,
+        "competences": [
+          "CCRI16.5.1",
+          "CCRI16.4.1",
+          "CCRI16.3.1"
+        ],
+        "type": "exemple",
+        "niveau": 3,
+        "categorie": "sketch",
+        "resume": "Une ligne médiane en L, transformée en tôle pliée de 2 mm."
+      },
+      {
         "id": "ex-coeur",
         "titre": "Pendentif cœur",
         "groupe": "Esquisser et coter",
@@ -539,6 +584,21 @@
         "niveau": 3,
         "categorie": "sketch",
         "resume": "Un profil courbe avec une paroi de 2 mm, tourné sur 360°."
+      },
+      {
+        "id": "ex-pyramide",
+        "titre": "Pyramide à monter",
+        "groupe": "Modéliser avec des volumes",
+        "total": 3,
+        "competences": [
+          "CCRI16.5.1",
+          "CCRI16.4.1",
+          "CCRI16.3.1"
+        ],
+        "type": "exemple",
+        "niveau": 3,
+        "categorie": "model",
+        "resume": "Une pyramide fermée : son patron se déplie en un seul morceau à imprimer."
       },
       {
         "id": "ex-barriere",

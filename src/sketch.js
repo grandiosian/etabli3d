@@ -16,8 +16,9 @@ const skB=id=>SK.d.beziers.find(z=>z.id===id);
 function openSketch(part=null, opts={}){
   closePlanePicker();
   SK.part=part?part.id:null;
-  if(part){ SK.d=clone(part.params.sk); SK.mode=part.params.mode||'extrude'; SK.h=part.params.h||10; SK.plane=part.params.plane||null; }
-  else { SK.d={nid:2,pts:[{id:1,x:0,y:0,fixed:true,origin:true}],lines:[],circles:[],beziers:[],cons:[]}; SK.mode='extrude'; SK.h=10; SK.plane=SKPLANES[opts.plane]? opts.plane : 'xy'; }
+  if(part){ SK.d=clone(part.params.sk); SK.mode= part.kind==='tole'? 'tole' : part.params.mode||'extrude'; SK.h=part.params.h||10; SK.plane=part.params.plane||null; }
+  else { SK.d={nid:2,pts:[{id:1,x:0,y:0,fixed:true,origin:true}],lines:[],circles:[],beziers:[],cons:[]}; SK.mode= opts.mode==='tole'? 'tole' : 'extrude'; SK.h=10; SK.plane=SKPLANES[opts.plane]? opts.plane : 'xy'; }
+  SK.tp= part?.kind==='tole'? {t:part.params.t, W:part.params.W, r:part.params.r} : {t:KINDS.tole.params.t, W:KINDS.tole.params.W, r:KINDS.tole.params.r};   // réglages de tôle conservés
   SK.d.beziers ||= [];
   if(!lv(3) && SK.mode==='revolve') toast('Cette esquisse utilise la révolution, réservée au niveau Avancé.');
   SK.hist=[]; SK.hidx=-1; SK.sel=null; SK.msel=[]; SK.chain=null; SK.pend=null; SK.editing=null;
@@ -29,15 +30,18 @@ function closeSketch(apply){
   hideDimEdit(false);
   if(apply){
     skSolve();
-    const pr=skProfiles(SK.d);
-    if(!pr.shapes.length){ toast('Aucun contour fermé : reliez le dernier point au premier.'); return; }
+    const tole=SK.mode==='tole';
+    if(tole){ const c=toleCheck({...SK.tp, sk:SK.d}); if(!c.ok){ toast(c.err, 4000); return; } }
+    else { const pr=skProfiles(SK.d);
+      if(!pr.shapes.length){ toast('Aucun contour fermé : reliez le dernier point au premier.'); return; } }
     bzRefresh(SK.d);
-    const params={sk:SK.d, mode:SK.mode, h:SK.h}; if(SK.plane) params.plane=SK.plane;
-    if(SK.part!=null){ const p=findPart(SK.part); if(p){
+    const params= tole? {...SK.tp, sk:SK.d} : {sk:SK.d, mode:SK.mode, h:SK.h}; if(SK.plane) params.plane=SK.plane;
+    const kind= tole? 'tole' : 'sketch';
+    if(SK.part!=null){ const p=findPart(SK.part); if(p){ p.kind=kind;
         // a sketch drawn on a plane keeps that plane: switching extrusion / revolution turns the part if it was still at its place
         if(SK.plane && p.params.mode!==SK.mode && sameRot(p.rot, planeRot(SK.plane, p.params.mode||'extrude'))) p.rot=planeRot(SK.plane, SK.mode);
         p.params=params; selection=[p.id]; } }
-    else { const p=newPart('sketch',{params, rot:planeRot(SK.plane, SK.mode)}); if(state.edit) p.inGroup=state.edit.gid; state.parts.push(p); selection=[p.id]; }
+    else { const p=newPart(kind,{params, rot:planeRot(SK.plane, SK.mode)}); if(state.edit) p.inGroup=state.edit.gid; state.parts.push(p); selection=[p.id]; }
     sync(); commit(); setTab('part');
   }
   $('#sk').hidden=true; renderDemo();
@@ -46,9 +50,10 @@ function skPush(){ const s=JSON.stringify(SK.d); if(SK.hist[SK.hidx]===s) return
 function skUndo(){ if(SK.hidx>0){ SK.hidx--; SK.d=JSON.parse(SK.hist[SK.hidx]); SK.sel=null; SK.msel=[]; SK.chain=null; SK.pend=null; skSolve(); skDraw(); } }
 function skRedo(){ if(SK.hidx<SK.hist.length-1){ SK.hidx++; SK.d=JSON.parse(SK.hist[SK.hidx]); SK.sel=null; SK.msel=[]; skSolve(); skDraw(); } }
 function setSkMode(m, draw=true){
-  SK.mode=m; $('#skModeExt').classList.toggle('on',m==='extrude'); $('#skModeRev').classList.toggle('on',m==='revolve'); $('#skHRow').hidden= m!=='extrude';
+  SK.mode=m; $('#skModeExt').classList.toggle('on',m==='extrude'); $('#skModeRev').classList.toggle('on',m==='revolve'); $('#skModeTole').classList.toggle('on',m==='tole'); $('#skHRow').hidden= m!=='extrude';
   const pl=SKPLANES[SK.plane||'xy'];
-  $('#skModeInfo').innerHTML = m==='extrude' ? `Le profil ${pl.ext} sur la hauteur choisie. Un contour dessiné à l’intérieur d’un autre devient un <b>trou</b>.`
+  $('#skModeInfo').innerHTML = m==='tole' ? `Tracez une <b>ligne ouverte</b> (sans revenir au premier point) : c’est le milieu de la tôle. Chaque coin devient un <b>pli</b>. La tôle ${pl.ext} sur sa largeur ; épaisseur, largeur et rayon se règlent ensuite dans Propriétés.`
+    : m==='extrude' ? `Le profil ${pl.ext} sur la hauteur choisie. Un contour dessiné à l’intérieur d’un autre devient un <b>trou</b>.`
     : 'Le profil tourne autour de l’<b>axe vertical</b> de l’esquisse (pointillés). Dessinez le <b>demi-profil</b> à droite de l’axe.'
       + (SK.plane==='xy'? '<br>Sur le plan du <b>dessus</b>, cet axe est <b>Y</b> : la pièce sera couchée. Pour une pièce debout, choisissez le plan de <b>face</b> (XZ).' : SK.plane? ' Cet axe est l’axe <b>Z</b> : la pièce sera debout.' : ' Il devient l’axe Z de la pièce.');
   if(draw) skDraw();
@@ -515,6 +520,11 @@ function drawDim(c,col){
 function skStatus(pr){
   const el=$('#skStatus'); const nC=pr.loops.length, nO=pr.open; const dof=Math.max(0,skDOF());
   let cls='ok', html='';
+  if(SK.mode==='tole' && SK.err<=1e-3){ const c=toleCheck({...SK.tp, sk:SK.d}), ch=toleChain(SK.d);
+    if(c.ok){ html=`<b>Ligne ouverte de ${ch.pts.length-1} segment${ch.pts.length>2?'s':''}</b> : ${c.bends? c.bends+' pli'+(c.bends>1?'s':'') : 'une plaque plate, sans pli'}.`; if(c.warn){ cls='warn'; html+='<br>'+c.warn; } }
+    else { cls='warn'; html='<b>Tôle impossible.</b> '+c.err; }
+    html+=`<br>Contraintes et cotes : <b>${SK.d.cons.length}</b>`;
+    el.className='status '+cls; el.innerHTML=html; $('#skOk').disabled=!c.ok; return; }
   if(SK.err>1e-3){ cls='err'; html='<b>Contraintes incompatibles.</b> Annulez la dernière action (Ctrl+Z) ou supprimez une contrainte.'; }
   else if(!nC){ cls='warn'; html= nO? `<b>Contour ouvert.</b> Revenez sur le premier point pour le fermer, ou utilisez l’outil ⦿ pour réunir deux extrémités.` : 'Tracez un contour fermé : rectangle, cercle, suite de lignes ou de courbes.'; }
   else { html=`<b>${nC} contour${nC>1?'s':''} fermé${nC>1?'s':''}</b>${nO?` · ${nO} tracé${nO>1?'s':''} ouvert${nO>1?'s':''} ignoré${nO>1?'s':''}`:''}.`; }

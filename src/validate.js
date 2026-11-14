@@ -93,6 +93,7 @@ function validatePart(p){
   else add('ok','Forme valide',`Volume ≈ ${fmt(vol/1000,2)} cm³`);
   if(p.kind==='sketch'){ const n=sketchCrossings(p.params.sk); if(n) add('err','Contour qui se croise',`${n} croisement${n>1?'s':''} dans l’esquisse : le volume peut être faux. Ouvrez l’esquisse et décroisez les traits.`);
     if(p.params.mode==='revolve' && p.params.sk.pts.some(q=>q.x<-1e-3)) add('warn','Profil à gauche de l’axe','La partie à gauche de l’axe est ignorée par la révolution.'); }
+  if(p.kind==='tole'){ const c=toleCheck(p.params); if(!c.ok) add('err','Tôle impossible',c.err); else if(c.warn) add('warn','Rayon de pli corrigé',c.warn); }
   if(p.kind!=='group' && st.finite){ if(st.open) add('warn','Surface non fermée',`${st.open} arête${st.open>1?'s':''} ouverte${st.open>1?'s':''} : la pièce n’est pas étanche pour l’impression.`); else add('ok','Surface fermée','La pièce est étanche.'); }
   const thin=Math.min(sz.x,sz.y,sz.z); if(thin>=0.05 && thin<1) add('warn','Très fine',`Épaisseur minimale ${fmt(thin,2)} mm : moins de 1 mm risque de casser à l’impression.`);
   if(p.hole) add('warn','Perçage seul','Ce perçage n’est groupé avec aucun solide : il ne creuse rien et ne sera pas imprimé.');
@@ -259,6 +260,7 @@ function renderValidation(body){
     d.append(h('div',{class:'cbar',title:`${t} triangles`}, h('i',{style:`width:${pct}%`,class: t<TRI_LIGHT?'c1':t<TRI_HEAVY?'c2':'c3'})), h('div',{class:'cleg'}, h('span',{},'légère'), h('span',{},'moyenne'), h('span',{},'lourde')));
   }
   body.append(d);
+  if(!p.hole) body.append(patronSec(p));
   if(p.valid && s!=='stale'){
     const px=sec('Proxy basse résolution', p.valid.proxy
       ? h('div',{class:'info',html:`Proxy de <b>${p.valid.proxyTris.toLocaleString('fr-FR')}</b> triangles au lieu de ${p.valid.tris.toLocaleString('fr-FR')} (−${Math.max(0,Math.round(100-p.valid.proxyTris/p.valid.tris*100))} %). L’atelier Mécanique l’affiche à la place de la pièce.`})

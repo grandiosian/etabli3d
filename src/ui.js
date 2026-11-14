@@ -137,7 +137,7 @@ function renderPart(body){
   for(const f of K.fields){
     if(f.type==='text'){ const t=h('input',{class:'field',value:p.params[f.k],'aria-label':f.label,maxlength:'40',disabled:lock||null}); t.addEventListener('change',()=>{ p.params[f.k]=t.value; partChanged(p); }); dims.append(row(f.label,t)); }
     else if(f.type==='select'){ const s=h('select',{class:'field','aria-label':f.label,disabled:lock||null}, f.opts.map(([v,l])=>h('option',{value:v,selected:p.params[f.k]===v||null},l))); s.addEventListener('change',()=>{ p.params[f.k]=s.value; partChanged(p); }); dims.append(row(f.label,s)); }
-    else dims.append(minLvl(row(f.label, numInput(f.label,p.params[f.k],f.unit,v=>{ if(!guard())return; p.params[f.k]=v; partChanged(p, p.kind==='gear'||p.kind==='rack'); }, {...f, disabled:lock})), f.lvl||1));
+    else dims.append(minLvl(row(f.label, numInput(f.label,p.params[f.k],f.unit,v=>{ if(!guard())return; p.params[f.k]=v; partChanged(p, p.kind==='gear'||p.kind==='rack'||p.kind==='tole'); }, {...f, disabled:lock})), f.lvl||1));
   }
   if(p.kind==='gear'){ const z=p.params.z, m=p.params.m; dims.append(h('div',{class:'info',html:`Diamètre primitif <b>d = m × Z = ${fmt(m*z)} mm</b><br>Diamètre extérieur ${fmt(m*(z+2))} mm · pas ${fmt(Math.PI*m)} mm<br>Deux roues engrènent si elles ont le <b>même module</b>. Entraxe = (d₁ + d₂) / 2.`})); }
   if(p.kind==='rack'){ const m=p.params.m; dims.append(h('div',{class:'info',html:`Pas <b>p = π × m = ${fmt(Math.PI*m)} mm</b> · longueur ${fmt(Math.PI*m*p.params.n,1)} mm<br>La ligne primitive passe par l'origine de la pièce (Y = 0) : placez-la à <b>d/2</b> du centre du pignon.`})); }
@@ -146,6 +146,10 @@ function renderPart(body){
     dims.append(h('div',{class:'info',html: p.params.mode==='revolve'? 'Volume obtenu par <b>révolution</b> du profil autour de l’axe vertical de l’esquisse (axe Z de la pièce).' : `Profil <b>extrudé</b> sur ${fmt(p.params.h)} mm.`}));
     if(p.params.mode!=='revolve') dims.append(row("Hauteur d'extrusion", numInput('Hauteur',p.params.h,'mm',v=>{ if(!guard())return; p.params.h=v; partChanged(p); },{min:0.1,step:1,disabled:lock})));
     dims.append(minLvl(h('button',{class:'btn',style:'justify-content:center',disabled:lock||null,onclick:()=>openSketch(p)}, svgIcon('edit'),"Modifier l'esquisse"),2));
+  }
+  if(p.kind==='tole'){ const c=toleCheck(p.params);
+    dims.append(h('div',{class:'status '+(!c.ok?'err':c.warn?'warn':'ok'),html: c.ok? `Tôle de <b>${fmt(p.params.t)} mm</b> d’épaisseur, <b>${c.bends? c.bends+' pli'+(c.bends>1?'s':'') : 'sans pli (plaque plate)'}</b>. Longueur à plat ≈ <b>${fmt(c.flat,1)} mm</b>.${c.warn?'<br>'+c.warn:''}` : '<b>Tôle impossible.</b> '+c.err}));
+    dims.append(minLvl(h('button',{class:'btn',style:'justify-content:center',disabled:lock||null,onclick:()=>openSketch(p)}, svgIcon('edit'),'Modifier la ligne médiane'),2));
   }
   if(p.kind==='group'){ const nh=p.children.filter(c=>c.hole).length; dims.append(h('div',{class:'info',html:`Assemblage de <b>${p.children.length} pièces</b>${nh?` dont ${nh} perçage${nh>1?'s':''}`:''}.`}), h('button',{class:'btn primary',style:'justify-content:center',disabled:lock||null,onclick:()=>enterGroupEdit(p.id),title:'Double-clic sur le groupe fait la même chose'}, svgIcon('group'),'Modifier l’intérieur'), h('button',{class:'btn',style:'justify-content:center',disabled:lock||null,onclick:ungroupSel}, svgIcon('ungroup'),'Dégrouper')); }
   if(K.fields.length||p.kind==='group'||p.kind==='sketch') body.append(dims);

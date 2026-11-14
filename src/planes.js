@@ -73,7 +73,7 @@ function closePlanePicker(){
   $$('#rack [data-sktool]').forEach(b=>{ b.classList.remove('on'); b.setAttribute('aria-pressed','false'); });
   if(pickMode===PP.fn){ pickMode=null; updateGizmo(); }
 }
-function choosePlane(k){ const tool= PP.tool==='sketch'? 'rect' : PP.tool; closePlanePicker(); openSketch(null, {plane:k, tool}); }
+function choosePlane(k){ const tole=PP.tool==='tole', tool= PP.tool==='sketch'? 'rect' : tole? 'line' : PP.tool; closePlanePicker(); openSketch(null, {plane:k, tool, mode:tole?'tole':null}); }
 /* étiquettes des plans, placées chaque image près du coin opposé à l'origine */
 const _ppv=new THREE.Vector3();
 function ppTick(){

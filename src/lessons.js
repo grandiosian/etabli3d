@@ -135,6 +135,25 @@ const LESSONS={
     {t:'Une esquisse avec au moins une <b>courbe de Bézier</b>', ok:()=>anyPart(p=>p.kind==='sketch' && (p.params.sk?.beziers||[]).length>0)},
     {t:'Transformée par <b>révolution</b>', ok:()=>anyPart(p=>p.kind==='sketch' && p.params.mode==='revolve' && (p.params.sk?.beziers||[]).length>0)},
   ]},
+  /* Esquisser (niveau 3) : après « vase » */
+  tole:{type:'tuto', cat:'sketch', level:3, title:'Une tôle pliée', desc:'Dessiner une ligne médiane, puis la transformer en tôle.', steps:[
+    {t:'Cliquez <b>Ligne</b> dans la barre du haut, puis le plan <b>Face (XZ)</b>.', ok:()=>skOpen() && SK.plane==='xz'},
+    {t:'Tracez une ligne en <b>L</b> : trois clics, sans revenir au premier point (ce n’est pas un rectangle), puis <b>Échap</b>.', ok:()=>skOpen() && SK.d.lines.length>=2},
+    {t:'Prenez <b>Cote</b> et donnez <b>40</b> au premier segment, <b>30</b> au second.', ok:()=>skOpen() && SK.d.cons.filter(c=>['dist','dx','dy'].includes(c.type)).length>=2},
+    {t:'À droite, choisissez <b>Tôle pliée</b>, puis <b>Valider l’esquisse</b> : la ligne devient une pièce pliée.', ok:()=>anyPart(p=>p.kind==='tole')},
+    {t:'Dans <b>Propriétés</b>, réglez l’<b>épaisseur</b> à 2 mm et la <b>largeur</b> à 30 mm.', ok:()=>anyPart(p=>p.kind==='tole' && near(p.params.t,2,0.05) && near(p.params.W,30,0.05))},
+    {t:'Réglez le <b>rayon de pli</b> à 2 mm : les coins s’arrondissent à l’intérieur.', ok:()=>anyPart(p=>p.kind==='tole' && near(p.params.r,2,0.05))},
+    {t:'Repère d’échelle : comparez la largeur de votre équerre à une pièce de 1 €.', ok:null},
+  ]},
+  /* Valider (niveau 3) : après « tole » */
+  patron:{type:'tuto', cat:'model', level:3, title:'Un patron à imprimer', desc:'Déplier une pièce fermée et la préparer à monter.', steps:[
+    {t:'Ajoutez une <b>Pyramide</b> depuis la barre du haut.', ok:()=>anyPart(p=>p.kind==='pyramid')},
+    {t:'Réglez Longueur et Largeur à <b>40</b>, Hauteur à <b>50</b>.', ok:()=>anyPart(p=>p.kind==='pyramid' && near(p.params.L,40,0.05) && near(p.params.l,40,0.05) && near(p.params.h,50,0.05))},
+    {t:'Passez à l’atelier <b>Valider</b> : onglet <b>Simulation mécanique</b>, puis <b>Valider pour simulation</b>.', ok:()=>ws==='check'},
+    {t:'Pyramide choisie, cliquez <b>Patron</b> dans le panneau de droite : les morceaux apparaissent à plat.', ok:()=>patronGenerated()},
+    {t:'Changez le mode de coupe en <b>manuelle</b>, puis cliquez une arête de la pyramide pour la couper.', ok:null},
+    {t:'Cliquez <b>Imprimer</b> ou <b>SVG</b> : vérifiez que l’échelle est 100 % avant d’imprimer.', ok:null},
+  ]},
   barriere:{type:'exo', cat:'move', level:2, title:'Barrière qui se lève', desc:'Une lisse qui pivote de 0 à 90° et revient.',
     brief:'Un <b>poteau</b> et une <b>lisse</b> qui pivote de <b>0 à 90°</b> avec un <b>moteur aller-retour</b>.',
     hint:'Liaison pivot d’axe horizontal sur la lisse, butées min 0 et max 90, mise en mouvement « Moteur aller-retour ».', steps:[

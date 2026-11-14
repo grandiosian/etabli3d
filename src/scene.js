@@ -131,6 +131,7 @@ let saveTimer=0;
 function autosave(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>{ try{ localStorage.setItem('etabli3d.autosave', snapshot()); }catch(e){} }, 400); }
 function loadProject(obj, push=true){
   if(!obj || !Array.isArray(obj.parts)) throw new Error('format');
+  patReset();
   state.name=obj.name||'Projet'; state.parts=obj.parts; state.joints=obj.joints||[]; state.nextId=obj.nextId|| (maxId(obj.parts)+1); state.note=obj.note||null; state.tp=obj.tp||null; state.struct=obj.struct||null; state.edit=obj.edit||null; state.textures=obj.textures||{}; demoClosed=false; GUIDE.src=null;
   $('#projName').value=state.name; selection=[]; selJoint=null; simReset(true); sync(); renderInspector(); renderDemo();
   if(push){ hist.stack=[]; hist.idx=-1; commit(); }
@@ -523,7 +524,7 @@ renderer.domElement.addEventListener('pointerup', ev=>{
 renderer.domElement.addEventListener('dblclick', ev=>{
   if(ws==='struct'){ if(!ST.mode3d) return; const hit=struct3DHit(ev); if(hit) frameObject(struct3DTarget(hit.object), 60); else frameObject(structGroup); return; }
   const hit=pickAt(ev); if(!hit){ if(ws==='model' && state.edit) finishGroupEdit(); else setView('fit'); return; } const p=findPart(hit.object.userData.id);
-  if(ws==='model' && p && p.kind==='sketch' && !simLocked() && lv(2)){ openSketch(p); return; }
+  if(ws==='model' && p && (p.kind==='sketch'||p.kind==='tole') && !simLocked() && lv(2)){ openSketch(p); return; }
   if(ws==='model' && p && p.kind==='group' && !simLocked() && !isLocked(p)){ enterGroupEdit(p.id); return; }
   frameObject(hit.object);
 });

@@ -15,7 +15,7 @@ function J_(o){ // origin/axis given in world coordinates at rest
   const j={id:state.nextId++, name:o.name, type:o.type, child:o.child, parent:o.parent??null, origin:[og.x,og.y,og.z], axis:[a.x,a.y,a.z], min:o.min??null, max:o.max??null, motor:o.motor||null, driver:o.driver||null};
   state.joints.push(j); return j;
 }
-function resetFor(name){ state.name=name; state.parts=[]; state.joints=[]; state.nextId=1; state.note=null; state.tp=null; state.struct=defaultStruct(); }
+function resetFor(name){ patReset(); state.name=name; state.parts=[]; state.joints=[]; state.nextId=1; state.note=null; state.tp=null; state.struct=defaultStruct(); }
 
 /* Sketch builder: points, closed polylines (automatic H / V), circles, dimensions. */
 function SKB(){
@@ -143,6 +143,19 @@ const SAMPLES={
     note:{observe:['Le profil est dessiné à droite de l’<b>axe vertical</b> : la révolution le fait tourner sur un tour complet.','La cote 12 est un <b>rayon</b> : le pion mesure 24 mm de diamètre à la base.'],
       try:['Ouvrez l’esquisse et déplacez un point de la tête pour changer sa forme.','Passez en <b>Extrusion</b> pour voir la différence avec le même profil.']}},
 
+  tole:{level:3, cat:'sketch', title:'Équerre en tôle', icon:'ex_tole', tags:['Tôle','Pli','Esquisse'],
+    desc:'Une ligne médiane en L, transformée en tôle pliée de 2 mm.',
+    build(){
+      resetFor('Équerre en tôle');
+      const s=SKB();
+      const a=s.pt(0,0), b=s.pt(40,0), c=s.pt(40,30);
+      s.line(a,b); s.line(b,c);
+      s.dx(a,b,-6); s.dy(b,c,6);   // 3e argument : décalage de l'étiquette de cote (la valeur est mesurée)
+      state.parts.push(P_('tole',{name:'Équerre (tôle)',params:{t:2,W:30,r:2,sk:s.d},color:'#7d8a86',pos:[0,0,0]}));
+    },
+    note:{observe:['La ligne tracée n’est <b>pas fermée</b> : chaque coin devient un <b>pli</b>.','L’épaisseur <b>2 mm</b> est la même partout : c’est une tôle, pas un volume plein.','Le rayon <b>r = 2</b> arrondit l’intérieur du pli ; l’extérieur fait r + t.'],
+      try:['Changez l’épaisseur à 4 mm : la pièce reste la même ligne, seul le volume change.','Mettez le rayon à 0 : que se passe-t-il à l’intérieur du pli ? (Le logiciel arrondit à une valeur minimale : l’épaisseur.)','Ajoutez un troisième segment : vous avez une pièce en U.']}},
+
   coeur:{level:2, cat:'sketch', title:'Pendentif cœur', icon:'ex_heart', tags:['Bézier','Extrusion','Cotes'],
     desc:'Quatre courbes de Bézier symétriques forment un cœur.',
     build(){
@@ -170,6 +183,15 @@ const SAMPLES={
       try:['Ouvrez l’esquisse et tirez les poignées de la courbe extérieure pour rendre le vase plus ventru.','Passez en <b>Extrusion</b> pour voir le profil seul, puis revenez en <b>Révolution</b>.']}},
 
   /* ---------------- Mettre en mouvement ---------------- */
+  pyramide:{level:3, cat:'model', title:'Pyramide à monter', icon:'ex_pyramide', tags:['Patron','Papercraft','Valider'],
+    desc:'Une pyramide fermée : son patron se déplie en un seul morceau à imprimer.',
+    build(){
+      resetFor('Pyramide à monter');
+      state.parts.push(P_('pyramid',{name:'Pyramide',params:{L:40,l:40,h:50},color:'#e0bd3f',pos:[0,0,0]}));
+    },
+    note:{observe:['Une pièce <b>fermée</b> peut être dépliée : le patron est sa « peau » à plat.','Le carré de base et les quatre triangles restent attachés par des <b>plis</b> ; les bords coupés portent un numéro et une <b>languette</b> pour coller.'],
+      try:['Dans Valider, ouvrez le <b>Patron</b> et imprimez-le à 100 %.','Passez en coupe <b>manuelle</b> et cliquez une arête rouge pour la recoller, ou un pli pour le couper : que devient le patron ?','Changez la hauteur à 80 mm et regardez le patron se déformer.']}},
+
   barriere:{level:2, cat:'move', title:'Barrière de parking', icon:'ex_barrier', tags:['Pivot','Butées','Encastrement'],
     desc:'Une lisse qui se lève de 0 à 90° et redescend.',
     build(){

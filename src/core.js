@@ -13,8 +13,9 @@ const I = {
   open:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1"/><path d="M3 7v11a1 1 0 0 0 1 1h14l3-8H7l-3 7"/>',
   save:'<path d="M5 3h11l4 4v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M8 3v5h7V3M8 21v-7h8v7"/>',
   print:'<path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/>',
-  undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>',
-  redo:'<path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/>',
+  undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+  redo:'<path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>',
+  cog:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
   help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01"/>',
   sliders:'<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
   move:'<path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/>',
@@ -74,6 +75,7 @@ const I = {
   close:'<path d="M6 6l12 12M18 6 6 18"/>',
   k_line:'<path d="M4 19 20 5"/><circle cx="4" cy="19" r="2" fill="currentColor"/><circle cx="20" cy="5" r="2" fill="currentColor"/>',
   k_rect:'<rect x="4" y="6" width="16" height="12"/>',
+  k_tole:'<path d="M4 6v9a3 3 0 0 0 3 3h13" stroke-width="3.2"/>',
   k_bez:'<path d="M4 19C7 5 17 19 20 5"/><path d="M4 19 8 8M20 5l-4 11" stroke-dasharray="2 2" opacity=".7"/><circle cx="8" cy="8" r="1.6"/><circle cx="16" cy="16" r="1.6"/>',
   palette:'<path d="M12 3a9 9 0 1 0 0 18c1.2 0 2-.8 2-1.8 0-1.3-1-1.6-1-2.7 0-1 .8-1.5 1.8-1.5H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/>',
   tree:'<path d="M5 4v16M5 8h5M5 14h5M5 20h5"/><rect x="11" y="6" width="9" height="4" rx="1"/><rect x="11" y="12" width="9" height="4" rx="1"/><rect x="11" y="18" width="9" height="4" rx="1"/>',
@@ -123,7 +125,10 @@ const S = {
   ex_vault:'<path d="M4 34V22a16 16 0 0 1 32 0v12h-7V22a9 9 0 0 0-18 0v12z" fill="#cbbf9f"/><path d="M20 3v5" stroke="#2f6fd6" stroke-width="2"/>',
   ex_hook:'<path d="M8 36V6h26v6H14v24z" fill="#c9a36b"/><path d="M31 12v8" stroke="#2c3331" stroke-width="1.5"/><rect x="27" y="20" width="8" height="8" fill="#e6a23a"/><path d="M4 36h12" stroke="#6c7a89" stroke-width="3"/>',
   ex_wind:'<path d="M19 36h4l-1-20h-2z" fill="#9aa5a1"/><g fill="#6c7a89"><path d="M21 15 19.5 2h3z"/><path d="M21 15l11.5 6.5-1.5 2.6z"/><path d="M21 15 9.5 21.5l1.5 2.6z"/></g><circle cx="21" cy="15" r="2.5" fill="#2c3331"/>',
+  ex_tole:'<path d="M6 8v20a6 6 0 0 0 6 6h22" stroke="#7d8a86" stroke-width="6" fill="none"/><path d="M6 8v20a6 6 0 0 0 6 6h22" stroke="#b9c2bf" stroke-width="1.6" fill="none"/>',
+  ex_pyramide:'<path d="M20 5 4 33h32z" fill="#e0bd3f"/><path d="M20 5 4 33h16z" fill="#c9a42d"/><path d="M20 5v28" stroke="#8a6f17" stroke-width="1.2" stroke-dasharray="2.5 2"/><path d="M4 33h32" stroke="#8a6f17" stroke-width="1.5"/>',
   k_sketch:'<rect x="5" y="9" width="20" height="16" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="15" cy="17" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 31h20M5 29v4M25 29v4" stroke="currentColor" stroke-width="1.6"/><path d="M29 30 35 8l2 1-6 22z" fill="currentColor"/>',
+  tole:'<path d="M9 7v17a7 7 0 0 0 7 7h17" stroke="#7d8a86" stroke-width="7" fill="none"/><path d="M9 7v17a7 7 0 0 0 7 7h17" stroke="#c1cac7" stroke-width="2" fill="none"/>',
   group:'<path d="M20 6 34 13v14L20 34 6 27V13z" fill="#7d8a86"/><path d="M6 13l14 7 14-7-14-7z" fill="#a8b4b0"/><ellipse cx="20" cy="13" rx="5" ry="2.5" fill="#4d5755"/>',
   sketch:'<path d="M6 27V13l14-7 14 7v14L20 34z" fill="#2b9a8a"/><path d="M6 13l14 7 14-7-14-7z" fill="#5cc2b3"/><circle cx="20" cy="13" r="3" fill="#1b6b60"/>',
 };
@@ -168,11 +173,13 @@ const KINDS = {
   gear:{label:'Roue dentée',color:'#6c7a89',params:{z:20,m:2,e:6,dh:5},fields:[F('z','Nombre de dents Z',{unit:'',min:6,max:150,step:1,int:true}),F('m','Module m',{step:0.5}),F('e','Épaisseur'),F('dh',"Diamètre de l'alésage",{min:0})]},
   rack:{label:'Crémaillère',color:'#8a6c55',params:{n:12,m:2,e:6,hb:6},fields:[F('n','Nombre de dents',{unit:'',min:2,max:200,step:1,int:true}),F('m','Module m',{step:0.5}),F('e','Épaisseur'),F('hb','Hauteur sous les dents')]},
   sketch:{label:'Esquisse',color:'#2b9a8a',params:{},fields:[]},
+  tole:{label:'Tôle',color:'#7d8a86',params:{t:2,W:30,r:2,sk:{nid:8,pts:[{id:1,x:0,y:0,fixed:true,origin:true},{id:2,x:40,y:0},{id:3,x:40,y:30}],lines:[{id:4,a:1,b:2},{id:5,a:2,b:3}],circles:[],beziers:[],cons:[{id:6,type:'h',l:4},{id:7,type:'v',l:5}]}},
+    fields:[F('t','Épaisseur',{step:0.5}),F('W','Largeur'),F('r','Rayon de pli',{min:0,step:0.5})]},
   group:{label:'Groupe',color:'#7d8a86',params:{},fields:[]},
 };
 const BASIC = ['box','cylinder','sphere','cone','pyramid','wedge','tube','torus','text'];
 /* Level at which each shape appears in the rack: 1 débutant, 2 intermédiaire, 3 avancé. */
-const KIND_LVL = {box:1,cylinder:1,sphere:1,cone:1,pyramid:1,wedge:1,text:1,tube:2,torus:2,sketch:2,gear:3,rack:3};
+const KIND_LVL = {box:1,cylinder:1,sphere:1,cone:1,pyramid:1,wedge:1,text:1,tube:2,torus:2,sketch:2,tole:3,gear:3,rack:3};
 const MECA = ['gear','rack'];
 const PALETTE = ['#e4574b','#e6a23a','#e0bd3f','#4aa36b','#2b9a8a','#3d8bd0','#3a6fc4','#8c5ac2','#c45b8e','#8a6c55','#6c7a89','#f2f2ee','#2c3331'];
 
@@ -407,6 +414,7 @@ function buildPrimitive(kind, p){
       g=new THREE.ExtrudeGeometry(sh,{depth:P(p.e),bevelEnabled:false,curveSegments:32}); break; }
     case 'rack': g=new THREE.ExtrudeGeometry(rackShape(p.n,p.m,p.hb),{depth:P(p.e),bevelEnabled:false}); break;
     case 'sketch': g=sketchGeometry(p) || new THREE.BoxGeometry(0.01,0.01,0.01); break;
+    case 'tole': g=toleGeometry(p) || new THREE.BoxGeometry(0.01,0.01,0.01); break;
     default: g=new THREE.BoxGeometry(10,10,10);
   }
   return ensureAttrs(g);

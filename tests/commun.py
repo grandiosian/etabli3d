@@ -37,6 +37,21 @@ def wait_ready(pg, timeout=30000):
     pg.wait_for_timeout(300)
 
 
+def apparence(pg):
+    """Ouvre le menu Apparence : engrenage (Réglages) puis « Apparence… »."""
+    pg.click('#bSet')
+    pg.click('#bLook')
+    pg.wait_for_timeout(100)
+
+
+def niveau(pg, n):
+    """Choisit le niveau dans le menu Réglages (engrenage à droite de la barre du haut), puis referme le menu."""
+    pg.click('#bSet')
+    pg.click(f'#lvl [data-lvl="{n}"]')
+    pg.click('#bSet')
+    pg.wait_for_timeout(300)
+
+
 class Ctx:
     def __init__(self, browser, url, failures, prefix=''):
         self.browser, self.URL, self.E, self.OUT = browser, url, E, OUT
@@ -59,8 +74,7 @@ class Ctx:
             if self.pg.is_visible('#gallery'):
                 self.pg.click('#galleryClose')
             if level != 1:
-                self.pg.click(f'#lvl [data-lvl="{level}"]')
-                self.pg.wait_for_timeout(300)
+                niveau(self.pg, level)
         return self.pg
 
     def close(self):

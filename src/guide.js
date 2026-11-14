@@ -32,6 +32,7 @@ function stepper(items, done, cur, {onDone, onGo, manual=()=>true}){
   return h('div',{class:'gd-stepper'}, box, list);
 }
 function renderDemo(){
+  majAtelier();   // la barre du haut suit l'activité du guide
   const el=$('#demo'); if(!el) return;
   if(demoClosed){ el.hidden=true; $('#bGuide')?.setAttribute('aria-pressed','false'); $('#bGuide')?.classList.remove('on'); applyViewOffset(); if(el.classList.contains('docked')) requestAnimationFrame(()=>fitWings()); return; }
   placeDemo(); el.hidden=false; el.classList.toggle('closed',!demoOpen); el.innerHTML='';
@@ -79,6 +80,28 @@ function renderDemo(){
   }
   else renderTp(body);
   hydrateIcons(el); applyLayout('demo'); applyViewOffset();
+}
+/* ---- Barre du haut : l'activité en cours, comme dans NetSim et TechnoStudio.
+   Pastille de la classe (5e / 4e / 3e, seulement une fois connecté), type (Tuto, Exercice, Exemple, TP),
+   nom du projet (modifiable), difficulté en barres (Débutant 1, Intermédiaire 2, Avancé 3), étapes faites / total.
+   Un clic (hors du nom) ouvre la bibliothèque. Ne change rien au guide : mêmes règles que guideSrc(), sans les écrire. */
+function activiteEnCours(){
+  const T= GUIDE.src==='tuto' && GUIDE.tuto? LESSONS[GUIDE.tuto] : null, tp=state.tp?.tasks?.length? state.tp : null, n=state.note;
+  if(T) return {type:LIB_TYPE[T.type]||'Tuto', titre:T.title, niv:T.level, fait:GUIDE.done.filter(Boolean).length, total:T.steps.length};
+  if(GUIDE.src==='tp' && tp || !n && tp) return {type:'TP', titre:tp.title||'Consignes du TP', fait:tp.tasks.filter(t=>t.done).length, total:tp.tasks.length};
+  if(n) return {type:'Exemple', titre:n.title, niv:SAMPLES[n.key]?.level, fait:GUIDE.noteDone.filter(Boolean).length, total:n.try.length};
+  return null;
+}
+function majAtelier(){
+  const w=$('#tbAtelier'); if(!w) return; const a=activiteEnCours();
+  const cl= window.Centrale?.connecte?.()? niveauEleve() : 0, k= cl>=5? 5 : cl;   // classe de l'élève (6e : couleur de la 5e)
+  w.className='tbres tbat'+(a?' actif':'')+(k? ' k'+k : '');
+  const pas=$('#tbPas'); pas.hidden=!cl; pas.className='pas'+(k?' p'+k:''); pas.textContent= cl? String(cl) : '';
+  const ty=$('#tbType'); ty.hidden=!a; ty.textContent= a? a.type : '';
+  const pr=$('#tbProg'); pr.hidden=!a; pr.innerHTML=''; pr.classList.toggle('fini', !!a && a.total>0 && a.fait>=a.total);
+  if(a){ if(a.niv) pr.append(h('span',{class:'nvb',title:`Niveau ${LEVELS[a.niv-1]?.name||a.niv}`,'aria-label':`Niveau ${a.niv} sur 3`}, [1,2,3].map(i=>h('i',{class:i<=a.niv?'on':null}))));
+    pr.append(h('span',{class:'tbpct',title:`${a.fait} étape${a.fait>1?'s':''} faite${a.fait>1?'s':''} sur ${a.total}`}, `${Math.min(a.fait,a.total)}/${a.total}`)); }
+  w.title= (a? `${a.type} « ${a.titre} » : ${Math.min(a.fait,a.total)} / ${a.total} étapes faites.\n` : '')+(cl? `Classe de ${cl}e. ` : '')+'Clic : la bibliothèque (tutos, exercices, exemples).';
 }
 function guideTips(){ return `Cliquez une forme de la barre du haut pour la poser sur le tapis, ou ouvrez un <b>exemple</b>.<br><br>Cliquez une pièce : des <b>poignées</b> apparaissent. Carrés blancs des coins : longueur et largeur ; petits carrés noirs : une cote ; carré du haut : hauteur ; cône : soulever ; flèches courbes : tourner. Glissez la pièce pour la déplacer. Double-clic sur un <b>groupe</b> : modifier ses pièces.<br><br><span class="kbd">Maj</span> + clic ou <span class="kbd">Maj</span> + glisser dans le vide (cadre) pour en choisir plusieurs ; cliquez encore au même endroit pour prendre la pièce de derrière.<br><br>${(LMB.find(x=>x[0]===(prefs.lmb||'orbit'))||LMB[1])[3]} Molette : zoom. Clic droit : menu.`; }
 /* ouvrir un tuto ou un exercice : niveau si besoin, scène de départ (ou projet vide), guide ouvert dessus */

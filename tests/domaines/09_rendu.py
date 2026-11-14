@@ -1,5 +1,6 @@
 """Options de rendu et matières des pièces."""
 import os
+from commun import apparence
 
 NIVEAU = 3
 
@@ -8,7 +9,7 @@ def run(t):
     pg, check, E, OUT, URL, b, errors = t.pg, t.check, t.E, t.OUT, t.URL, t.browser, t.errors
     # Options de rendu : arêtes, fil de fer, rayons X, ombres, éclairage
     pg.evaluate(f"()=>{E}.loadExample('maison')"); pg.wait_for_timeout(400)
-    pg.click('#bLook'); pg.wait_for_timeout(100)
+    apparence(pg)
     pg.locator('#menuLook .look-rend button', has_text='Fil de fer').click(); pg.wait_for_timeout(100)
     a = pg.evaluate(f"()=>[...{E}.meshes.values()].every(r=>r.mesh.material.wireframe)")
     pg.locator('#menuLook .look-rend button', has_text='Arêtes').click(); pg.wait_for_timeout(100)
@@ -18,9 +19,9 @@ def run(t):
     pg.locator('#menuLook .look-rend button', has_text='Avec').click(); pg.locator('#menuLook .look-rend button', has_text='Contrasté').click(); pg.wait_for_timeout(300)
     d = pg.evaluate(f"()=>[{E}.renderer.shadowMap.enabled, [...{E}.meshes.values()].every(r=>r.mesh.castShadow), {E}.prefs.light]")
     pg.screenshot(path=os.path.join(OUT, 'rendu.png'))
-    pg.locator('#menuLook .look-rend button', has_text='Plein').click(); pg.locator('#menuLook .look-rend button', has_text='Sans').click(); pg.locator('#menuLook .look-rend button', has_text='Atelier').click(); pg.click('#bLook')
+    pg.locator('#menuLook .look-rend button', has_text='Plein').click(); pg.locator('#menuLook .look-rend button', has_text='Sans').click(); pg.locator('#menuLook .look-rend button', has_text='Atelier').click(); pg.keyboard.press('Escape')
     check('rendu : fil de fer, arêtes, rayons X, ombres et éclairage', a and bb_ and c and d == [True, True, 'contraste'], [a, bb_, c, d])
-    pg.click('#bLook'); pg.wait_for_timeout(100)
+    apparence(pg)
     pg.locator('#menuLook .look-rend button', has_text='Texture').click(); pg.wait_for_timeout(100)
     pg.locator('#menuLook .look-rend button', has_text='Bois').click(); pg.wait_for_timeout(300)
     t = pg.evaluate(f"()=>[[...{E}.meshes.values()].every(r=>'TEX' in (r.mesh.material.defines||{{}})), {E}.TEXK.value]")
@@ -29,7 +30,7 @@ def run(t):
     pg.screenshot(path=os.path.join(OUT, 'rendu-hq.png'))
     pg.locator('#menuLook .look-rend button', has_text='Normale').click(); pg.locator('#menuLook .look-rend button', has_text='Plein').click(); pg.wait_for_timeout(200)
     t2 = pg.evaluate(f"()=>[[...{E}.meshes.values()].some(r=>'TEX' in (r.mesh.material.defines||{{}})), {E}.renderer.toneMapping, !!{E}.scene_().environment]")
-    pg.click('#bLook')
+    pg.keyboard.press('Escape')
     check('mode texture (bois) et haute qualité (environnement, tons film), puis retour', t == [True, 2] and q == [True, True, True] and t2 == [False, 0, False], [t, q, t2])
     # Matières des pièces : motif propre à chaque pièce, couleur naturelle, masse, image importée, enregistrement
     pid = pg.evaluate(f"()=>{E}.state.parts.find(p=>p.kind!=='group' && !p.hole).id")

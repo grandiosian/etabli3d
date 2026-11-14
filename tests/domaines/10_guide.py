@@ -11,7 +11,7 @@ def run(t):
     r = pg.evaluate(f"()=>{{const E={E}; const c=E.addPart('cylinder'); c.hole=true; E.setSel([]); const m=E.meshes.get(c.id).mesh.material; return [!!m.defines && 'HATCH' in m.defines, m.transparent]}}")
     check('perçage transparent et hachuré', r == [True, True], r)
     pg.evaluate("()=>document.querySelector('#bNew').click()"); pg.wait_for_timeout(200)
-    if pg.is_hidden('#demo'): pg.click('#bGuide')
+    if pg.is_hidden('#demo'): pg.evaluate("()=>document.querySelector('#bGuide').click()")   # interrupteur du menu Réglages
     pg.locator('#demo .gd-tabs .btn', has_text='Tutos').click(); pg.locator('#demo .gd-tuto', has_text='Premiers pas').click(); pg.wait_for_timeout(200)
     pg.evaluate(f"()=>{E}.addPart('box')"); pg.wait_for_timeout(800)
     r = pg.evaluate(f"()=>[{E}.GUIDE.done[0], {E}.GUIDE.step, document.querySelector('#demo .gd-n').textContent]")

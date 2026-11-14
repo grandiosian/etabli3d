@@ -1,40 +1,62 @@
 
 <div id="app">
   <header id="top">
-    <div class="brand"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M16 3 28 9.5v13L16 29 4 22.5v-13z"/><path d="M4 9.5 16 16l12-6.5M16 16v13"/></svg><span>Établi 3D</span></div>
-    <div class="tb-group tb-hist">
-      <button class="btn icon ghost" id="bUndo" title="Annuler (Ctrl+Z)" aria-label="Annuler"><svg data-i="undo"></svg></button>
-      <button class="btn icon ghost" id="bRedo" title="Rétablir (Ctrl+Y)" aria-label="Rétablir"><svg data-i="redo"></svg></button>
-    </div>
-    <div class="menu-wrap">
-      <button class="btn ghost" id="bFile" aria-haspopup="menu" aria-expanded="false" title="Nouveau, ouvrir, enregistrer, exporter, bibliothèque"><svg data-i="open"></svg><span>Fichier</span><svg data-i="chevDown" class="dd"></svg></button>
-      <div class="menu file" id="menuFile" role="menu" hidden>
-        <button role="menuitem" id="bNew"><svg data-i="new"></svg><span>Nouveau projet</span></button>
-        <button role="menuitem" id="bOpen"><svg data-i="open"></svg><span>Ouvrir un projet…</span><small>.json</small></button>
-        <button role="menuitem" id="bSave"><svg data-i="save"></svg><span>Enregistrer le projet</span><small>.json</small></button>
-        <button role="menuitem" id="bStl"><svg data-i="print"></svg><span>Exporter pour l’impression 3D</span><small>.stl</small></button>
-        <button role="menuitem" id="bNuage"><svg data-i="send"></svg><span>Déposer sur Nuage</span><small>secours</small></button>
-        <hr>
-        <button role="menuitem" id="bExamples"><svg data-i="book"></svg><span>Bibliothèque : tutos, exercices, exemples</span></button>
+    <!-- à gauche : logo (il ouvre le menu Fichier), annuler / rétablir, puis le widget de l'élève (« ← » de la Centrale + « Visiteur » ou son identifiant) -->
+    <div class="tb-l">
+      <div class="menu-wrap">
+        <button class="brand" id="bFile" aria-haspopup="menu" aria-expanded="false" aria-label="Menu Fichier" title="Fichier : nouveau, ouvrir, enregistrer, exporter, bibliothèque"><svg class="logo" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M16 3 28 9.5v13L16 29 4 22.5v-13z"/><path d="M4 9.5 16 16l12-6.5M16 16v13"/></svg><span>Établi 3D</span><svg data-i="chevDown" class="dd"></svg></button>
+        <div class="menu file" id="menuFile" role="menu" hidden>
+          <button role="menuitem" id="bNew"><svg data-i="new"></svg><span>Nouveau projet</span></button>
+          <button role="menuitem" id="bOpen"><svg data-i="open"></svg><span>Ouvrir un projet…</span><small>.json</small></button>
+          <button role="menuitem" id="bSave"><svg data-i="save"></svg><span>Enregistrer le projet</span><small>.json</small></button>
+          <button role="menuitem" id="bStl"><svg data-i="print"></svg><span>Exporter pour l’impression 3D</span><small>.stl</small></button>
+          <button role="menuitem" id="bNuage"><svg data-i="send"></svg><span>Déposer sur Nuage</span><small>secours</small></button>
+          <hr>
+          <button role="menuitem" id="bExamples"><svg data-i="book"></svg><span>Bibliothèque : tutos, exercices, exemples</span></button>
+        </div>
+      </div>
+      <div class="tb-group tb-hist">
+        <button class="btn icon ghost" id="bUndo" title="Annuler (Ctrl+Z)" aria-label="Annuler"><svg data-i="undo"></svg></button>
+        <button class="btn icon ghost" id="bRedo" title="Rétablir (Ctrl+Y)" aria-label="Rétablir"><svg data-i="redo"></svg></button>
+      </div>
+      <div class="tbres tbid" id="widgetCentrale">
+        <button type="button" id="bCentrale" title="Visiteur : clique pour te connecter avec ton code et enregistrer ton travail"><svg data-i="user"></svg><span>Visiteur</span></button>
       </div>
     </div>
-    <input id="projName" aria-label="Nom du projet" value="Mon projet">
-    <input type="file" id="fileIn" accept=".json,application/json" hidden>
-    <nav class="flow" id="flow" aria-label="Démarche"></nav>
-    <div class="spacer"></div>
-    <div class="lvl" id="lvl" role="radiogroup" aria-label="Niveau">
-      <span class="lvl-lbl">Niveau</span>
-      <button role="radio" data-lvl="1" title="Débutant : volumes, perçages, groupes"><span class="l">Débutant</span><span class="m">Déb.</span><span class="s">1</span></button>
-      <button role="radio" data-lvl="2" title="Intermédiaire : + esquisses cotées et mouvements"><span class="l">Intermédiaire</span><span class="m">Inter.</span><span class="s">2</span></button>
-      <button role="radio" data-lvl="3" title="Avancé : toutes les fonctions"><span class="l">Avancé</span><span class="m">Avancé</span><span class="s">3</span></button>
+    <!-- au centre : l'activité en cours (classe, type, nom du projet, difficulté, avancement) -->
+    <div class="tb-c">
+      <div class="tbres tbat" id="tbAtelier" title="Bibliothèque : tutos, exercices, exemples">
+        <button type="button" class="tbat-go" id="bAtelier" aria-label="Ouvrir la bibliothèque : tutos, exercices, exemples"><svg data-i="book" class="tbat-lib"></svg><span class="pas" id="tbPas" hidden></span><span class="tpcn" id="tbType" hidden></span></button>
+        <input id="projName" aria-label="Nom du projet" value="Mon projet">
+        <span class="tbat-prog" id="tbProg" hidden></span>
+      </div>
+      <input type="file" id="fileIn" accept=".json,application/json" hidden>
     </div>
-    <button class="btn ghost" id="bGuide" aria-pressed="false" title="Guide : tutos pas à pas, fiche de l’exemple, consignes du TP"><svg data-i="guide"></svg><span class="hide-narrow">Guide</span></button>
-    <div class="menu-wrap">
-      <button class="btn ghost" id="bLook" aria-haspopup="true" title="Thème et couleurs"><svg data-i="palette"></svg><span class="hide-narrow">Apparence</span></button>
-      <div class="menu look" id="menuLook" hidden></div>
+    <!-- à droite : la démarche (#flow, hors Modéliser) puis l'engrenage des réglages : niveau, guide, propriétés,
+         arborescence, apparence, aide (la barre garde le moins d'icônes possible) -->
+    <div class="tb-r">
+      <nav class="flow" id="flow" aria-label="Démarche"></nav>
+      <div class="menu-wrap">
+        <button class="btn icon ghost" id="bSet" aria-haspopup="true" aria-expanded="false" aria-label="Réglages" title="Réglages : niveau, guide, propriétés, apparence, aide"><svg data-i="cog"></svg></button>
+        <div class="menu set" id="menuSet" hidden>
+          <h4>Niveau</h4>
+          <div class="lvl" id="lvl" role="radiogroup" aria-label="Niveau">
+            <button role="radio" data-lvl="1"><b>Débutant</b><small>volumes, perçages, groupes</small></button>
+            <button role="radio" data-lvl="2"><b>Intermédiaire</b><small>+ esquisses cotées et mouvements</small></button>
+            <button role="radio" data-lvl="3"><b>Avancé</b><small>toutes les fonctions</small></button>
+          </div>
+          <hr>
+          <h4>Panneaux</h4>
+          <button class="set-item" id="bGuide" aria-pressed="false" title="Guide : tutos pas à pas, fiche de l’exemple, consignes du TP"><svg data-i="guide"></svg><span>Guide</span><small>tutos, fiche, consignes</small><i class="set-coche" aria-hidden="true"></i></button>
+          <button class="set-item" id="mobileInsp" aria-pressed="true" title="Propriétés de la pièce choisie"><svg data-i="sliders"></svg><span>Propriétés</span><small>de la pièce choisie</small><i class="set-coche" aria-hidden="true"></i></button>
+          <div id="setTree"></div>
+          <hr>
+          <button class="set-item" id="bLook" aria-haspopup="true" title="Thème et couleurs"><svg data-i="palette"></svg><span>Apparence…</span><small>thème, couleurs, rendu</small></button>
+          <button class="set-item" id="bHelp"><svg data-i="help"></svg><span>Aide et raccourcis</span></button>
+        </div>
+        <div class="menu look" id="menuLook" hidden></div>
+      </div>
     </div>
-    <button class="btn" id="mobileInsp"><svg data-i="sliders"></svg>Réglages</button>
-    <button class="btn ghost" id="bHelp" title="Aide et raccourcis"><svg data-i="help"></svg><span class="hide-narrow">Aide</span></button>
   </header>
 
 
@@ -54,6 +76,7 @@
       <button class="shape sk-tool" data-min="2" data-sktool="rect" title="Esquisse en rectangle : choisir le plan, puis tracer"><svg data-i="k_rect"></svg>Rectangle</button>
       <button class="shape sk-tool" data-min="2" data-sktool="circle" title="Esquisse en cercle : choisir le plan, puis tracer"><svg data-i="k_circle"></svg>Cercle</button>
       <button class="shape sk-tool" data-min="2" data-sktool="bezier" title="Esquisse en courbe de Bézier : choisir le plan, puis tracer point par point"><svg data-i="k_bez"></svg>Bézier</button>
+      <button class="shape sk-tool" data-min="3" data-sktool="tole" title="Tôle pliée : choisir le plan, puis tracer la ligne médiane (ouverte)"><svg data-i="k_tole"></svg>Tôle</button>
       <button class="rackmin-btn" id="rackMin" title="Réduire la barre des formes" aria-label="Réduire la barre des formes"><svg data-i="chevUp"></svg></button>
     </div>
   </nav>
@@ -231,6 +254,7 @@
       <div class="mode2">
         <button class="btn on" id="skModeExt"><svg data-i="extrude"></svg>Extrusion</button>
         <button class="btn" data-min="3" id="skModeRev"><svg data-i="revolve"></svg>Révolution</button>
+        <button class="btn" data-min="3" id="skModeTole" style="grid-column:1/-1" title="La ligne tracée devient une tôle pliée"><svg data-i="k_tole"></svg>Tôle pliée</button>
       </div>
       <div class="row" id="skHRow"><label for="skH">Hauteur d'extrusion</label><div class="num"><input id="skH" type="number" step="0.5" min="0.1" value="10"><span>mm</span></div></div>
       <div class="info" id="skModeInfo"></div>
@@ -297,7 +321,7 @@
         <li><b>Débutant</b> : volumes simples, perçages, groupes, couleurs, export STL.</li>
         <li><b>Intermédiaire</b> : + esquisses cotées et courbes de Bézier, tube et tore, aligner, liaisons et moteurs.</li>
         <li><b>Avancé</b> : + engrenages, transmissions, révolution, contraintes avancées et arborescence (à gauche).</li>
-        <li>Le niveau se choisit en haut à droite ; il est mémorisé dans ce navigateur.</li>
+        <li>Le niveau se choisit dans les réglages (l’engrenage, en haut à droite) ; il est mémorisé dans ce navigateur.</li>
       </ul></div>
       <div><h4>Raccourcis</h4><ul>
         <li><span class="kbd">M</span> déplacer · <span class="kbd">R</span> tourner · <span class="kbd">D</span> poser</li>

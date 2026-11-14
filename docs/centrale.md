@@ -10,7 +10,9 @@ Notes détaillées pour Claude (voir la carte dans `CLAUDE.md`). Le contrat lui-
 `window.Etabli3D` (point d'accès unique) : `activites()`, `catalogue()`, `progression(id)`, `fusionnerProgression`, `donnees()` = `{projet}`, `estProjet`, `ouvrirProjet`, `resume()`, `fichier(nom)`.
 
 ## Connexion
-- Chargement du module `js/centrale-client.js` depuis `window.CENTRALE_URL` ou le serveur par défaut ; bouton `#bCentrale` « Mon code » ; entrées `.cz-item` du menu Fichier une fois connecté.
+- Chargement du module `js/centrale-client.js` depuis `window.CENTRALE_URL` ou le serveur par défaut ; widget de l'élève `#widgetCentrale` dans la barre du haut (fixe, dans `body.html`) : `#bCentrale` « Visiteur » ou l'identifiant (`s.identifiant||s.eleve`), clic = connexion / déconnexion (`centraleClic`) ; entrées `.cz-item` du menu Fichier une fois connecté.
+- Bouton « ← » au début du widget (`#bRetourCentrale`, `centraleRetourBouton()`) : `Centrale.boutonPrecedent({classe:'tbid-ret'})` (« ← Étape précédente » dans un parcours, « ← Mes ateliers » sinon, caché hors Centrale ; `maj()` à chaque `centraleBouton()`) ; module plus ancien : « ← Mes ateliers » de secours (`Centrale.retour()`, sinon l'adresse `sessionStorage['centrale-retour']`). `Centrale.init` reçoit `boutonRetour:false` (plus de bouton flottant en bas à gauche) ; le bouton flottant « Étape suivante » du module reste.
+- Pastille de la classe (5e / 4e / 3e, `niveauEleve()`) dans l'activité en cours au centre de la barre (`majAtelier()`, guide.js), seulement une fois connecté.
 - Le jeton `#centrale=` du portail se repère AVANT `Centrale.init` (le vrai module le retire de l'adresse ; la fausse Centrale des tests aussi).
 
 ## Ateliers transversaux

@@ -25,7 +25,7 @@ def run(t):
     cz.goto(URL); cz.wait_for_timeout(2500); cz.click('#galleryClose')
     r = cz.evaluate("()=>[__cz.init.app, __cz.init.activites.length, Etabli3D.activites().length, document.querySelector('#bCentrale').textContent.trim()]")
     cz.click('#bCentrale'); cz.wait_for_timeout(200); cz.click('#czFaux'); cz.wait_for_timeout(1500)
-    r2 = cz.evaluate("""()=>{const E=window.__etabli; return [document.querySelector('#bCentrale').textContent.trim(), !!E.PROG.done['exo:de'], E.PROG.part.premiers, E.state.note && E.state.note.key,
+    r2 = cz.evaluate("""()=>{const E=window.__etabli; return [document.querySelector('#bCentrale').textContent.trim(), document.querySelector('#tbPas').textContent, document.querySelector('#tbAtelier').classList.contains('k5'), __cz.init.boutonRetour, !!E.PROG.done['exo:de'], E.PROG.part.premiers, E.state.note && E.state.note.key,
       __cz.progres.some(([id,p])=>id==='ex-de' && p.faites===0 && p.statut==='commence'), __cz.sauve.some(([k,v])=>k==='projet' && v.app==='etabli3d'), Etabli3D.progression('exo-de').statut]}""")
     # Annuler : exemple demandé → fichier de l'étape (ouvert à l'arrivée) → projet du serveur
     cz.keyboard.press('Control+z'); cz.wait_for_timeout(300)
@@ -38,8 +38,8 @@ def run(t):
     cz.click('#bFile'); cz.locator('#menuFile .cz-item', has_text='Déposer').click(); cz.wait_for_timeout(1500)
     cz.click('#bFile'); cz.locator('#menuFile .cz-item', has_text='STL').click(); cz.wait_for_timeout(600)
     r5 = cz.evaluate("()=>[__cz.depots.map(d=>d.nom+':'+d.type+':'+(d.taille>0)).join(' '), __cz.fichiers.map(f=>f.nom.endsWith('.stl')+':'+f.type).join(' ')]")
-    check('Centrale : déclaration des activités, bouton « Mon code », progression fusionnée, projet du serveur (Annuler revient), activité demandée, sauvegarde',
-          r == ['etabli3d', 39, 39, 'Mon code'] and r2 == ['5A · 07', True, 3, 'de', True, True, 'termine'] and r3 == ['Support de départ', 'Porte-crayon', 'bois'], [r, r2, r3])
+    check('Centrale : déclaration des activités, widget « Visiteur » puis identifiant et pastille de la classe, sans bouton flottant, progression fusionnée, projet du serveur (Annuler revient), activité demandée, sauvegarde',
+          r == ['etabli3d', 43, 43, 'Visiteur'] and r2 == ['07', '5', True, False, True, 3, 'de', True, True, 'termine'] and r3 == ['Support de départ', 'Porte-crayon', 'bois'], [r, r2, r3])
     check('Centrale : fichier de l’atelier repris, dépôt des sorties (projet, STL, aperçu, résumé), STL envoyé au professeur',
           r4[0] == 'Support de départ' and r4[1] > n0 and r5 == ['projet.etabli3d.json:application/json:true resume.json:application/json:true piece.stl:model/stl:true apercu.png:image/png:true', 'true:model/stl'], [r4, n0, r5])
     # Constats de compétences : exercice réussi après « Un indice ? », tuto terminé (classe 5A → capacités de 5e)
@@ -52,6 +52,25 @@ def run(t):
               Etabli3D.activites().find(a=>a.id==='exo-plaque').competences.join(' ')]; }""")
     check('Centrale : constats envoyés à la réussite (capacités du niveau de la classe, indices comptés)',
           rc == ['CCRI16.5.1:true:1:1', 'CCRI16.5.1:1', 'CCRI16.5.1 CCRI16.4.1 CCRI16.3.1'], rc)
+    # Bouton « ← » dans le widget de l'élève : Centrale.boutonPrecedent s'il existe, sinon « ← Mes ateliers » (Centrale.retour / adresse du portail)
+    for precedent in (False, True):
+        c2 = b.new_context(viewport={'width': 1400, 'height': 860})
+        c2.add_init_script(f"window.CENTRALE_URL='{base}/tests/centrale/'; window.__CZ_TEST={_json.dumps({'precedent': precedent})}; sessionStorage.setItem('centrale-retour', '{base}/tests/portail.html');")
+        p2 = c2.new_page(); p2.on('pageerror', lambda e: errors.append('centrale: ' + str(e)))
+        p2.goto(URL); p2.wait_for_timeout(2500)
+        rb = p2.evaluate("""()=>{const w=document.querySelector('#widgetCentrale'), r=w.querySelector('#bRetourCentrale');
+          return [document.querySelectorAll('#bRetourCentrale').length, !!r && w.firstElementChild===r && r.nextElementSibling.id==='bCentrale', r? r.textContent.replace('←','').trim() : null, !!r && !r.hidden, (__cz.precedent||{}).maj>0]}""")
+        if precedent:
+            if p2.is_visible('#galleryClose'): p2.click('#galleryClose')
+            n0 = p2.evaluate("()=>__cz.precedent.maj"); p2.click('#bCentrale'); p2.wait_for_timeout(200); p2.click('#czFaux'); p2.wait_for_timeout(800)
+            p2.click('#bRetourCentrale'); p2.wait_for_timeout(200)
+            rb += p2.evaluate("n0=>[__cz.precedent.maj>n0, document.querySelector('#bRetourCentrale').textContent.replace('←','').trim(), __cz.precedent.clic]", n0)
+            check('widget de l’élève : bouton commun « ← » de la Centrale (Centrale.boutonPrecedent) au début du widget, mis à jour à la connexion',
+                  rb == [1, True, 'Mes ateliers', True, True, True, 'Étape précédente', 1], rb)
+        else:
+            check('widget de l’élève : « ← Mes ateliers » de secours (Centrale sans boutonPrecedent, ouverte depuis le portail)',
+                  rb == [1, True, 'Mes ateliers', True, False], rb)
+        c2.close()
     ver = ctx.new_page(); ver.goto(base + '/dist/outils/verifier-descripteur.html?app=../test.html'); ver.wait_for_function("()=>document.body.dataset.resultat", timeout=30000)
     vr = ver.evaluate("()=>[document.body.dataset.resultat, [...document.querySelectorAll('#res li.ko')].map(l=>l.textContent)]")
     check('centrale.json correspond à l’application (outils/verifier-descripteur.html)', vr[0] == 'ok', vr)
@@ -72,7 +91,7 @@ def run(t):
         r = cz.evaluate("()=>[document.querySelector('#bCentrale').textContent.trim(), location.hash.includes('centrale='), window.__etabli.state.name, typeof __cz.init.avantDeQuitter]")
         if cas == 'rien de déposé':
             check('Centrale : ouvert depuis le portail (#centrale=…), connexion automatique et fichier reçu par l’étape ouvert',
-                  r == ['5A · 07', False, attendu, 'function'], r)
+                  r == ['07', False, attendu, 'function'], r)
             cz.evaluate("()=>__cz.init.avantDeQuitter()"); cz.wait_for_timeout(300)
             d1 = cz.evaluate("()=>__cz.depots.map(d=>d.nom+':'+d.type+':'+(d.taille>0)).join(' ')")
             cz.evaluate("()=>__cz.init.avantDeQuitter()"); cz.wait_for_timeout(300)
@@ -83,7 +102,7 @@ def run(t):
             check('Centrale : avant « Étape suivante », les sorties de l’étape sont déposées (une seule fois tant que rien ne change)',
                   d1 == 'support.json:application/json:true support.stl:model/stl:true' and n1 == 2 and n2 == 4, [d1, n1, n2])
         else:
-            check(f'Centrale : arrivée dans l’étape, {cas} → « {attendu} »', r[0] == '5A · 07' and r[2] == attendu, r)
+            check(f'Centrale : arrivée dans l’étape, {cas} → « {attendu} »', r[0] == '07' and r[2] == attendu, r)
         ctx.close()
 
     # Sans serveur (Centrale injoignable) : #activite= ouvre l'activité ; « Déposer sur Nuage » enregistre le projet

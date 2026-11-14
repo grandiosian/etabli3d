@@ -24,6 +24,8 @@ Modeleur 3D pour la technologie au collège, dans le navigateur. Ce fichier est 
 | Esquisses, plans, Bézier | `sketch.js`, `planes.js`, `core.js` | `esquisse` | `docs/modelisation.md` |
 | Matières, perçages, repères d'échelle | `scene.js`, `ui.js`, `refs.js` | `rendu`, `guide`, `reperes` | `docs/modelisation.md` |
 | Validation, Mécanique, bulle, étiquettes de liaison | `validate.js`, `ui.js`, `bubble.js` | `mecanique` | `docs/simulation.md` |
+| Tôle pliée (ligne médiane ouverte, plis) | `tole.js`, `sketch.js`, `core.js` (`KINDS.tole`, `case 'tole'`) | `tole` | `docs/modelisation.md` |
+| Patron à imprimer (Valider, pages A4 en SVG) | `patron.js`, `validate.js` | `patron` | `docs/simulation.md` |
 | Structures | `struct.js`, `bubble.js` | `structures` | `docs/simulation.md` |
 | Guide, tutos, exercices, bibliothèque, exemples | `guide.js`, `lessons.js`, `examples.js` | `guide`, `bibliotheque`, `exemples` | `docs/pedagogie.md` |
 | Passerelle avec la Centrale | `centrale.js`, `centrale.json` | `centrale` | `docs/centrale.md`, `PASSERELLE.md` |
@@ -32,10 +34,20 @@ Modeleur 3D pour la technologie au collège, dans le navigateur. Ce fichier est 
 - `head.html` : toute la feuille de style (variables de couleur sur `:root`, mode sombre) ; `body.html` : le HTML de la page.
 - `core.js` : imports three.js, icônes, `toast`, géométrie des pièces (`getGeometry`, primitives, esquisses, groupes).
 - `prefs.js` : niveau et apparence (`prefs`, enregistrés dans le navigateur) ; `scene.js` : scène, caméra, annuler (`commit`/`undo`), `addPart`, `sync()` (met la vue à jour), matériaux et rendu.
-- `ui.js` : panneau Propriétés (`renderInspector`), liaisons et simulation du mouvement ; `sketch.js` : éditeur d'esquisse ; `validate.js` : atelier Valider ; `struct.js` : atelier Structures.
+- `ui.js` : panneau Propriétés (`renderInspector`), liaisons et simulation du mouvement ; `sketch.js` : éditeur d'esquisse ; `tole.js` : tôle pliée ; `validate.js` : atelier Valider ; `patron.js` : patron à imprimer (Valider) ; `struct.js` : atelier Structures.
 - `examples.js` (`SAMPLES`), `lessons.js` (`LESSONS`), `guide.js` (`#demo`), `outliner.js` (arborescence), `bubble.js` (bulle de simulation), `workspace.js` (ateliers), `panels.js` (panneaux flottants et plaqués), `hover.js` (survol, navigation), `gizmo.js` (poignées), `viewcube.js`, `refs.js`, `planes.js`, `centrale.js`, `init.js` (branchements, boucle d'affichage, `window.__etabli` utilisé par les tests).
 
 ## Conventions transversales
+- **Barre du haut** : elle suit la règle commune aux applications élèves (SPECIFICATION de la Centrale §2.6, NetSim en référence).
+  - **À gauche** : logo (`button.brand#bFile`, qui ouvre le menu Fichier), annuler / rétablir (`.tb-hist`), widget de l'élève (`#widgetCentrale`).
+  - **Au centre** : l'activité (`#tbAtelier`).
+  - **À droite**, seulement : la démarche (`#flow`) et la roue des réglages (`#bSet` → `#menuSet`). Ce menu contient niveau, interrupteurs Guide et Propriétés, arborescence, « Apparence… » (`#menuLook` prend sa place) et « Aide et raccourcis ». Les tests ouvrent ces menus avec `niveau()` et `apparence()` de `tests/commun.py`.
+  - **Clic sur l'élève connecté** : le menu commun `Centrale.menuEleve()`, avec repli sur l'ancienne confirmation.
+- **Tailles d'écran** :
+  - au-dessus de 860 px, grand écran ;
+  - de 600 à 860 px, barre sur une ligne avec la création et l'Édition en haut (bloc `@media (min-width: 600px) and (max-width: 860px)` de head.html) ;
+  - sous 600 px, téléphone : barres en bas.
+  - Le JS teste « grand écran » avec `WIDE` (`min-width: 861px`, panels.js).
 - Niveaux : `<html data-level="1|2|3">`. `data-min="2"` / `data-min="3"` réserve un élément à un niveau, `data-max="2"` le masque au-dessus ; en JS, `lv(n)`. Niveau des formes : `KIND_LVL` ; des exemples : `level`.
 - Ateliers : `<html data-ws="model|check|mech|struct">` ; un élément `data-ws="model mech"` n'apparaît que dans ces ateliers. `setWs(k)`, variable `ws`. Navigation dans `#flow` (barre du haut), rendue par `updateSteps()`. La Mécanique exige `mechReady()`.
 - Pour placer quelque chose sur la vue : `toStage(v)` (monde → coordonnées de `#stage`) et `evStage(ev)`, pas le rectangle du canevas. Caméra : utilisez toujours `camera` (jamais `camP`).

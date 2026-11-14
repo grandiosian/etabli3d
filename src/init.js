@@ -27,7 +27,7 @@ function setLevel(n, quiet=false){
   if(!lv(2)) closePlanePicker();
   setRackTab(LAYOUT.rackTab||'vol');
   if(lv(3) && prefs.tree && !$('#app').classList.contains('with-tree') && !matchMedia('(max-width: 860px)').matches) setTreeOpen(true);
-  sync(); renderInspector(); applyViewOffset(); updateSteps();
+  sync(); renderInspector(); applyViewOffset(); updateSteps(); renderSetTree();
   if(!quiet && n!==prev) toast(`Niveau ${LEVELS[n-1].name} : ${LEVELS[n-1].desc}`, 3400);
 }
 $$('#lvl [data-lvl]').forEach(b=>b.onclick=()=>setLevel(+b.dataset.lvl));
@@ -40,6 +40,8 @@ $$('#treeMode [data-mode]').forEach(b=>b.onclick=()=>{ tree.mode=b.dataset.mode;
 /* ---- appearance */
 function renderLook(){
   const m=$('#menuLook'); m.innerHTML='';
+  // ouvert depuis le menu Réglages : on peut y revenir
+  m.append(h('button',{class:'look-retour',type:'button',onclick:e=>{ e.stopPropagation(); $('#menuLook').hidden=true; ouvrirReglages(); }}, '← Réglages'));
   const seg=h('div',{class:'seg'}, ...[['auto','Auto'],['light','Clair'],['dark','Sombre']].map(([v,l])=>h('button',{class:'btn'+(prefs.theme===v?' on':''),'aria-pressed':String(prefs.theme===v),onclick:()=>{ prefs.theme=v; savePrefs(); applyTheme(); renderLook(); afterLook(); }}, l)));
   const acc=h('div',{class:'look-sw'}, ...Object.entries(ACCENTS).map(([k,A])=>h('button',{'aria-pressed':String(prefs.accent===k),onclick:()=>{ prefs.accent=k; savePrefs(); applyTheme(); renderLook(); afterLook(); }}, h('i',{style:`background:${A.light[0]}`}), A.name)));
   const mats=h('div',{class:'look-sw'}, ...Object.entries(MATS).map(([k,M])=>h('button',{'aria-pressed':String(prefs.mat===k),onclick:()=>{ prefs.mat=k; savePrefs(); refreshMat(); renderLook(); }}, h('i',{style:`background:${M.fill}`}), M.name)));
@@ -54,18 +56,32 @@ function renderLook(){
   m.append(rend);
   m.append(h('div',{}, h('h4',{},'Thème'), seg), h('div',{}, h('h4',{},'Couleur principale'), acc), h('div',{}, h('h4',{},'Plan de travail'), mats), h('div',{}, h('h4',{},'Couleurs des axes X Y Z'), axs),
     h('div',{}, h('h4',{},'Panneaux'), h('div',{class:'seg',style:'margin-bottom:6px'}, ...[['transparent','Transparents'],['leger','Peu transparents'],['opaque','Opaques']].map(([v,l])=>h('button',{class:'btn'+(prefs.glass===v?' on':''),'aria-pressed':String(prefs.glass===v),onclick:()=>{ prefs.glass=v; savePrefs(); applyGlass(); renderLook(); }}, l))), h('button',{class:'btn',style:'width:100%;justify-content:center',onclick:()=>{ resetLayout(); $('#menuLook').hidden=true; }}, svgIcon('reset'),'Remettre les panneaux à leur place')),
-    lv(3)? h('div',{}, h('h4',{},'Arborescence (à gauche)'), h('div',{class:'seg'}, ...[[true,'Affichée'],[false,'Masquée']].map(([v,l])=>{ const on=$('#app').classList.contains('with-tree')===v; return h('button',{class:'btn'+(on?' on':''),'aria-pressed':String(on),onclick:()=>{ setTreeOpen(v); renderLook(); }}, l); }))) : null,
     h('div',{}, h('h4',{},'Barre de navigation (tactile)'), h('div',{class:'seg'}, ...[['auto','Auto'],['show','Affichée'],['hide','Masquée']].map(([v,l])=>h('button',{class:'btn'+(prefs.nav===v?' on':''),'aria-pressed':String(prefs.nav===v),onclick:()=>{ prefs.nav=v; savePrefs(); applyNavBar(); renderLook(); }}, l)))),
     h('p',{class:'jsub',style:'margin:0'},'Ces réglages restent dans ce navigateur.'));
 }
 function afterLook(){ sceneBg(); sync(); skDraw(); }
-$('#bLook').onclick=e=>{ e.stopPropagation(); const m=$('#menuLook'); if(m.hidden) renderLook(); m.hidden=!m.hidden; closeFileMenu(); };
+// « Apparence… » (menu Réglages) : le menu Apparence prend sa place, au même endroit
+$('#bLook').onclick=e=>{ e.stopPropagation(); closeSetMenu(); renderLook(); $('#menuLook').hidden=false; closeFileMenu(); };
+/* menu Réglages (engrenage, seul à droite de la barre avec la démarche) : niveau, panneaux (guide, propriétés,
+   arborescence au niveau 3), apparence, aide et raccourcis */
+function inspVisible(){ return WIDE.matches ? !LAYOUT.inspMin : $('#insp').classList.contains('open'); }
+function majReglages(){ const b=$('#mobileInsp'); if(b) b.setAttribute('aria-pressed',String(inspVisible())); renderSetTree(); }
+function ouvrirReglages(){ majReglages(); $('#menuSet').hidden=false; $('#bSet').setAttribute('aria-expanded','true'); }
+function renderSetTree(){
+  const m=$('#setTree'), ok=lv(3); m.innerHTML='';
+  m.append(h('h4',{},'Arborescence'), h('div',{class:'seg'}, ...[[true,'Affichée'],[false,'Masquée']].map(([v,l])=>{ const on=ok && $('#app').classList.contains('with-tree')===v;
+    return h('button',{class:'btn'+(on?' on':''),'aria-pressed':String(on),disabled:!ok,onclick:()=>{ setTreeOpen(v); renderSetTree(); }}, l); })));
+  if(!ok) m.append(h('small',{},'Disponible au niveau Avancé.'));
+}
+function closeSetMenu(){ $('#menuSet').hidden=true; $('#bSet').setAttribute('aria-expanded','false'); }
+$('#bSet').onclick=e=>{ e.stopPropagation(); const m=$('#menuSet'); $('#menuLook').hidden=true; closeFileMenu();
+  if(m.hidden) ouvrirReglages(); else closeSetMenu(); };   // depuis Apparence : retour aux Réglages
 /* menu Fichier : nouveau, ouvrir, enregistrer, exporter, bibliothèque ; se ferme après un choix */
 function closeFileMenu(){ $('#menuFile').hidden=true; $('#bFile').setAttribute('aria-expanded','false'); }
-$('#bFile').onclick=e=>{ e.stopPropagation(); const m=$('#menuFile'), open=m.hidden; m.hidden=!open; $('#bFile').setAttribute('aria-expanded',String(open)); $('#menuLook').hidden=true; if(open) m.querySelector('button')?.focus(); };
+$('#bFile').onclick=e=>{ e.stopPropagation(); const m=$('#menuFile'), open=m.hidden; m.hidden=!open; $('#bFile').setAttribute('aria-expanded',String(open)); $('#menuLook').hidden=true; closeSetMenu(); if(open) m.querySelector('button')?.focus(); };
 $$('#menuFile button').forEach(b=>b.addEventListener('click',()=>closeFileMenu()));
 $('#menuFile').addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeFileMenu(); $('#bFile').focus(); } });
-document.addEventListener('pointerdown',e=>{ if(!e.target.closest('.menu-wrap')){ $('#menuLook').hidden=true; closeFileMenu(); } });
+document.addEventListener('pointerdown',e=>{ if(!e.target.closest('.menu-wrap')){ $('#menuLook').hidden=true; closeFileMenu(); closeSetMenu(); } });
 $('#tSolid').onclick=()=>setHole(false); $('#tHole').onclick=()=>setHole(true);
 $('#tGroup').onclick=groupSel; $('#tUngroup').onclick=ungroupSel; $('#tDup').onclick=duplicateSel; $('#tDrop').onclick=dropSel; $('#tDel').onclick=deleteSel;
 $$('#views [data-view], #navBar [data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
@@ -90,18 +106,21 @@ $('#fileIn').onchange=e=>{ const f=e.target.files[0]; if(!f) return; const r=new
 $('#bNew').onclick=()=>{ simReset(true); resetFor('Nouveau projet'); selection=[]; jf=null; selJoint=null; $('#projName').value=state.name; sync(); commit(); renderDemo(); setTab('part'); toast('Nouveau projet. Ctrl+Z pour revenir en arrière.'); };
 $('#projName').onchange=()=>{ state.name=$('#projName').value.trim()||'Mon projet'; commit(); };
 $('#bExamples').onclick=openGallery;
-$('#bGuide').onclick=toggleGuide;
+// activité en cours (centre de la barre du haut) : un clic hors du nom du projet ouvre la bibliothèque
+$('#tbAtelier').addEventListener('click',e=>{ if(e.target.closest('#projName')) return; const T=GUIDE.src==='tuto' && GUIDE.tuto && LESSONS[GUIDE.tuto]; openGallery(T? 'lesson' : state.note? 'ex' : undefined); });
+$('#bGuide').onclick=()=>toggleGuide();   // dans le menu Réglages : il reste ouvert, l'interrupteur suit (guide.js)
 $('#galleryClose').onclick=()=>{ $('#gallery').hidden=true; };
 $('#gallery').addEventListener('pointerdown',e=>{ if(e.target.id==='gallery') $('#gallery').hidden=true; });
-$('#mobileInsp').onclick=()=>$('#insp').classList.toggle('open');
-$('#bHelp').onclick=()=>{ $('#help').hidden=false; };
+// Propriétés (menu Réglages) : sur grand écran, agrandir / réduire le panneau ; sur tablette, l'ouvrir en bas
+$('#mobileInsp').onclick=()=>{ if(WIDE.matches) $('#inspMin').click(); else $('#insp').classList.toggle('open'); majReglages(); };
+$('#bHelp').onclick=()=>{ closeSetMenu(); $('#help').hidden=false; };
 $('#helpClose').onclick=()=>{ $('#help').hidden=true; };
 $('#help').addEventListener('pointerdown',e=>{ if(e.target.id==='help') $('#help').hidden=true; });
 // sketch editor
 $$('#skbar [data-tool]').forEach(b=>b.onclick=()=>setSkTool(b.dataset.tool));
 $('#skDel').onclick=skDelete; $('#skUndo').onclick=skUndo; $('#skRedo').onclick=skRedo; $('#skFit').onclick=skFit;
 $('#skSnap').onchange=()=>skDraw();
-$('#skModeExt').onclick=()=>setSkMode('extrude'); $('#skModeRev').onclick=()=>setSkMode('revolve');
+$('#skModeExt').onclick=()=>setSkMode('extrude'); $('#skModeRev').onclick=()=>setSkMode('revolve'); $('#skModeTole').onclick=()=>setSkMode('tole');
 $('#skH').onchange=()=>{ const v=parseNum($('#skH').value); if(isFinite(v)&&v>0) SK.h=v; $('#skH').value=fmtIn(SK.h); };
 $('#skOk').onclick=()=>closeSketch(true); $('#skCancel').onclick=()=>closeSketch(false);
 
@@ -127,6 +146,7 @@ document.addEventListener('keydown', e=>{
     return;
   }
   if(!$('#help').hidden){ if(k==='escape') $('#help').hidden=true; return; }
+  if(k==='escape' && !$('#menuSet').hidden){ closeSetMenu(); $('#bSet').focus(); return; }
   if(k==='escape' && !$('#bubble').hidden){ closeBubble(); return; }
   if(!$('#gallery').hidden){ if(k==='escape') $('#gallery').hidden=true; return; }
   if(k==='escape' && !$('#menuLook').hidden){ $('#menuLook').hidden=true; return; }
@@ -165,7 +185,7 @@ initPanels();
   document.documentElement.dataset.ws='model';
   $$('#lvl [data-lvl]').forEach(b=>b.setAttribute('aria-checked', String(+b.dataset.lvl===prefs.level)));
   if(lv(3) && prefs.tree && !matchMedia('(max-width: 860px)').matches) $('#app').classList.add('with-tree');
-  // (arborescence : réglage dans Apparence)
+  // (arborescence : réglage dans le menu de l'engrenage, niveau 3)
   let loaded=false;
   try{ const s=localStorage.getItem('etabli3d.autosave'); if(s){ const o=JSON.parse(s); if(o.parts && o.parts.length){ loadProject(o,true); loaded=true; } } }catch(e){}
   if(!loaded){ loadExample('maison'); hist.stack=[hist.stack[hist.stack.length-1]]; hist.idx=0; openGallery(); }
@@ -182,6 +202,7 @@ function loop(now){
   if(sim.playing){ simStep(dt*(+$('#sSpeed').value||1)); applyPoses(); if(ws==='mech') updateMarkerPoses(); if(frame%4===0){ refreshJointValues(); tickBubble(); $('#sTime').textContent=fmt(sim.t,1)+' s'; } }
   if(ws==='struct') stAnimTick(now);
   if(ws==='check') locTestTick(now);
+  patTick();
   if(!$('#sk').hidden) return;
   if(!(ws==='struct' && !ST.mode3d)){ stepCam(now); orbit.update(); updOrtho(); hoverTick(); renderer.render(scene,camera); vcTick(); }
   // overlays projected with this frame's camera
@@ -191,4 +212,4 @@ function loop(now){
   updateBubbleLink();
 }
 requestAnimationFrame(loop);
-window.__etabli={state, pivot, TG, guides, enterGroupEdit, finishGroupEdit, pickAll, setLmb, openCtxMenu, HOV, groupSel, prefs, orbit_:()=>orbit, SAMPLES, LAYOUT:()=>LAYOUT, resetLayout, togglePanel, CHK, startLocTest, stopLocTest, openStructBubble, openMechBubble, closeBubble, BUB, stAnimPlay, locEdit, locFrame, LOCV, applyStruct3DK, camera, orbit, structGroup, struct3DHit, renderer, ampFactor, structBox, stDraw, arrowHits:()=>stArrowHits, setWs, ws:()=>ws, validateAll, validatePart, vState, mechReady, setJointLoc, ST, SD, computeStruct, solveTruss, buildMesh, solvePlane, beamTheory, makeProxy, getProxyGeo, locGroup, loadExample, openGallery, addPart, groupSel, openSketch, closeSketch, SK, skSolve, DOCKABLE, TEXK, scene_:()=>scene, applyRender, edgeLineMat, refSeries, setRackTab, applyTree, LESSONS, startLesson, markDone, PROG, LIB, setRef, REF, refAuto, partsBox, cam:()=>camera, setOrtho, NAV, setNavLock, zoomBy, applyNavBar, tgSnapAngle, setRackTab, GUIDE, startTuto, openPlanePicker, closePlanePicker, choosePlane, PP, planeRot, bzSetType, bzSetInterp, sim, simToggle, simReset, exportStl, stlBinary, CZ, centraleConnecte, MATIERES, geoVolume, zipStore, meshes, selection:()=>selection, setSel:(ids)=>{selection=ids; sync(); renderInspector();}, setTab, openJointForm, saveJoint, jf:()=>jf, skProfiles, getGeometry};
+window.__etabli={state, pivot, TG, guides, enterGroupEdit, finishGroupEdit, pickAll, setLmb, openCtxMenu, HOV, groupSel, prefs, orbit_:()=>orbit, SAMPLES, LAYOUT:()=>LAYOUT, resetLayout, togglePanel, CHK, startLocTest, stopLocTest, openStructBubble, openMechBubble, closeBubble, BUB, stAnimPlay, locEdit, locFrame, LOCV, applyStruct3DK, camera, orbit, structGroup, struct3DHit, renderer, ampFactor, structBox, stDraw, arrowHits:()=>stArrowHits, setWs, ws:()=>ws, validateAll, validatePart, vState, mechReady, setJointLoc, ST, SD, computeStruct, solveTruss, buildMesh, solvePlane, beamTheory, makeProxy, getProxyGeo, locGroup, loadExample, openGallery, addPart, groupSel, openSketch, closeSketch, SK, skSolve, DOCKABLE, TEXK, scene_:()=>scene, applyRender, edgeLineMat, refSeries, setRackTab, applyTree, LESSONS, startLesson, markDone, PROG, LIB, setRef, REF, refAuto, partsBox, cam:()=>camera, setOrtho, NAV, setNavLock, zoomBy, applyNavBar, tgSnapAngle, setRackTab, GUIDE, startTuto, openPlanePicker, closePlanePicker, choosePlane, PP, planeRot, bzSetType, bzSetInterp, sim, simToggle, simReset, exportStl, stlBinary, CZ, centraleConnecte, MATIERES, geoVolume, zipStore, meshes, selection:()=>selection, setSel:(ids)=>{selection=ids; sync(); renderInspector();}, setTab, openJointForm, saveJoint, jf:()=>jf, skProfiles, getGeometry, toleCheck, toleChain, newPart, findPart, meshStats, signedVolume, renderInspector, PAT, patronMake, patronGenerated, patronCompute, patClick, patManual, patGroup, setWs};

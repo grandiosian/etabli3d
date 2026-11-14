@@ -25,6 +25,12 @@
     nomFichier:(ext, suf)=>`5A_07_etabli3d_${suf? suf.replace(/\W+/g,'-')+'_' : ''}2026.${ext}`,
     contexteAtelier:()=>T.atelier? {parcours:1, etape:0} : null,
     async etape(){ return T.atelier? {numero:0, parcours:{id:1}, fichiers:T.dossier||[], etape:{ouverte:true, deposees:[...new Set(rec.depots.map(d=>d.nom))], ...T.atelier}} : null; },
+    // bouton « ← » du widget de l'élève (Centrale récente) : seulement si le test le demande, pour essayer aussi le bouton de secours
+    boutonPrecedent: T.precedent? (o)=>{ const b=document.createElement('button'); b.type='button'; b.className=o.classe||'centrale-precedent'; b.hidden=true;
+      b.innerHTML='<span aria-hidden="true">←</span><span class="centrale-precedent-txt"></span>'; rec.precedent={maj:0, clic:0};
+      b.addEventListener('click', ()=>{ rec.precedent.clic++; });
+      const maj=()=>{ rec.precedent.maj++; b.hidden=false; b.querySelector('.centrale-precedent-txt').textContent= on? 'Étape précédente' : 'Mes ateliers'; };
+      maj(); return {bouton:b, maj}; } : undefined,
     projet:{ async charger(nom){ return T.fichiers?.[nom]? JSON.parse(JSON.stringify(T.fichiers[nom])) : null; },
       async sauver(nom, b){ rec.depots.push({nom, type:b.type, taille:b.size}); return {nom, version:1}; } },
   };

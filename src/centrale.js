@@ -5,7 +5,7 @@
    - le module de la Centrale (js/centrale-client.js) est chargé à la fin du démarrage ; s'il est injoignable,
      Établi 3D fonctionne seul (enregistrement dans le navigateur).
    ========================================================= */
-const ETABLI_VERSION='1.3.0';   // = atelier.version de centrale.json
+const ETABLI_VERSION='1.4.0';   // = atelier.version de centrale.json
 const PROJET_FORMAT=2;          // version du document « projet » (2 : matières p.mat et images textures)
 
 /* ---- compétences (référentiel de la Centrale : /passerelle/competences.json, programme de technologie cycle 4)
@@ -113,11 +113,16 @@ window.Etabli3D=Object.freeze({
 });
 
 /* =========================================================
-   Connexion à la Centrale (facultative) : bouton « Mon code », sauvegarde du projet, progression,
+   Connexion à la Centrale (facultative) : widget de l'élève (« Visiteur »), sauvegarde du projet, progression,
    activité demandée par le portail, fichiers de l'élève et dossier de projet des ateliers.
    ========================================================= */
-const CZ={pret:false, bouton:null, fenetre:null, serveur:'', constate:new Set(), indices:{}};
+const CZ={pret:false, bouton:null, precedent:null, fenetre:null, serveur:'', constate:new Set(), indices:{}};
+/* adresse du portail quand Établi 3D a été ouvert depuis la Centrale (gardée par le module de la Centrale) */
+const adresseRetourCentrale=()=>{ try{ return sessionStorage.getItem('centrale-retour'); }catch(e){ return null; } };
 function centraleInit(){
+  // Le widget de l'élève (barre du haut) existe dès l'ouverture : « Visiteur » tant que la Centrale n'est pas connectée ou joignable
+  CZ.bouton=$('#bCentrale'); if(CZ.bouton) CZ.bouton.onclick=e=>{ e.stopPropagation(); centraleClic(); };
+  centraleBouton();
   // Copie servie par une Centrale (…/miroir/etabli3d/) : on parle à cette Centrale-là (ex. Centrale locale)
   const miroir=/^https?:$/.test(location.protocol)&&location.pathname.match(/^(.*?\/)miroir\/[^/]+\//);
   CZ.serveur=window.CENTRALE_URL||(miroir?location.origin+miroir[1]:'https://technoversailles.alwaysdata.net/');
@@ -128,16 +133,45 @@ function centraleDemarrer(){
   if(!window.Centrale) return;
   const avecJeton=/(^|[#&])centrale=/.test(location.hash);   // à lire AVANT init : le module retire aussitôt le jeton de l'adresse
   Centrale.init({api:CZ.serveur+'api/', app:'etabli3d', activites:Etabli3D.activites(), avantDeQuitter:centraleAvantDeQuitter,
+    boutonRetour:false,   // « ← Étape précédente » / « ← Mes ateliers » est dans le widget de la barre du haut
     surDeconnexion:()=>{ CZ.pret=false; centraleBouton(); centraleMenu(); toast('Session terminée : reconnecte-toi pour enregistrer ton travail.'); }});
-  const btn=h('button',{class:'btn ghost',id:'bCentrale',type:'button',onclick:centraleClic}); $('#bGuide').before(btn); CZ.bouton=btn; centraleBouton();
+  centraleBouton();
   if(avecJeton || Centrale.connecte()) Centrale.afficherConnexion(centraleCorps(), {onConnecte:centraleConnecte});
 }
+/* Widget de l'élève : « Visiteur », ou son identifiant une fois connecté, précédé du bouton « ← » de la Centrale */
 function centraleBouton(){
   const b=CZ.bouton; if(!b) return; const s=window.Centrale?.connecte() && Centrale.session(); b.innerHTML='';
-  b.append(svgIcon(s? 'user' : 'login'), h('span',{class:'hide-narrow'}, s? `${s.classe} · ${s.eleve}` : 'Mon code'));
-  b.title= s? 'Ton travail est enregistré sur le serveur de la classe' : 'Se connecter avec son code pour enregistrer son travail et sa progression';
+  b.append(svgIcon('user'), h('span',{}, s? (s.identifiant||s.eleve) : 'Visiteur'));
+  b.title= s? 'Connecté : ton travail est enregistré sur le serveur de la classe' : 'Visiteur : clique pour te connecter avec ton code et enregistrer ton travail';
+  centraleRetourBouton(); majAtelier();
+}
+function centraleRetourBouton(){
+  const w=$('#widgetCentrale'); if(!w) return; let ret=$('#bRetourCentrale');
+  // Centrale récente : bouton commun « ← Étape précédente » (parcours, quelle que soit l'application) ou « ← Mes ateliers » (portail),
+  // caché hors de la Centrale ; il se met aussi à jour tout seul
+  if(window.Centrale?.boutonPrecedent){
+    if(!CZ.precedent){
+      if(ret) ret.remove();   // bouton de secours posé avant le chargement du module
+      CZ.precedent=Centrale.boutonPrecedent({classe:'tbid-ret'}); CZ.precedent.bouton.id='bRetourCentrale';
+      // en attendant la réponse du module (étape du parcours) : pas de pastille vide ni de clignotement
+      if(adresseRetourCentrale()){ const t=CZ.precedent.bouton.querySelector('.centrale-precedent-txt'); if(t && !t.textContent) t.textContent='Mes ateliers'; CZ.precedent.bouton.hidden=false; }
+      w.prepend(CZ.precedent.bouton);
+    }
+    CZ.precedent.maj(); return;
+  }
+  // Centrale plus ancienne (ou module pas encore chargé) : retour au portail seulement
+  const adresse=adresseRetourCentrale();
+  if(!adresse){ ret?.remove(); return; }
+  if(!ret) w.prepend(h('button',{type:'button',id:'bRetourCentrale',class:'tbid-ret',title:'Revenir à tous tes ateliers sur la Centrale (ton travail est enregistré)','aria-label':'Mes ateliers',
+    onclick:e=>{ e.stopPropagation(); if(!(window.Centrale?.retour && Centrale.retour())) location.href=adresse; }},
+    h('span',{'aria-hidden':'true'},'←'), h('span',{class:'tbid-txt'},'Mes ateliers')));
 }
 function centraleClic(){
+  if(!window.Centrale) return toast('La Centrale est injoignable pour le moment : Établi 3D fonctionne sans connexion.');
+  // connecté : menu de l'élève commun aux applications (module de la Centrale) ; sinon l'ancienne confirmation
+  if(Centrale.connecte() && Centrale.menuEleve){
+    Centrale.menuEleve(CZ.bouton,{onChange:centraleBouton, onDeconnexion:()=>{ CZ.pret=false; centraleBouton(); centraleMenu(); toast('Déconnecté. Établi 3D enregistre de nouveau dans ce navigateur seulement.'); }});
+    return; }
   if(Centrale.connecte()){ const s=Centrale.session();
     if(confirm(`Connecté : ${s.classe} · élève ${s.eleve}.\nTon travail est enregistré automatiquement.\n\nSe déconnecter ?`)){ Centrale.deconnexion(); CZ.pret=false; centraleBouton(); centraleMenu(); toast('Déconnecté. Établi 3D enregistre de nouveau dans ce navigateur seulement.'); }
     return; }
