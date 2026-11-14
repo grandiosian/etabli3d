@@ -56,5 +56,5 @@ Modeleur 3D pour la technologie au collège, dans le navigateur. Ce fichier est 
 
 ## Publier
 - Le push sur `main` déploie automatiquement sur GitHub Pages, et `.github/workflows/miroirs.yml` copie le dépôt sur la forge GitLab et le site sur technoversailles.alwaysdata.net (réglages : README, « Mise en ligne »).
-- `dist/artifact.html` est la même page sans `<html>`/`<head>`. Après chaque push, la republier sur l'artefact existant https://claude.ai/artifact/XoZ1sPmBrX1jkPcmeEoHVf (passer cette adresse en `url` pour garder le même lien ; ne pas créer un nouvel artefact).
+- `dist/artifact.html` est la même page sans `<html>`/`<head>`. L'artefact https://claude.ai/artifact/XoZ1sPmBrX1jkPcmeEoHVf n'est **pas** republié à chaque push : seulement quand on le demande. Dans ce cas, passer cette adresse en `url` pour garder le même lien (ne pas créer un nouvel artefact). L'outil exige de relire d'abord toute la version en ligne (environ 230 000 tokens) : le faire au début d'une session, ou dans une session à part.
 - Après tout ajout de tuto, exercice ou exemple : mettre à jour `centrale.json` et `ateliers.json` (voir `docs/centrale.md`).
