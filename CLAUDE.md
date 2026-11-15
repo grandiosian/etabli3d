@@ -4,6 +4,8 @@ Modeleur 3D pour la technologie au collège, dans le navigateur. Ce fichier est 
 
 ## Règles
 - Tous les textes visibles sont en français, ton simple et direct (élèves de collège).
+- **Mode atelier** (ouvert depuis le portail de la Centrale, `depuisPortail()`) : l'élève reste sur l'atelier demandé. `regleAtelier('menu'|'bibliotheque'|'niveau')` dit ce qui est permis. Par défaut tout est fermé (`INTERFACE_ATELIER`) ; un tuto, un exercice (`LESSONS`) ou un exemple (`SAMPLES`) peut en rouvrir avec un champ `interface:{…}`. Les règles sont publiées dans `ateliers.json` (champ `interface`). Les classes `sans-menu`, `sans-bibliotheque` et `sans-niveau` de `<html>` masquent ce qui est fermé. Règle commune : SPECIFICATION de la Centrale, §2.6.
+- **Charte graphique** : [CHARTE-GRAPHIQUE.md](CHARTE-GRAPHIQUE.md) (logo, couleurs clair / sombre, polices) est à respecter. Un changement de logo ou de couleur principale se fait d'abord dans ce document, puis dans le code et dans le portail de la Centrale (`centrale/public/index.php` : `LOGOS` et `.app-…`).
 - Le code est dans `src/`. Ne modifiez jamais `dist/` à la main : `python3 build.py`.
 - Les `src/*.js` sont concaténés dans **une seule portée** (ordre `JS_ORDER` de `build.py`) : pas d'`import`/`export` entre eux, une fonction de core.js est visible partout. Pour trouver qui appelle une fonction : `grep -n "nomFonction(" src/*.js`.
 - Repère : Z vers le haut, millimètres, chaque pièce a sa base à z = 0 dans son repère local.

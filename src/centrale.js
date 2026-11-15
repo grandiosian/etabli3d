@@ -5,7 +5,7 @@
    - le module de la Centrale (js/centrale-client.js) est chargé à la fin du démarrage ; s'il est injoignable,
      Établi 3D fonctionne seul (enregistrement dans le navigateur).
    ========================================================= */
-const ETABLI_VERSION='1.4.0';   // = atelier.version de centrale.json
+const ETABLI_VERSION='1.5.0';   // = atelier.version de centrale.json
 const PROJET_FORMAT=2;          // version du document « projet » (2 : matières p.mat et images textures)
 
 /* ---- compétences (référentiel de la Centrale : /passerelle/competences.json, programme de technologie cycle 4)
@@ -46,7 +46,7 @@ function etabliFusionner(serveur){
   saveProg();
 }
 /* ---- le projet (clé de données « projet ») */
-const etabliProjet=()=>JSON.parse(JSON.stringify({app:'etabli3d', version:PROJET_FORMAT, name:state.name, parts:state.parts, joints:state.joints, nextId:state.nextId, note:state.note||null, tp:state.tp||null, struct:state.struct||null, textures:usedTextures()}));
+const etabliProjet=()=>JSON.parse(JSON.stringify({app:'etabli3d', version:PROJET_FORMAT, name:state.name, parts:state.parts, joints:state.joints, nextId:state.nextId, note:state.note||null, tp:state.tp||null, struct:state.struct||null, textures:usedTextures(), tuto:tutoEnCours()}));
 function estProjet(o){
   if(!o || typeof o!=='object' || !Array.isArray(o.parts) || (o.app && o.app!=='etabli3d') || (o.version||1)>PROJET_FORMAT) return false;
   const ok=ps=>ps.every(p=>p && Number.isInteger(p.id) && KINDS[p.kind] && Array.isArray(p.pos) && p.pos.length===3 && Array.isArray(p.rot) && p.rot.length===3 && (p.kind!=='group' || (Array.isArray(p.children) && ok(p.children))));
@@ -95,7 +95,8 @@ window.Etabli3D=Object.freeze({
   /** Catalogue des ateliers (ateliers.json, format catalogue.ateliers v1) : un tuto, un exercice ou un exemple = un atelier. */
   ateliers:()=>({format:'catalogue.ateliers', version:1, app:'etabli3d', app_version:ETABLI_VERSION, referentiel:'technologie-c4-2024',
     ateliers:etabliCatalogue().map(a=>({id:a.id, titre:a.titre, niveau:'', resume:a.resume, competences:a.competences,
-      activites:[{id:a.id, titre:a.titre, total:a.total, competences:a.competences}], ouvrir:a.id, etiquettes:[a.type, a.groupe]}))}),
+      activites:[{id:a.id, titre:a.titre, total:a.total, competences:a.competences}], ouvrir:a.id, etiquettes:[a.type, a.groupe],
+      interface:interfaceAtelier(a.id)}))}),   // ce que l'élève peut ouvrir quand l'atelier est lancé depuis la Centrale
   /** Progression d'une activité au format de la Centrale, ou null si jamais ouverte. */
   progression:etabliProgression,
   /** Fusionne le résultat de Centrale.mesProgressions() (le meilleur est gardé). */
@@ -119,6 +120,42 @@ window.Etabli3D=Object.freeze({
 const CZ={pret:false, bouton:null, precedent:null, fenetre:null, serveur:'', constate:new Set(), indices:{}};
 /* adresse du portail quand Établi 3D a été ouvert depuis la Centrale (gardée par le module de la Centrale) */
 const adresseRetourCentrale=()=>{ try{ return sessionStorage.getItem('centrale-retour'); }catch(e){ return null; } };
+/* ouvert depuis le portail de la Centrale : l'adresse est lue au chargement (le module en retire aussitôt le jeton), puis le retour gardé */
+var OUVERT_DEPUIS_PORTAIL=/(^|[#&])(centrale|retour)=/.test(location.hash);
+/* retour au portail de la Centrale (clic sur la pastille de l'atelier) : enregistre d'abord, comme « ← Mes ateliers » */
+function allerPortailCentrale(){
+  const C=window.Centrale;
+  if(C && C.allerPortail && C.allerPortail()) return;
+  if(C && C.retour && C.retour()!==false) return;
+  const r=adresseRetourCentrale(); if(r) location.href=r;
+}
+/* ---- Mode atelier : Établi 3D ouvert depuis le portail de la Centrale. L'élève reste sur l'atelier demandé.
+   Règles par défaut : pas de menu du logo (Fichier, Ctrl+S), pas de bibliothèque ni d'autre tuto ou exemple (onglets et
+   boutons du Guide), pas de changement de niveau. Un atelier peut en rouvrir avec un champ interface:{menu, bibliotheque,
+   niveau} (tuto ou exercice : LESSONS ; exemple : SAMPLES) ; il est publié dans ateliers.json. */
+var INTERFACE_ATELIER={menu:false, bibliotheque:false, niveau:false};
+function interfaceAtelier(id){   // règles complètes d'un atelier du catalogue (tuto-…, exo-…, ex-…)
+  const [t,k]=[id.split('-')[0], id.slice(id.indexOf('-')+1)], def= t==='ex'? SAMPLES[k] : LESSONS[k];
+  return Object.assign({}, INTERFACE_ATELIER, def?.interface||{});
+}
+function atelierDemande(){   // le tuto, l'exercice ou l'exemple ouvert par la Centrale
+  if(GUIDE.src==='tuto' && GUIDE.tuto && LESSONS[GUIDE.tuto]) return LESSONS[GUIDE.tuto];
+  return state.note?.key ? SAMPLES[state.note.key] || null : null;
+}
+function regleAtelier(cle){   // true : permis (hors mode atelier, tout est permis)
+  if(!depuisPortail()) return true;
+  const r=Object.assign({}, INTERFACE_ATELIER, atelierDemande()?.interface||{});
+  return r[cle]!==false;
+}
+function majModeAtelier(){   // classes de <html> lues par la feuille de style
+  const d=document.documentElement, at=depuisPortail();
+  d.classList.toggle('mode-atelier', at);
+  for(const k of Object.keys(INTERFACE_ATELIER)) d.classList.toggle('sans-'+k, at && !regleAtelier(k));
+}
+function depuisPortail(){   // déclaration de fonction : utilisable aussi depuis guide.js, chargé avant
+  if(OUVERT_DEPUIS_PORTAIL || /(^|[#&])(centrale|retour)=/.test(location.hash)) return true;
+  try{ return !!sessionStorage.getItem('centrale-retour'); }catch(e){ return false; }
+}
 function centraleInit(){
   // Le widget de l'élève (barre du haut) existe dès l'ouverture : « Visiteur » tant que la Centrale n'est pas connectée ou joignable
   CZ.bouton=$('#bCentrale'); if(CZ.bouton) CZ.bouton.onclick=e=>{ e.stopPropagation(); centraleClic(); };
@@ -142,7 +179,7 @@ function centraleDemarrer(){
 function centraleBouton(){
   const b=CZ.bouton; if(!b) return; const s=window.Centrale?.connecte() && Centrale.session(); b.innerHTML='';
   b.append(svgIcon('user'), h('span',{}, s? (s.identifiant||s.eleve) : 'Visiteur'));
-  b.title= s? 'Connecté : ton travail est enregistré sur le serveur de la classe' : 'Visiteur : clique pour te connecter avec ton code et enregistrer ton travail';
+  b.title= s? 'Connecté : ton travail est enregistré sur le serveur de la classe. Clic : retour sur la Centrale' : 'Visiteur : clique pour te connecter avec ton code et enregistrer ton travail';
   centraleRetourBouton(); majAtelier();
 }
 function centraleRetourBouton(){
@@ -168,7 +205,9 @@ function centraleRetourBouton(){
 }
 function centraleClic(){
   if(!window.Centrale) return toast('La Centrale est injoignable pour le moment : Établi 3D fonctionne sans connexion.');
-  // connecté : menu de l'élève commun aux applications (module de la Centrale) ; sinon l'ancienne confirmation
+  // connecté : retour sur la Centrale (le compte et le surnom se gèrent sur le portail) ;
+  // module plus ancien : menu de l'élève commun, sinon l'ancienne confirmation
+  if(Centrale.connecte() && Centrale.allerPortail && Centrale.allerPortail()) return;
   if(Centrale.connecte() && Centrale.menuEleve){
     Centrale.menuEleve(CZ.bouton,{onChange:centraleBouton, onDeconnexion:()=>{ CZ.pret=false; centraleBouton(); centraleMenu(); toast('Déconnecté. Établi 3D enregistre de nouveau dans ce navigateur seulement.'); }});
     return; }

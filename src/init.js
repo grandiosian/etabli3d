@@ -78,7 +78,7 @@ $('#bSet').onclick=e=>{ e.stopPropagation(); const m=$('#menuSet'); $('#menuLook
   if(m.hidden) ouvrirReglages(); else closeSetMenu(); };   // depuis Apparence : retour aux Réglages
 /* menu Fichier : nouveau, ouvrir, enregistrer, exporter, bibliothèque ; se ferme après un choix */
 function closeFileMenu(){ $('#menuFile').hidden=true; $('#bFile').setAttribute('aria-expanded','false'); }
-$('#bFile').onclick=e=>{ e.stopPropagation(); const m=$('#menuFile'), open=m.hidden; m.hidden=!open; $('#bFile').setAttribute('aria-expanded',String(open)); $('#menuLook').hidden=true; closeSetMenu(); if(open) m.querySelector('button')?.focus(); };
+$('#bFile').onclick=e=>{ e.stopPropagation(); if(!regleAtelier('menu')) return; const m=$('#menuFile'), open=m.hidden; m.hidden=!open; $('#bFile').setAttribute('aria-expanded',String(open)); $('#menuLook').hidden=true; closeSetMenu(); if(open) m.querySelector('button')?.focus(); };
 $$('#menuFile button').forEach(b=>b.addEventListener('click',()=>closeFileMenu()));
 $('#menuFile').addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeFileMenu(); $('#bFile').focus(); } });
 document.addEventListener('pointerdown',e=>{ if(!e.target.closest('.menu-wrap')){ $('#menuLook').hidden=true; closeFileMenu(); closeSetMenu(); } });
@@ -106,8 +106,9 @@ $('#fileIn').onchange=e=>{ const f=e.target.files[0]; if(!f) return; const r=new
 $('#bNew').onclick=()=>{ simReset(true); resetFor('Nouveau projet'); selection=[]; jf=null; selJoint=null; $('#projName').value=state.name; sync(); commit(); renderDemo(); setTab('part'); toast('Nouveau projet. Ctrl+Z pour revenir en arrière.'); };
 $('#projName').onchange=()=>{ state.name=$('#projName').value.trim()||'Mon projet'; commit(); };
 $('#bExamples').onclick=openGallery;
-// activité en cours (centre de la barre du haut) : un clic hors du nom du projet ouvre la bibliothèque
-$('#tbAtelier').addEventListener('click',e=>{ if(e.target.closest('#projName')) return; const T=GUIDE.src==='tuto' && GUIDE.tuto && LESSONS[GUIDE.tuto]; openGallery(T? 'lesson' : state.note? 'ex' : undefined); });
+// activité en cours (centre de la barre du haut) : un clic hors du nom du projet ouvre la bibliothèque ;
+// ouvert depuis le portail de la Centrale, il ramène au portail (« Mes ateliers »)
+$('#tbAtelier').addEventListener('click',e=>{ if(e.target.closest('#projName') && !depuisPortail()) return; if(depuisPortail()){ allerPortailCentrale(); return; } const T=GUIDE.src==='tuto' && GUIDE.tuto && LESSONS[GUIDE.tuto]; openGallery(T? 'lesson' : state.note? 'ex' : undefined); });
 $('#bGuide').onclick=()=>toggleGuide();   // dans le menu Réglages : il reste ouvert, l'interrupteur suit (guide.js)
 $('#galleryClose').onclick=()=>{ $('#gallery').hidden=true; };
 $('#gallery').addEventListener('pointerdown',e=>{ if(e.target.id==='gallery') $('#gallery').hidden=true; });
@@ -162,7 +163,7 @@ document.addEventListener('keydown', e=>{
   else if(mod&&k==='y'){ e.preventDefault(); redo(); }
   else if(mod&&k==='g'){ e.preventDefault(); e.shiftKey?ungroupSel():groupSel(); }
   else if(mod&&k==='d'){ e.preventDefault(); duplicateSel(); }
-  else if(mod&&k==='s'){ e.preventDefault(); saveProject(); }
+  else if(mod&&k==='s'){ e.preventDefault(); if(regleAtelier('menu')) saveProject(); }
   else if(mod&&k==='a'){ e.preventDefault(); selection=state.parts.map(p=>p.id); sync(); renderInspector(); }
   else if(mod) return;
   else if(k==='delete'||k==='backspace'){ e.preventDefault(); deleteSel(); }
@@ -188,7 +189,8 @@ initPanels();
   // (arborescence : réglage dans le menu de l'engrenage, niveau 3)
   let loaded=false;
   try{ const s=localStorage.getItem('etabli3d.autosave'); if(s){ const o=JSON.parse(s); if(o.parts && o.parts.length){ loadProject(o,true); loaded=true; } } }catch(e){}
-  if(!loaded){ loadExample('maison'); hist.stack=[hist.stack[hist.stack.length-1]]; hist.idx=0; openGallery(); }
+  // première visite : la bibliothèque s'ouvre, sauf depuis le portail de la Centrale (l'atelier demandé s'ouvre aussitôt après)
+  if(!loaded){ loadExample('maison'); hist.stack=[hist.stack[hist.stack.length-1]]; hist.idx=0; if(!depuisPortail()) openGallery(); }
   else { renderInspector(); renderDemo(); }
   simUI(); updateUndo(); updateSteps();
   etabliOuvrirAdresse(); window.addEventListener('hashchange', etabliOuvrirAdresse);   // #activite=… : ouverture directe, sans serveur

@@ -2,7 +2,7 @@
   "format": "catalogue.ateliers",
   "version": 1,
   "app": "etabli3d",
-  "app_version": "1.4.0",
+  "app_version": "1.5.0",
   "referentiel": "technologie-c4-2024",
   "ateliers": [
     {
@@ -31,7 +31,12 @@
       "etiquettes": [
         "tuto",
         "Modéliser avec des volumes"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "tuto-mesures",
@@ -59,7 +64,12 @@
       "etiquettes": [
         "tuto",
         "Modéliser avec des volumes"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "tuto-empiler",
@@ -87,7 +97,12 @@
       "etiquettes": [
         "tuto",
         "Modéliser avec des volumes"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "tuto-esquisse",
@@ -115,7 +130,12 @@
       "etiquettes": [
         "tuto",
         "Esquisser et coter"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "tuto-debout",
@@ -143,7 +163,12 @@
       "etiquettes": [
         "tuto",
         "Esquisser et coter"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "tuto-bezier",
@@ -171,7 +196,12 @@
       "etiquettes": [
         "tuto",
         "Esquisser et coter"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "tuto-pivot",
@@ -205,7 +235,12 @@
       "etiquettes": [
         "tuto",
         "Mettre en mouvement"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "tuto-engrenages",
@@ -239,7 +274,12 @@
       "etiquettes": [
         "tuto",
         "Mettre en mouvement"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "tuto-treillis",
@@ -267,7 +307,12 @@
       "etiquettes": [
         "tuto",
         "Simuler la déformation"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "tuto-tole",
@@ -295,7 +340,12 @@
       "etiquettes": [
         "tuto",
         "Esquisser et coter"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "tuto-patron",
@@ -323,7 +373,12 @@
       "etiquettes": [
         "tuto",
         "Modéliser avec des volumes"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "exo-de",
@@ -351,7 +406,12 @@
       "etiquettes": [
         "exo",
         "Modéliser avec des volumes"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "exo-plaque",
@@ -379,7 +439,12 @@
       "etiquettes": [
         "exo",
         "Modéliser avec des volumes"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "exo-tour",
@@ -407,7 +472,12 @@
       "etiquettes": [
         "exo",
         "Modéliser avec des volumes"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "exo-equerre",
@@ -435,7 +505,12 @@
       "etiquettes": [
         "exo",
         "Esquisser et coter"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "exo-vase",
@@ -463,7 +538,12 @@
       "etiquettes": [
         "exo",
         "Esquisser et coter"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "exo-barriere",
@@ -497,7 +577,12 @@
       "etiquettes": [
         "exo",
         "Mettre en mouvement"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "exo-reducteur",
@@ -531,7 +616,12 @@
       "etiquettes": [
         "exo",
         "Mettre en mouvement"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "exo-pont",
@@ -559,7 +649,12 @@
       "etiquettes": [
         "exo",
         "Simuler la déformation"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "ex-maison",
@@ -587,7 +682,12 @@
       "etiquettes": [
         "exemple",
         "Modéliser avec des volumes"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "ex-crayons",
@@ -615,7 +715,12 @@
       "etiquettes": [
         "exemple",
         "Modéliser avec des volumes"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "ex-de",
@@ -643,7 +748,12 @@
       "etiquettes": [
         "exemple",
         "Modéliser avec des volumes"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "ex-porteCles",
@@ -671,7 +781,12 @@
       "etiquettes": [
         "exemple",
         "Modéliser avec des volumes"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "ex-plaque",
@@ -699,7 +814,12 @@
       "etiquettes": [
         "exemple",
         "Esquisser et coter"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "ex-pion",
@@ -727,7 +847,12 @@
       "etiquettes": [
         "exemple",
         "Esquisser et coter"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "ex-tole",
@@ -755,7 +880,12 @@
       "etiquettes": [
         "exemple",
         "Esquisser et coter"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "ex-coeur",
@@ -783,7 +913,12 @@
       "etiquettes": [
         "exemple",
         "Esquisser et coter"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "ex-vase",
@@ -811,7 +946,12 @@
       "etiquettes": [
         "exemple",
         "Esquisser et coter"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "ex-pyramide",
@@ -839,7 +979,12 @@
       "etiquettes": [
         "exemple",
         "Modéliser avec des volumes"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "ex-barriere",
@@ -873,7 +1018,12 @@
       "etiquettes": [
         "exemple",
         "Mettre en mouvement"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "ex-gears",
@@ -907,7 +1057,12 @@
       "etiquettes": [
         "exemple",
         "Mettre en mouvement"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "ex-reducteur",
@@ -941,7 +1096,12 @@
       "etiquettes": [
         "exemple",
         "Mettre en mouvement"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "ex-poulies",
@@ -975,7 +1135,12 @@
       "etiquettes": [
         "exemple",
         "Mettre en mouvement"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "ex-etau",
@@ -1009,7 +1174,12 @@
       "etiquettes": [
         "exemple",
         "Mettre en mouvement"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "ex-bras",
@@ -1043,7 +1213,12 @@
       "etiquettes": [
         "exemple",
         "Mettre en mouvement"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "ex-eolienne",
@@ -1077,7 +1252,12 @@
       "etiquettes": [
         "exemple",
         "Mettre en mouvement"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "ex-pontWarren",
@@ -1105,7 +1285,12 @@
       "etiquettes": [
         "exemple",
         "Simuler la déformation"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "ex-grue",
@@ -1133,7 +1318,12 @@
       "etiquettes": [
         "exemple",
         "Simuler la déformation"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "ex-pontSuspendu",
@@ -1161,7 +1351,12 @@
       "etiquettes": [
         "exemple",
         "Simuler la déformation"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "ex-plongeoir",
@@ -1189,7 +1384,12 @@
       "etiquettes": [
         "exemple",
         "Simuler la déformation"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "ex-plancher",
@@ -1217,7 +1417,12 @@
       "etiquettes": [
         "exemple",
         "Simuler la déformation"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "ex-voute",
@@ -1245,7 +1450,12 @@
       "etiquettes": [
         "exemple",
         "Simuler la déformation"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     },
     {
       "id": "ex-potence",
@@ -1273,7 +1483,12 @@
       "etiquettes": [
         "exemple",
         "Simuler la déformation"
-      ]
+      ],
+      "interface": {
+        "menu": false,
+        "bibliotheque": false,
+        "niveau": false
+      }
     }
   ]
 }

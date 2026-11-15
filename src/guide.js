@@ -9,6 +9,14 @@
    ========================================================= */
 let demoClosed=false, demoOpen=true;
 const GUIDE={src:null, tuto:null, step:0, done:[], noteDone:[], editing:false};
+/* tuto ou exercice en cours, enregistré avec le projet (champ tuto) : rouvert depuis la Centrale, il reprend là où
+   l'élève en était au lieu de repartir de la scène de départ */
+function tutoEnCours(){ return GUIDE.src==='tuto' && GUIDE.tuto && LESSONS[GUIDE.tuto]? {k:GUIDE.tuto, step:GUIDE.step||0, done:GUIDE.done.map(Boolean)} : null; }
+function reprendreTuto(t){
+  const T=t && LESSONS[t.k]; if(!T) return false;
+  GUIDE.src='tuto'; GUIDE.tuto=t.k; GUIDE.done=T.steps.map((_,i)=>!!(t.done||[])[i]);
+  GUIDE.step=Math.min(Math.max(0, t.step|0), T.steps.length-1); return true;
+}
 
 function guideSrc(){
   let s=GUIDE.src;
@@ -32,6 +40,7 @@ function stepper(items, done, cur, {onDone, onGo, manual=()=>true}){
   return h('div',{class:'gd-stepper'}, box, list);
 }
 function renderDemo(){
+  majModeAtelier();   // ouvert depuis la Centrale : menus et bibliothèque selon les règles de l'atelier
   majAtelier();   // la barre du haut suit l'activité du guide
   const el=$('#demo'); if(!el) return;
   if(demoClosed){ el.hidden=true; $('#bGuide')?.setAttribute('aria-pressed','false'); $('#bGuide')?.classList.remove('on'); applyViewOffset(); return; }
@@ -62,10 +71,10 @@ function renderDemo(){
       add(h('div',{class:'gd-brief',html:T.brief}),
         h('div',{class:'demo-sec'}, h('h4',{},'Critères de réussite'), h('ul',{class:'gd-crit'}, T.steps.map((c,i)=>h('li',{class:GUIDE.done[i]?'ok':'',html:c.t})))),
         T.hint? h('details',{class:'gd-tips'}, h('summary',{},'Un indice ?'), h('div',{class:'empty',html:T.hint})) : null,
-        all? h('div',{class:'info gd-bravo',html:'<b>Exercice réussi !</b> Il est marqué terminé dans la bibliothèque.'}) : null);
+        all? h('div',{class:'info gd-bravo',html: depuisPortail()? '<b>Exercice réussi !</b> Clique sur l’atelier, en haut, pour revenir à tes ateliers.' : '<b>Exercice réussi !</b> Il est marqué terminé dans la bibliothèque.'}) : null);
     } else add(stepper(T.steps.map(s=>s.t), GUIDE.done, GUIDE.step, {manual:i=>!T.steps[i].ok,
         onDone:(i,v)=>{ GUIDE.done[i]=v; if(v && i<T.steps.length-1) GUIDE.step=i+1; lessonProgress(); renderDemo(); }, onGo:i=>{ GUIDE.step=i; renderDemo(); }}),
-      all? h('div',{class:'info gd-bravo',html:'<b>Bravo, tuto terminé !</b> Choisissez-en un autre ou ouvrez un exemple.'}) : null);
+      all? h('div',{class:'info gd-bravo',html: depuisPortail()? '<b>Bravo, tuto terminé !</b> Clique sur l’atelier, en haut, pour revenir à tes ateliers.' : '<b>Bravo, tuto terminé !</b> Choisissez-en un autre ou ouvrez un exemple.'}) : null);
     add(h('div',{class:'gd-nav'}, h('button',{class:'btn demo-more',onclick:()=>{ GUIDE.tuto=null; renderDemo(); }}, '‹ Tous les tutos'),
       h('button',{class:'btn demo-more',onclick:()=>openGallery('lesson')}, svgIcon('book'),'Bibliothèque')));
   }
@@ -95,13 +104,15 @@ function activiteEnCours(){
 function majAtelier(){
   const w=$('#tbAtelier'); if(!w) return; const a=activiteEnCours();
   const cl= window.Centrale?.connecte?.()? niveauEleve() : 0, k= cl>=5? 5 : cl;   // classe de l'élève (6e : couleur de la 5e)
-  w.className='tbres tbat'+(a?' actif':'')+(k? ' k'+k : '');
+  const fige=depuisPortail();   // ouvert depuis le portail : la pastille nomme l'atelier, sans mener à la bibliothèque
+  w.className='tbres tbat'+(a?' actif':'')+(k? ' k'+k : '')+(fige? ' fige' : '');
+  const pn=$('#projName'); if(pn){ pn.readOnly=fige; pn.tabIndex= fige? -1 : 0; }   // depuis le portail : le nom de l'atelier ne se modifie pas
   const pas=$('#tbPas'); pas.hidden=!cl; pas.className='pas'+(k?' p'+k:''); pas.textContent= cl? String(cl) : '';
   const ty=$('#tbType'); ty.hidden=!a; ty.textContent= a? a.type : '';
   const pr=$('#tbProg'); pr.hidden=!a; pr.innerHTML=''; pr.classList.toggle('fini', !!a && a.total>0 && a.fait>=a.total);
   if(a){ if(a.niv) pr.append(h('span',{class:'nvb',title:`Niveau ${LEVELS[a.niv-1]?.name||a.niv}`,'aria-label':`Niveau ${a.niv} sur 3`}, [1,2,3].map(i=>h('i',{class:i<=a.niv?'on':null}))));
     pr.append(h('span',{class:'tbpct',title:`${a.fait} étape${a.fait>1?'s':''} faite${a.fait>1?'s':''} sur ${a.total}`}, `${Math.min(a.fait,a.total)}/${a.total}`)); }
-  w.title= (a? `${a.type} « ${a.titre} » : ${Math.min(a.fait,a.total)} / ${a.total} étapes faites.\n` : '')+(cl? `Classe de ${cl}e. ` : '')+'Clic : la bibliothèque (tutos, exercices, exemples).';
+  w.title= (a? `${a.type} « ${a.titre} » : ${Math.min(a.fait,a.total)} / ${a.total} étapes faites.\n` : '')+(cl? `Classe de ${cl}e. ` : '')+(fige? 'Clic : retour à mes ateliers, sur la Centrale.' : 'Clic : la bibliothèque (tutos, exercices, exemples).');
 }
 function guideTips(){ return `Cliquez une forme de la barre du haut pour la poser sur le tapis, ou ouvrez un <b>exemple</b>.<br><br>Cliquez une pièce : des <b>poignées</b> apparaissent. Carrés blancs des coins : longueur et largeur ; petits carrés noirs : une cote ; carré du haut : hauteur ; cône : soulever ; flèches courbes : tourner. Glissez la pièce pour la déplacer. Double-clic sur un <b>groupe</b> : modifier ses pièces.<br><br><span class="kbd">Maj</span> + clic ou <span class="kbd">Maj</span> + glisser dans le vide (cadre) pour en choisir plusieurs ; cliquez encore au même endroit pour prendre la pièce de derrière.<br><br>${(LMB.find(x=>x[0]===(prefs.lmb||'orbit'))||LMB[1])[3]} Molette : zoom. Clic droit : menu.`; }
 /* ouvrir un tuto ou un exercice : niveau si besoin, scène de départ (ou projet vide), guide ouvert dessus */
@@ -118,7 +129,8 @@ function startLesson(k){
 }
 const startTuto=startLesson;
 /* progression enregistrée : nombre d'étapes faites, puis « terminé » */
-function lessonProgress(){ const k=GUIDE.tuto, T=LESSONS[k]; if(!T) return; const n=GUIDE.done.filter(Boolean).length; const before=PROG.part[k]||0; PROG.part[k]=Math.max(before, n); saveProg(); if(PROG.part[k]>before) centraleProgres(T.type+':'+k);
+function lessonProgress(){ const k=GUIDE.tuto, T=LESSONS[k]; if(!T) return; autosave(); centraleTravail();   // l'étape du tuto part avec le projet
+  const n=GUIDE.done.filter(Boolean).length; const before=PROG.part[k]||0; PROG.part[k]=Math.max(before, n); saveProg(); if(PROG.part[k]>before) centraleProgres(T.type+':'+k);
   if(n===T.steps.length && markDone(T.type+':'+k)) toast(T.type==='exo'? `Exercice « ${T.title} » réussi !` : `Tuto « ${T.title} » terminé, bravo !`, 3200); }
 /* the tutorial steps tick themselves: checked twice a second, a step once done stays done */
 function guideCheck(quiet=false){

@@ -77,6 +77,11 @@ button.brand:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .tbid #bCentrale span{font-family:var(--f-mono);font-size:12px}
 @media (max-width:700px){.tbid .tbid-ret .tbid-txt,.tbid .tbid-ret .centrale-precedent-txt{display:none}}
 /* activité en cours : pastille de la classe (5e / 4e / 3e), type, nom du projet, difficulté (barres), étapes faites */
+.tbat.fige #projName{cursor:pointer;pointer-events:none}
+/* mode atelier (ouvert depuis la Centrale) : seulement ce dont l'atelier a besoin (règles interface de l'atelier, centrale.js) */
+.sans-menu #bFile{pointer-events:none;cursor:default} .sans-menu #bFile .dd,.sans-menu #menuFile{display:none!important}
+.sans-bibliotheque .gd-tabs,.sans-bibliotheque .gd-nav,.sans-bibliotheque .demo-more,.sans-bibliotheque #gallery{display:none!important}
+.sans-niveau .set-niveau,.sans-niveau #lvl{display:none!important}   /* ouvert depuis le portail : la pastille ramène à la Centrale */
 .tbat{gap:7px;padding:0 14px 0 4px;cursor:pointer;max-width:min(520px,44vw);min-width:150px;flex:0 1 auto}
 .tbat-go{display:inline-flex;align-items:center;gap:7px;border:0;background:none;padding:3px;border-radius:999px;color:inherit;flex:none;cursor:pointer}
 .tbat-go:focus-visible{outline:2px solid var(--accent);outline-offset:0}

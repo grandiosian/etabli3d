@@ -466,7 +466,7 @@ function renderGallery(){
   if(!n) wrap.append(h('p',{class:'empty'},'Rien pour ce filtre.'));
   hydrateIcons(wrap);
 }
-function openGallery(tab){ if(typeof tab==='string') LIB.tab=tab; renderGallery(); $('#gallery').hidden=false; $('#galleryBody').scrollTop=0; }
+function openGallery(tab){ if(!regleAtelier('bibliotheque')) return; if(typeof tab==='string') LIB.tab=tab; renderGallery(); $('#gallery').hidden=false; $('#galleryBody').scrollTop=0; }
 $$('#libTabs [data-t]').forEach(b=>b.onclick=()=>{ LIB.tab=b.dataset.t; renderGallery(); });
 $$('#libLvl [data-l]').forEach(b=>b.onclick=()=>{ LIB.lvl=+b.dataset.l; renderGallery(); });
 $('#libReset').onclick=()=>{ if(confirm('Effacer tout l’avancement (tutos, exercices, exemples) dans ce navigateur ?')){ resetProgress(); renderGallery(); renderDemo(); } };

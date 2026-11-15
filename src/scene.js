@@ -108,7 +108,7 @@ let ws='model';   // atelier: model | check | mech | struct
 let selJoint=null;
 const meshes=new Map();
 const hist={stack:[],idx:-1};
-function snapshot(){ return JSON.stringify({name:state.name,parts:state.parts,joints:state.joints,nextId:state.nextId,note:state.note||null,tp:state.tp||null,struct:state.struct||null,edit:state.edit||null,textures:usedTextures()}); }
+function snapshot(){ return JSON.stringify({name:state.name,parts:state.parts,joints:state.joints,nextId:state.nextId,note:state.note||null,tp:state.tp||null,struct:state.struct||null,edit:state.edit||null,textures:usedTextures(),tuto:tutoEnCours()}); }
 /* seules les images encore utilisées par une pièce sont gardées */
 function usedTextures(){ const all=state.textures||{}, out={}; const walk=ps=>{ for(const p of ps){ const id=p.mat?.k==='image' && p.mat.img; if(id && all[id]) out[id]=all[id]; if(p.children) walk(p.children); } }; walk(state.parts); return Object.keys(out).length? out : null; }
 function commit(){
@@ -133,6 +133,7 @@ function loadProject(obj, push=true){
   if(!obj || !Array.isArray(obj.parts)) throw new Error('format');
   patReset();
   state.name=obj.name||'Projet'; state.parts=obj.parts; state.joints=obj.joints||[]; state.nextId=obj.nextId|| (maxId(obj.parts)+1); state.note=obj.note||null; state.tp=obj.tp||null; state.struct=obj.struct||null; state.edit=obj.edit||null; state.textures=obj.textures||{}; demoClosed=false; GUIDE.src=null;
+  if(obj.tuto) reprendreTuto(obj.tuto);   // tuto en cours enregistré avec le projet
   $('#projName').value=state.name; selection=[]; selJoint=null; simReset(true); sync(); renderInspector(); renderDemo();
   if(push){ hist.stack=[]; hist.idx=-1; commit(); }
   fitView();

@@ -92,6 +92,13 @@ def run(t):
         if cas == 'rien de déposé':
             check('Centrale : ouvert depuis le portail (#centrale=…), connexion automatique et fichier reçu par l’étape ouvert',
                   r == ['07', False, attendu, 'function'], r)
+            check('Centrale : ouvert depuis le portail, la bibliothèque ne s’ouvre pas au démarrage', cz.evaluate("()=>document.querySelector('#gallery').hidden"))
+            # mode atelier : ni menu du logo, ni bibliothèque, ni onglets du guide, ni niveau
+            cz.click('#bFile', force=True); cz.wait_for_timeout(150)
+            ma = cz.evaluate("""()=>{const E=window.__etabli; E.openGallery(); const v=s=>{const e=document.querySelector(s); return !!e && !!e.offsetParent;};
+              return [document.documentElement.classList.contains('mode-atelier'), document.querySelector('#menuFile').hidden, document.querySelector('#gallery').hidden,
+                v('.gd-tabs'), v('.gd-nav'), document.documentElement.classList.contains('sans-niveau')]}""")
+            check('Centrale : mode atelier (menu du logo, bibliothèque, onglets du guide et niveau fermés)', ma == [True, True, True, False, False, True], ma)
             cz.evaluate("()=>__cz.init.avantDeQuitter()"); cz.wait_for_timeout(300)
             d1 = cz.evaluate("()=>__cz.depots.map(d=>d.nom+':'+d.type+':'+(d.taille>0)).join(' ')")
             cz.evaluate("()=>__cz.init.avantDeQuitter()"); cz.wait_for_timeout(300)
