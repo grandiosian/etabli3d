@@ -299,13 +299,25 @@ function centraleMontrer(oui){ if(CZ.fenetre) CZ.fenetre.hidden=!oui; }
 async function centraleConnecte(infos){
   centraleMontrer(false); centraleBouton();
   try{
+    // 0. à qui est la copie de ce navigateur ? Celle d'un autre élève, ou d'un élève remis à zéro sur la Centrale
+    //    (le serveur n'a plus rien pour lui), est vidée au lieu d'être renvoyée. Travail fait en visiteur : envoyé comme avant.
+    //    Ce que dit le serveur lui-même : charger() reprendrait la copie de secours du module (envoi pas terminé).
+    const serveur=await Centrale.mesProgressions();
+    const surServeur=(await Centrale.listeDonnees().catch(()=>null))?.find(c=>c.cle==='projet');
+    //    (dans un atelier : date du projet du serveur AVANT tout envoi, pour la comparer aux dépôts de l'étape)
+    CZ.projetMaj= Centrale.contexteAtelier?.()? (surServeur?.maj||0) : 0;
+    const ses=Centrale.session?.()||{}, qui=`${ses.classe||infos.classe}/${ses.eleve||infos.eleve}`;
+    let lien=null; try{ lien=localStorage.getItem(CLE_ELEVE_LOCAL); }catch(e){}
+    const rienSurServeur=!Object.keys(serveur||{}).length && !surServeur;
+    const remis= !!lien && (lien!==qui || rienSurServeur), remisAZero= remis && lien===qui;   // message seulement pour le même élève
+    if(remis) viderCopieLocale();
+    try{ localStorage.setItem(CLE_ELEVE_LOCAL, qui); }catch(e){}
+    //    remis à zéro : pas de charger(), qui renverrait l'ancien projet gardé par le module ; le projet vide le remplace
+    const projet= remis && rienSurServeur? null : await Centrale.charger('projet', null);
     // 1. progression : le meilleur entre ce navigateur et le serveur, puis on renvoie ce qui est en avance ici
-    const serveur=await Centrale.mesProgressions(); Etabli3D.fusionnerProgression(serveur);
+    Etabli3D.fusionnerProgression(serveur);
     for(const a of Etabli3D.activites()){ const l=Etabli3D.progression(a.id), p=serveur?.[a.id]; if(l && (!p || l.faites>(p.faites||0) || (l.statut==='termine' && p.statut!=='termine'))) Centrale.progression(a.id, l); }
     // 2. projet : celui du serveur s'il existe (l'ancien reste dans Annuler), sinon on envoie celui du navigateur
-    //    (dans un atelier : date du projet du serveur AVANT cet envoi, pour la comparer aux dépôts de l'étape)
-    CZ.projetMaj= Centrale.contexteAtelier?.()? ((await Centrale.listeDonnees().catch(()=>[])).find(c=>c.cle==='projet')?.maj||0) : 0;
-    const projet=await Centrale.charger('projet', null);
     if(estProjet(projet)){ if(JSON.stringify(projet)!==JSON.stringify(etabliProjet())) ouvrirProjet(projet); }
     else Centrale.sauver('projet', etabliProjet());
     CZ.pret=true;
@@ -314,8 +326,22 @@ async function centraleConnecte(infos){
     if(E?.etape){ const f=await atelierArrivee(E).catch(()=>null); if(f) toast(`Fichier de l’atelier ouvert : ${f}. Ton projet précédent reste dans Annuler.`); }
     // 4. activité demandée depuis le portail
     const dem=Centrale.activiteDemandee(); if(dem) centraleOuvrirActivite(dem);
-    centraleMenu(); toast(`Connecté : ${infos.classe} · élève ${infos.eleve}. Ton travail est enregistré automatiquement.`);
+    centraleMenu(); toast(`Connecté : ${infos.classe} · élève ${infos.eleve}. `+(remisAZero? 'Ton travail a été remis à zéro : tu repars du début.' : 'Ton travail est enregistré automatiquement.'), remisAZero? 5000 : undefined);
   }catch(e){ toast('Connexion au serveur impossible : '+e.message); }
+}
+/* Copie locale de l'élève (progression, projet, repères des étapes) : à qui elle est, « classe/numéro ».
+   Vidée à la connexion d'un autre élève, ou d'un élève remis à zéro sur la Centrale (voir centraleConnecte). */
+const CLE_ELEVE_LOCAL='etabli3d.centrale-eleve';
+function viderCopieLocale(){
+  resetProgress(); CZ.depose=null; CZ.constate.clear(); CZ.indices={};
+  try{ localStorage.removeItem('etabli3d.autosave');
+    for(const k of Object.keys(localStorage)) if(k.startsWith('etabli3d.atelier:')) localStorage.removeItem(k); }catch(e){}
+  if(state.edit) finishGroupEdit(); if(!$('#sk').hidden) closeSketch(false);
+  simReset(true); resetFor('Nouveau projet'); selection=[]; selJoint=null;
+  Object.assign(GUIDE, {src:null, tuto:null, step:0, done:[], noteDone:[], editing:false});
+  $('#projName').value=state.name; sync();
+  hist.stack=[]; hist.idx=-1; commit();   // pas de retour au travail d'avant avec Annuler
+  renderInspector(); renderDemo(); updateSteps();
 }
 function centraleOuvrirActivite(id){
   const key=actKey(id); if(!key) return; const [type,k]=key.split(':');

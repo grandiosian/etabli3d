@@ -9,16 +9,16 @@
     init(o){ rec.init=o;
       if(/(^|[#&])centrale=/.test(location.hash)){ jeton='essai'; history.replaceState(null, '', location.pathname+location.search); }
       return this; },
-    connecte:()=>on, session:()=>on? {classe:'5A', eleve:'07'} : null,
+    connecte:()=>on, session:()=>on? {classe:'5A', eleve:T.eleve||'07'} : null,
     deconnexion(){ on=false; },
     afficherConnexion(el, opt){
-      if(jeton){ jeton=null; on=true; rec.nav?.relancer(); setTimeout(()=>opt.onConnecte({classe:'5A', eleve:'07'}), 50); return; }   // ouvert depuis le portail
+      if(jeton){ jeton=null; on=true; rec.nav?.relancer(); setTimeout(()=>opt.onConnecte({classe:'5A', eleve:T.eleve||'07'}), 50); return; }   // ouvert depuis le portail
       el.innerHTML=''; const b=document.createElement('button'); b.id='czFaux'; b.textContent='Se connecter (essai)';
-      b.onclick=()=>{ on=true; rec.nav?.relancer(); opt.onConnecte({classe:'5A', eleve:'07'}); }; el.append(b); },
+      b.onclick=()=>{ on=true; rec.nav?.relancer(); opt.onConnecte({classe:'5A', eleve:T.eleve||'07'}); }; el.append(b); },
     async mesProgressions(){ return T.progressions||{}; },
-    async charger(cle, def){ return cle==='projet' && T.projet? JSON.parse(JSON.stringify(T.projet)) : def; },
+    async charger(cle, def){ rec.charges=(rec.charges||0)+1; return cle==='projet' && T.projet? JSON.parse(JSON.stringify(T.projet)) : def; },
     sauver(cle, v){ rec.sauve.push([cle, v]); return Promise.resolve(); },
-    async listeDonnees(){ return T.donnees||[]; },
+    async listeDonnees(){ return T.donnees||(T.projet? [{cle:'projet', maj:1}] : []); },
     progression(id, p){ rec.progres.push([id, p]); return Promise.resolve(); },
     activiteDemandee(){ const a=T.activite||null; T.activite=null; return a; },
     async envoyerFichier(b, nom){ rec.fichiers.push({nom, type:b.type, taille:b.size}); return {nom}; },

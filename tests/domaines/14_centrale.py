@@ -161,6 +161,40 @@ def run(t):
     check('Navigation intégrée : carte d’atelier sans suite connue, seulement « ← Mes ateliers »', r3 and r3[1] == '← Mes ateliers' and r3[2] is None, r3)
     ctx.close()
 
+    # Copie du navigateur d'un autre élève, ou d'un élève remis à zéro sur la Centrale : vidée, pas renvoyée au serveur.
+    # Travail fait en visiteur (pas de lien) : envoyé comme avant (premier cas de ce domaine).
+    local = {'app': 'etabli3d', 'version': 2, 'name': 'Travail d’avant', 'nextId': 2, 'joints': [],
+             'parts': [{'id': 1, 'kind': 'box', 'name': 'Bloc', 'params': {'L': 30, 'l': 30, 'h': 30}, 'color': '#4aa36b', 'hole': False, 'pos': [0, 0, 0], 'rot': [0, 0, 0]}]}
+    prog = {'done': {'tuto:premiers': 1}, 'seen': {'tuto:premiers': 1}, 'part': {'premiers': 6}}
+    ex = {'exo-de': {'faites': 3, 'total': 3, 'statut': 'termine'}}
+    for cas, lien, cfg4, attendu in [
+            ('élève remis à zéro', '5A/07', {}, ['Nouveau projet', 0, False, 0, True, '5A/07', True]),
+            ('autre élève sur le poste', '5A/03', {'projet': serveur, 'progressions': ex}, ['Nouveau projet', 1, False, 0, False, '5A/07', True]),
+            ('même élève, travail sur le serveur', '5A/07', {'projet': serveur, 'progressions': ex}, ['Porte-crayon', 2, True, 1, False, '5A/07', False])]:
+        ctx = b.new_context(viewport={'width': 1400, 'height': 860})
+        ctx.add_init_script(f"window.CENTRALE_URL='{base}/tests/centrale/'; window.__CZ_TEST={_json.dumps(cfg4)};"
+                            f"if(!sessionStorage.getItem('fait')){{ sessionStorage.setItem('fait','1'); localStorage.setItem('etabli3d.autosave', {_json.dumps(_json.dumps(local))});"
+                            f"localStorage.setItem('etabli3d.progress', {_json.dumps(_json.dumps(prog))}); localStorage.setItem('etabli3d.centrale-eleve', '{lien}'); localStorage.setItem('etabli3d.atelier:1:0', '1'); }}")
+        cz = ctx.new_page(); cz.on('pageerror', lambda e: errors.append('remise à zéro: ' + str(e)))
+        cz.goto(URL); cz.wait_for_timeout(2500)
+        if cz.is_visible('#galleryClose'): cz.click('#galleryClose')
+        avant = cz.evaluate("()=>window.__etabli.state.name")
+        cz.click('#bCentrale'); cz.wait_for_timeout(200); cz.click('#czFaux'); cz.wait_for_timeout(1500)
+        toast = cz.evaluate("()=>document.querySelector('#toast').textContent")
+        cz.keyboard.press('Control+z'); cz.wait_for_timeout(300)
+        r = cz.evaluate("()=>{const E=window.__etabli; return [E.state.name, Object.keys(E.PROG.done).length, !!E.PROG.done['tuto:premiers'],"
+                        " __cz.progres.filter(([id])=>id==='tuto-premiers').length]}")
+        r += [toast.find('remis à zéro') >= 0] + cz.evaluate("()=>[localStorage.getItem('etabli3d.centrale-eleve'), !localStorage.getItem('etabli3d.atelier:1:0')]")
+        if cas == 'élève remis à zéro':   # charger() reprendrait la copie de secours du module : pas appelé, projet vide envoyé
+            rs = cz.evaluate("()=>[__cz.charges||0, (__cz.sauve.filter(([k])=>k==='projet').pop()||[])[1]?.parts?.length]")
+            check('Connexion, élève remis à zéro : projet du serveur lu par listeDonnees, pas par charger() ; projet vide envoyé', rs == [0, 0], rs)
+        # après Annuler (le projet du serveur ouvert, Annuler fait un pas en arrière) : copie vidée → projet vide,
+        # jamais le travail d'avant ; copie gardée → le projet du navigateur
+        if not attendu[6]: attendu = ['Travail d’avant'] + attendu[1:]
+        check(f'Connexion, {cas} : copie du navigateur ' + ('vidée (rien de renvoyé, Annuler ne la ramène pas)' if attendu[6] else 'gardée et fusionnée'),
+              avant == 'Travail d’avant' and r == attendu, [avant, r])
+        ctx.close()
+
     # Sans serveur (Centrale injoignable) : #activite= ouvre l'activité ; « Déposer sur Nuage » enregistre le projet
     # puis, sans lien de la classe, demande le lien au professeur et le garde sur le poste
     ctx = b.new_context(viewport={'width': 1400, 'height': 860}, accept_downloads=True)
