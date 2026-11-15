@@ -56,6 +56,9 @@ button{cursor:pointer}
   background:var(--panel);border-bottom:1px solid var(--line)}
 .tb-l,.tb-c,.tb-r{display:flex;align-items:center;gap:10px;min-width:0}
 .tb-c{justify-content:center}
+/* Essai de l'enseignant (« Tester à la place d'un élève ») : interrupteur Élève | Enseignant du module de la Centrale */
+.tb-c .tb-vue{color:var(--ink)}
+@media (max-width: 1500px){ .tb-c .tb-vue .centrale-vue-txt{display:none} .tb-c .tb-vue button{padding:0 8px} }
 .tb-r{justify-content:flex-end}
 .brand{display:flex;align-items:center;gap:8px;font-family:var(--f-display);font-weight:700;font-size:19px;letter-spacing:.02em;white-space:nowrap;margin-right:6px}
 /* le logo ouvre le menu Fichier (comme TechnoStudio) */

@@ -108,7 +108,7 @@ $('#projName').onchange=()=>{ state.name=$('#projName').value.trim()||'Mon proje
 $('#bExamples').onclick=openGallery;
 // activité en cours (centre de la barre du haut) : un clic hors du nom du projet ouvre la bibliothèque ;
 // ouvert depuis le portail de la Centrale, il ramène au portail (« Mes ateliers »)
-$('#tbAtelier').addEventListener('click',e=>{ if(e.target.closest('#projName') && !depuisPortail()) return; if(depuisPortail()){ allerPortailCentrale(); return; } const T=GUIDE.src==='tuto' && GUIDE.tuto && LESSONS[GUIDE.tuto]; openGallery(T? 'lesson' : state.note? 'ex' : undefined); });
+$('#tbAtelier').addEventListener('click',e=>{ if(e.target.closest('#projName') && !depuisPortail()) return; if(depuisPortail() && !vueProfEtabli()){ allerPortailCentrale(); return; } const T=GUIDE.src==='tuto' && GUIDE.tuto && LESSONS[GUIDE.tuto]; openGallery(T? 'lesson' : state.note? 'ex' : undefined); });
 $('#bGuide').onclick=()=>toggleGuide();   // dans le menu Réglages : il reste ouvert, l'interrupteur suit (guide.js)
 $('#galleryClose').onclick=()=>{ $('#gallery').hidden=true; };
 $('#gallery').addEventListener('pointerdown',e=>{ if(e.target.id==='gallery') $('#gallery').hidden=true; });

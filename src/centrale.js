@@ -142,8 +142,18 @@ function atelierDemande(){   // le tuto, l'exercice ou l'exemple ouvert par la C
   if(GUIDE.src==='tuto' && GUIDE.tuto && LESSONS[GUIDE.tuto]) return LESSONS[GUIDE.tuto];
   return state.note?.key ? SAMPLES[state.note.key] || null : null;
 }
+/* Vue enseignant d'un essai (« Tester à la place d'un élève », interrupteur Élève | Enseignant du module de la Centrale) :
+   aucune règle d'atelier (menu, bibliothèque, niveau) ; la pastille de l'atelier ouvre la bibliothèque. Gardée par la
+   Centrale avec la session (Centrale.vue) : le portail et les autres applications la retrouvent. */
+function vueProfEtabli(){ return !!(window.Centrale?.vue && Centrale.connecte() && Centrale.vue()==='enseignant'); }
+let vueEtabli=false;
+function appliquerVueEtabli(){
+  const v=vueProfEtabli(); if(v===vueEtabli) return; vueEtabli=v;   // seulement quand la vue change
+  document.documentElement.classList.toggle('vue-prof', v);
+  majModeAtelier(); document.querySelectorAll('.menu').forEach(m=>{ m.hidden=true; });
+}
 function regleAtelier(cle){   // true : permis (hors mode atelier, tout est permis)
-  if(!depuisPortail()) return true;
+  if(!depuisPortail() || vueProfEtabli()) return true;
   const r=Object.assign({}, INTERFACE_ATELIER, atelierDemande()?.interface||{});
   return r[cle]!==false;
 }
@@ -180,7 +190,13 @@ function centraleBouton(){
   const b=CZ.bouton; if(!b) return; const s=window.Centrale?.connecte() && Centrale.session(); b.innerHTML='';
   b.append(svgIcon('user'), h('span',{}, s? (s.identifiant||s.eleve) : 'Visiteur'));
   b.title= s? 'Connecté : ton travail est enregistré sur le serveur de la classe. Clic : retour sur la Centrale' : 'Visiteur : clique pour te connecter avec ton code et enregistrer ton travail';
-  centraleRetourBouton(); majAtelier();
+  centraleRetourBouton(); centraleVueBouton(); majAtelier();
+}
+/* Interrupteur Élève | Enseignant (essai de l'enseignant), juste après l'activité au centre de la barre ; caché hors essai */
+function centraleVueBouton(){
+  if(!window.Centrale?.boutonVue) return;
+  if(!CZ.vue){ CZ.vue=Centrale.boutonVue({classe:'tb-vue', onChange:appliquerVueEtabli}); $('#tbAtelier')?.after(CZ.vue.bouton); }
+  CZ.vue.maj(); appliquerVueEtabli();
 }
 function centraleRetourBouton(){
   const w=$('#widgetCentrale'); if(!w) return; let ret=$('#bRetourCentrale');
