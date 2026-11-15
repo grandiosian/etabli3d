@@ -181,15 +181,68 @@ function centraleDemarrer(){
   const avecJeton=/(^|[#&])centrale=/.test(location.hash);   // à lire AVANT init : le module retire aussitôt le jeton de l'adresse
   Centrale.init({api:CZ.serveur+'api/', app:'etabli3d', activites:Etabli3D.activites(), avantDeQuitter:centraleAvantDeQuitter,
     boutonRetour:false,   // « ← Étape précédente » / « ← Mes ateliers » est dans le widget de la barre du haut
+    // module récent : « Suivant » est dans le pied du Guide (Centrale.navigation, plus bas) ; pas de bouton flottant
+    // (une première version du module le dessinait encore si navigation() était appelé après init())
+    ...(Centrale.navigation? {boutonSuivant:false} : {}),
     surDeconnexion:()=>{ CZ.pret=false; centraleBouton(); centraleMenu(); toast('Session terminée : reconnecte-toi pour enregistrer ton travail.'); }});
+  // « ← » et « Suivant → » en pied du Guide (le module retire alors ses boutons flottants) ; module plus ancien : ses boutons restent
+  if(Centrale.navigation) CZ.navigation=Centrale.navigation(nav=>{ CZ.nav=nav||null; majPiedGuide(); }, {activite:activiteOuverte});
+  // vue Enseignant d'un essai : le widget montre le nom de l'élève (Centrale.nomAffiche)
+  if(Centrale.surChangementVue) Centrale.surChangementVue(()=>centraleBouton());
   centraleBouton();
   if(avecJeton || Centrale.connecte()) Centrale.afficherConnexion(centraleCorps(), {onConnecte:centraleConnecte});
+}
+/* ---- Navigation intégrée : pied du Guide (le panneau consigne), « ← » et « Suivant → ».
+   Le module de la Centrale calcule quoi afficher (Centrale.navigation, SPECIFICATION §2.6) : étape d'un parcours,
+   activité suivante d'un atelier du calendrier, ou portail. CZ.nav vaut null hors de la Centrale : pas de pied. */
+function activiteOuverte(){   // id de l'activité ouverte (tuto-…, exo-…, ex-…), '' sinon
+  const T=GUIDE.tuto && LESSONS[GUIDE.tuto], n=state.note?.key && SAMPLES[state.note.key]? 'ex-'+state.note.key : '';
+  if(T && (GUIDE.src==='tuto' || !n)) return T.type+'-'+GUIDE.tuto;
+  return n;
+}
+function piedGuide(){
+  const a=activiteOuverte();   // l'élève a changé d'activité dans Établi 3D : le module recalcule la suite
+  if(CZ.navigation && a!==CZ.navAct) CZ.navigation.maj();   // aussi à la première activité ouverte : position juste tout de suite
+  CZ.navAct=a;
+  const nav=CZ.nav; if(!nav || (!nav.precedent && !nav.suivant)) return null;
+  const p=nav.precedent, pos=nav.position;
+  // activité inconnue du module (sans position) : « Suivant » mènerait aussi au portail, le « ← Mes ateliers » suffit
+  const s= nav.suivant && !(nav.suivant.cible==='portail' && !nav.suivant.fin && !pos && p?.cible==='portail')? nav.suivant : null;
+  const partir=async(x, b)=>{
+    if(x.verrou) return toast(x.raison||'Pas encore ouvert.', 3200);
+    b.disabled=true; b.classList.add('attente');
+    const ok=await Promise.resolve(x.aller()).catch(()=>false);
+    if(ok===false){ b.disabled=false; b.classList.remove('attente'); toast(x.raison||'Pas encore : termine d’abord cette étape.', 3200); CZ.navigation?.maj(); }
+  };
+  const bp= p? h('button',{type:'button',class:'btn gd-prec',title:p.titre||p.libelle||'','aria-label':p.libelle||p.court||'Revenir'},
+    h('span',{'aria-hidden':'true'},'←'), h('span',{class:'gd-pied-txt'}, p.court||p.libelle)) : null;
+  if(bp) bp.onclick=()=>partir(p, bp);
+  const vers= s && s.cible!=='portail';   // étape ou activité suivante ; sinon retour au portail (« Mes ateliers → »)
+  const bs= s? h('button',{type:'button',class:'btn gd-suiv'+(s.verrou?' verrou':' primary'),title:s.titre||s.libelle||'','aria-disabled':s.verrou? 'true' : null},
+    s.verrou? svgIcon('lock') : null,
+    h('span',{class:'gd-suiv-t'}, h('b',{}, vers? 'Suivant' : s.libelle), vers && s.libelle? h('small',{}, s.libelle) : null),
+    vers && !s.verrou? h('span',{'aria-hidden':'true'},'→') : null) : null;   // « Mes ateliers → » porte déjà sa flèche
+  if(bs) bs.onclick=()=>partir(s, bs);
+  return h('div',{class:'gd-pied'},
+    pos? h('div',{class:'gd-pied-pos'}, (nav.contexte==='atelier'? 'Atelier · ' : nav.contexte==='parcours'? 'Parcours · ' : '')+`étape ${pos.numero} / ${pos.total}`, pos.titre? h('span',{}, ' · '+pos.titre) : null) : null,   // à ne pas confondre avec les étapes du tuto
+    h('div',{class:'gd-pied-nav'}, bp||h('span'), bs),
+    s?.verrou && s.raison? h('p',{class:'gd-pied-raison'}, s.raison) : null);
+}
+function majPiedGuide(){   // seulement le pied : le reste du guide (et son défilement) ne bouge pas
+  const el=$('#demo'); if(!el || el.hidden) return;
+  const ancien=el.querySelector(':scope > .gd-pied'), neuf=piedGuide();
+  if(!!ancien!==!!neuf) return renderDemo();   // le pied apparaît ou disparaît : bouton Fermer, message de fin
+  if(ancien){ ancien.replaceWith(neuf); hydrateIcons(neuf); }
 }
 /* Widget de l'élève : « Visiteur », ou son identifiant une fois connecté, précédé du bouton « ← » de la Centrale */
 function centraleBouton(){
   const b=CZ.bouton; if(!b) return; const s=window.Centrale?.connecte() && Centrale.session(); b.innerHTML='';
-  b.append(svgIcon('user'), h('span',{}, s? (s.identifiant||s.eleve) : 'Visiteur'));
-  b.title= s? 'Connecté : ton travail est enregistré sur le serveur de la classe. Clic : retour sur la Centrale' : 'Visiteur : clique pour te connecter avec ton code et enregistrer ton travail';
+  // vue Enseignant d'un essai : le nom gardé sur l'ordinateur de l'enseignant, ou « pas désanonymisé » (en italique)
+  const nomProf= s && Centrale.nomEnseignant? Centrale.nomEnseignant() : null;
+  const nom= s? ((Centrale.nomAffiche && Centrale.nomAffiche()) || s.identifiant || s.eleve) : 'Visiteur';
+  b.append(svgIcon('user'), h('span',{class:nomProf===''? 'anonyme' : null}, nom));
+  b.title= nomProf!=null? `Vue enseignant : ${nomProf? 'nom gardé sur cet ordinateur' : 'élève pas désanonymisé sur cet ordinateur'} (identifiant ${s.identifiant||s.eleve}). Clic : retour sur la Centrale`
+    : s? 'Connecté : ton travail est enregistré sur le serveur de la classe. Clic : retour sur la Centrale' : 'Visiteur : clique pour te connecter avec ton code et enregistrer ton travail';
   centraleRetourBouton(); centraleVueBouton(); majAtelier();
 }
 /* Interrupteur Élève | Enseignant (essai de l'enseignant), juste après l'activité au centre de la barre ; caché hors essai */

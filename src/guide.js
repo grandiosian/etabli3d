@@ -49,12 +49,13 @@ function renderDemo(){
   const src=guideSrc(), n=state.note;
   const T=src==='tuto' && GUIDE.tuto? LESSONS[GUIDE.tuto] : null;
   const title= src==='note'? n.title : src==='tp'? (state.tp?.title||'Consignes du TP') : T? T.title : 'Tutos pas à pas';
+  let pied=null; try{ pied=piedGuide(); }catch(e){}   // ouvert depuis la Centrale : « ← » et « Suivant → » en pied (centrale.js)
   const grip=h('span',{class:'pgrip demo-grip',title:'Glisser pour déplacer le guide'}, svgIcon('dots')); grip.addEventListener('pointerdown',e=>{ if(!el.classList.contains('in-sk')) startPanelDrag(e, el, 'demo'); });
   el.append(h('div',{class:'demo-head'}, grip,
     h('button',{class:'demo-toggle','aria-expanded':String(demoOpen),onclick:()=>{ demoOpen=!demoOpen; renderDemo(); }},
       h('span',{class:'demo-kicker'}, src==='note'? 'Guide · exemple' : src==='tp'? 'Guide · mon TP' : T?.type==='exo'? 'Guide · exercice' : 'Guide · tuto'), h('b',{},title), svgIcon(demoOpen?'chevUp':'chevDown')),
-    h('button',{class:'btn icon ghost',title:'Fermer le guide (bouton Guide en haut pour le rouvrir)','aria-label':'Fermer le guide',onclick:()=>{ demoClosed=true; renderDemo(); }}, svgIcon('close'))));
-  if(!demoOpen){ applyLayout('demo'); applyViewOffset(); return; }
+    pied? null : h('button',{class:'btn icon ghost',title:'Fermer le guide (bouton Guide en haut pour le rouvrir)','aria-label':'Fermer le guide',onclick:()=>{ demoClosed=true; renderDemo(); }}, svgIcon('close'))));   // avec la navigation de la Centrale, le guide se replie mais ne se ferme pas
+  if(!demoOpen){ if(pied){ el.append(pied); hydrateIcons(pied); } applyLayout('demo'); applyViewOffset(); return; }
   const tab=(k,label)=>h('button',{class:'btn'+(src===k?' on':''),'aria-pressed':String(src===k),onclick:()=>{ GUIDE.src=k; GUIDE.editing=false; if(k!=='tuto') GUIDE.step=0; renderDemo(); }}, label);
   el.append(h('div',{class:'seg gd-tabs'}, n? tab('note','Exemple') : null, tab('tuto','Tutos et exercices'), tab('tp','Mon TP')));
   const body=h('div',{class:'gd-body'}); el.append(body); const add=(...k)=>body.append(...k.filter(Boolean));
@@ -67,14 +68,15 @@ function renderDemo(){
   }
   else if(src==='tuto' && T){
     const all=GUIDE.done.filter(Boolean).length===T.steps.length;
+    const suiteGuide='Pour continuer, utilise le bouton en bas du guide.';   // le pied suit la Centrale : texte valable pour « Suivant » comme pour « Mes ateliers »
     if(T.type==='exo'){   // exercice : la consigne, puis les critères de réussite vérifiés tout seuls
       add(h('div',{class:'gd-brief',html:T.brief}),
         h('div',{class:'demo-sec'}, h('h4',{},'Critères de réussite'), h('ul',{class:'gd-crit'}, T.steps.map((c,i)=>h('li',{class:GUIDE.done[i]?'ok':'',html:c.t})))),
         T.hint? h('details',{class:'gd-tips'}, h('summary',{},'Un indice ?'), h('div',{class:'empty',html:T.hint})) : null,
-        all? h('div',{class:'info gd-bravo',html: depuisPortail()? '<b>Exercice réussi !</b> Clique sur l’atelier, en haut, pour revenir à tes ateliers.' : '<b>Exercice réussi !</b> Il est marqué terminé dans la bibliothèque.'}) : null);
+        all? h('div',{class:'info gd-bravo',html: pied? '<b>Exercice réussi !</b> '+suiteGuide : depuisPortail()? '<b>Exercice réussi !</b> Clique sur l’atelier, en haut, pour revenir à tes ateliers.' : '<b>Exercice réussi !</b> Il est marqué terminé dans la bibliothèque.'}) : null);
     } else add(stepper(T.steps.map(s=>s.t), GUIDE.done, GUIDE.step, {manual:i=>!T.steps[i].ok,
         onDone:(i,v)=>{ GUIDE.done[i]=v; if(v && i<T.steps.length-1) GUIDE.step=i+1; lessonProgress(); renderDemo(); }, onGo:i=>{ GUIDE.step=i; renderDemo(); }}),
-      all? h('div',{class:'info gd-bravo',html: depuisPortail()? '<b>Bravo, tuto terminé !</b> Clique sur l’atelier, en haut, pour revenir à tes ateliers.' : '<b>Bravo, tuto terminé !</b> Choisissez-en un autre ou ouvrez un exemple.'}) : null);
+      all? h('div',{class:'info gd-bravo',html: pied? '<b>Bravo, tuto terminé !</b> '+suiteGuide : depuisPortail()? '<b>Bravo, tuto terminé !</b> Clique sur l’atelier, en haut, pour revenir à tes ateliers.' : '<b>Bravo, tuto terminé !</b> Choisissez-en un autre ou ouvrez un exemple.'}) : null);
     add(h('div',{class:'gd-nav'}, h('button',{class:'btn demo-more',onclick:()=>{ GUIDE.tuto=null; renderDemo(); }}, '‹ Tous les tutos'),
       h('button',{class:'btn demo-more',onclick:()=>openGallery('lesson')}, svgIcon('book'),'Bibliothèque')));
   }
@@ -88,6 +90,7 @@ function renderDemo(){
       h('details',{class:'gd-tips'}, h('summary',{},'Rappel des gestes'), h('div',{class:'empty',html:guideTips()})));
   }
   else renderTp(body);
+  if(pied) el.append(pied);
   hydrateIcons(el); applyLayout('demo'); applyViewOffset();
 }
 /* ---- Barre du haut : l'activité en cours, comme dans NetSim et TechnoStudio.

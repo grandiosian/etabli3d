@@ -38,6 +38,7 @@ def run(t):
     cz.click('#bFile'); cz.locator('#menuFile .cz-item', has_text='Déposer').click(); cz.wait_for_timeout(1500)
     cz.click('#bFile'); cz.locator('#menuFile .cz-item', has_text='STL').click(); cz.wait_for_timeout(600)
     r5 = cz.evaluate("()=>[__cz.depots.map(d=>d.nom+':'+d.type+':'+(d.taille>0)).join(' '), __cz.fichiers.map(f=>f.nom.endsWith('.stl')+':'+f.type).join(' ')]")
+    check('Centrale plus ancienne (sans Centrale.navigation) : pas de pied de navigation dans le Guide', cz.evaluate("()=>!document.querySelector('.gd-pied')"))
     check('Centrale : déclaration des activités, widget « Visiteur » puis identifiant et pastille de la classe, sans bouton flottant, progression fusionnée, projet du serveur (Annuler revient), activité demandée, sauvegarde',
           r == ['etabli3d', 43, 43, 'Visiteur'] and r2 == ['07', '5', True, False, True, 3, 'de', True, True, 'termine'] and r3 == ['Support de départ', 'Porte-crayon', 'bois'], [r, r2, r3])
     check('Centrale : fichier de l’atelier repris, dépôt des sorties (projet, STL, aperçu, résumé), STL envoyé au professeur',
@@ -111,6 +112,54 @@ def run(t):
         else:
             check(f'Centrale : arrivée dans l’étape, {cas} → « {attendu} »', r[0] == '07' and r[2] == attendu, r)
         ctx.close()
+
+    # Navigation intégrée (Centrale.navigation) : « ← » et « Suivant → » dans le pied du Guide ; widget avec Centrale.nomAffiche
+    nav = {'contexte': 'parcours', 'position': {'numero': 2, 'total': 4, 'titre': 'Modéliser le support', 'consigne': ''},
+           'precedent': {'cible': 'etape', 'libelle': 'Étape 1 : Croquis', 'court': 'Étape précédente', 'titre': 'Revenir à l’étape 1'},
+           'suivant': {'cible': 'etape', 'libelle': 'Étape 3 : Valider', 'titre': 'Termine d’abord cette étape', 'verrou': True, 'raison': 'Termine d’abord « Modéliser le support »', 'fin': False}}
+    cfg3 = {'projet': serveur, 'fichiers': {'depart.json': depart}, 'nav': nav, 'nom': '', 'activite': 'exo-plaque',
+            'atelier': {'titre': 'Modéliser le support', 'entrees': ['depart.json'], 'sorties': ['support.json']}}
+    ctx = b.new_context(viewport={'width': 1400, 'height': 860})
+    ctx.add_init_script(f"window.CENTRALE_URL='{base}/tests/centrale/'; window.__CZ_TEST={_json.dumps(cfg3)};")
+    cz = ctx.new_page(); cz.on('pageerror', lambda e: errors.append('navigation: ' + str(e)))
+    cz.goto(URL + '#centrale=jeton-essai&parcours=1&etape=0'); cz.wait_for_timeout(3000)
+    pied = """()=>{const p=document.querySelector('#demo > .gd-pied'), s=p&&p.querySelector('.gd-suiv'), t=x=>x? x.innerText.replace(/\\s+/g,' ').trim() : null;
+      return p? [t(p.querySelector('.gd-pied-pos')), t(p.querySelector('.gd-prec')), t(s), !!s && s.classList.contains('verrou'), s && s.getAttribute('aria-disabled'), t(p.querySelector('.gd-pied-raison')),
+        !!document.querySelector('#demo .demo-head [aria-label="Fermer le guide"]'), p===document.querySelector('#demo').lastElementChild] : null}"""
+    r1 = cz.evaluate(pied)
+    w = cz.evaluate("()=>{const s=document.querySelector('#bCentrale span'); return [s.textContent, s.classList.contains('anonyme'), typeof __cz.nav.options.activite, __cz.nav.options.activite(), (__cz.vue||[]).length>0]}")
+    check('Navigation intégrée : pied du Guide (étape n / N, « ← Étape précédente », « Suivant » verrouillé avec la raison), sans bouton Fermer',
+          r1 == ['PARCOURS · ÉTAPE 2 / 4 · Modéliser le support', '← Étape précédente', 'Suivant Étape 3 : Valider', True, 'true', 'Termine d’abord « Modéliser le support »', False, True], r1)
+    check('Widget de l’élève : Centrale.nomAffiche (« pas désanonymisé » en italique), redessiné au changement de vue ; activité ouverte donnée au module',
+          w == ['pas désanonymisé', True, 'function', 'exo-plaque', True], w)
+    cz.click('#demo .gd-suiv', force=True); cz.wait_for_timeout(300)   # aria-disabled : Playwright ne clique pas sans force
+    a1 = cz.evaluate("()=>(__cz.allers||[]).length")
+    n0 = cz.evaluate("()=>__cz.depots.length")
+    cz.evaluate("()=>{ const s=window.__CZ_TEST.nav.suivant; s.verrou=false; s.raison=''; s.titre='Enregistrer et ouvrir l’étape suivante'; window.__CZ_TEST.nom='Léa D.'; __cz.vue.forEach(f=>f('enseignant')); __cz.nav.relancer(); }")
+    cz.wait_for_timeout(300)
+    r2 = cz.evaluate(pied)
+    w2 = cz.evaluate("()=>{const s=document.querySelector('#bCentrale span'); return [s.textContent, s.classList.contains('anonyme')]}")
+    cz.evaluate(f"()=>{E}.addPart('box',[80,0]) && 1"); cz.wait_for_timeout(200)
+    cz.click('#demo .gd-suiv'); cz.wait_for_timeout(800)
+    a2 = cz.evaluate("n0=>[__cz.allers, __cz.depots.length>n0]", n0)
+    m0 = cz.evaluate("()=>__cz.nav.maj")
+    cz.evaluate("()=>{ window.__etabli.startLesson('premiers'); }"); cz.wait_for_timeout(300)
+    a3 = cz.evaluate("m0=>[__cz.nav.maj>m0, __cz.nav.options.activite()]", m0)
+    cz.click('#demo .demo-toggle'); cz.wait_for_timeout(200)
+    a4 = cz.evaluate("()=>[document.querySelector('#demo').classList.contains('closed'), !!document.querySelector('#demo > .gd-pied')]")
+    check('Navigation intégrée : verrouillé, le clic ne part pas ; ouvert, « Suivant → » dépose les fichiers puis part ; changement d’activité signalé ; guide replié : pied gardé',
+          a1 == 0 and r2[2:6] == ['Suivant Étape 3 : Valider →', False, None, None] and w2 == ['Léa D.', False] and a2 == [['suivant'], True] and a3 == [True, 'tuto-premiers'] and a4 == [True, True],
+          [a1, r2, w2, a2, a3, a4])
+    # fin de parcours : retour au portail, sans double flèche
+    cz.evaluate("()=>{ window.__CZ_TEST.nav.suivant={cible:'portail', libelle:'Parcours terminé → Mes ateliers', court:'Mes ateliers', titre:'Dernière étape', fin:true, verrou:false, raison:''}; __cz.nav.relancer(); }")
+    cz.wait_for_timeout(300)
+    check('Navigation intégrée : dernière étape, « Parcours terminé → Mes ateliers »', cz.evaluate(pied)[2] == 'Parcours terminé → Mes ateliers', cz.evaluate(pied))
+    # carte d'atelier dont le module ne connaît pas l'activité : seulement « ← Mes ateliers »
+    cz.evaluate("()=>{ const N=window.__CZ_TEST.nav, P={cible:'portail', libelle:'Mes ateliers', court:'Mes ateliers', titre:'', fin:false, verrou:false, raison:''}; N.contexte='atelier'; N.position=null; N.precedent=P; N.suivant=P; __cz.nav.relancer(); }")
+    cz.wait_for_timeout(300)
+    r3 = cz.evaluate(pied)
+    check('Navigation intégrée : carte d’atelier sans suite connue, seulement « ← Mes ateliers »', r3 and r3[1] == '← Mes ateliers' and r3[2] is None, r3)
+    ctx.close()
 
     # Sans serveur (Centrale injoignable) : #activite= ouvre l'activité ; « Déposer sur Nuage » enregistre le projet
     # puis, sans lien de la classe, demande le lien au professeur et le garde sur le poste

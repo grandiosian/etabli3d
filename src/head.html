@@ -511,6 +511,23 @@ html[data-level="3"] #app.with-tree #outliner{display:flex}
 .gd-tips summary{cursor:pointer;font-size:12.5px;font-weight:600;color:var(--ink-2)} .gd-tips .empty{font-size:12.5px;margin-top:6px}
 .gd-ta{resize:vertical;font:13px/1.45 var(--f-body);min-height:110px}
 .gd-bravo{background:color-mix(in srgb,#2f9a4a 16%,var(--panel))}
+/* pied du guide : navigation de la Centrale (« ← » et « Suivant → »), toujours visible en bas du panneau */
+.gd-pied{position:sticky;bottom:-10px;margin:2px 0 -10px;padding:8px 6px 10px 0;border-top:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;gap:6px;z-index:1}
+#demo.closed .gd-pied{margin-top:0;padding-bottom:6px;margin-bottom:-6px;bottom:-6px}
+.gd-pied-pos{font:600 11px var(--f-display);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gd-pied-pos span{letter-spacing:.02em;text-transform:none;font-weight:500}
+.gd-pied-nav{display:flex;align-items:stretch;gap:6px;justify-content:space-between}
+.gd-pied .btn{min-height:36px;font-size:13px}
+.gd-prec{flex:none;max-width:60%;font-weight:600;padding-left:8px;padding-right:8px} .gd-prec .gd-pied-txt{overflow:hidden;text-overflow:ellipsis}
+.gd-suiv{flex:0 1 auto;min-width:0;justify-content:flex-end;text-align:right;margin-left:auto}
+.gd-suiv-t{display:flex;flex-direction:column;align-items:flex-end;min-width:0;gap:1px}
+.gd-suiv-t b{font-family:var(--f-display);font-weight:600;font-size:14px}
+.gd-suiv-t small{font-size:11.5px;opacity:.85;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.gd-suiv.verrou{background:var(--panel-2);color:var(--ink-2);border-style:dashed;cursor:not-allowed}
+.gd-suiv.verrou:hover{background:var(--panel-2)}
+.gd-pied .btn.attente{opacity:.6;cursor:progress}
+.gd-pied-raison{margin:0;font-size:12px;line-height:1.35;color:var(--ink-2)}
+.tbid #bCentrale span.anonyme{font-style:italic;color:var(--ink-2)}
 
 /* gallery */
 .overlay{position:fixed;inset:0;z-index:70;background:color-mix(in srgb,var(--ink) 35%,transparent);display:grid;place-items:center;padding:16px}

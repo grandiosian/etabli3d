@@ -176,7 +176,7 @@ Pour les ateliers transversaux (`fichiers` dans `centrale.json`). Établi 3D rec
 | Chaque modification (et Annuler / Rétablir) | `etabli3d.autosave` après 400 ms, puis `sauver("projet")` (regroupé par la Centrale). |
 | Ouverture d’un tuto, d’un exercice ou d’un exemple ; étape réussie ; activité terminée | `progression(id, …)`. |
 | Fichier → Envoyer le STL au professeur | `envoyerFichier(stl, nomFichier("stl", nom du projet))`. |
-| « Étape suivante → » (bouton du module) ou « ← Étape précédente » / « ← Mes ateliers » (`Centrale.boutonPrecedent`, dans le widget de l'élève) | `avantDeQuitter` : dépose chaque sortie de l’étape (`.json`, `resume.json`, `.stl`, puis `.png`), si le projet a changé depuis le dernier dépôt. C’est ce dépôt qui termine l’étape et ouvre la suivante en mode « dans l’ordre ». |
+| « Suivant → » / « ← » en pied du Guide (`Centrale.navigation`), « Étape suivante → » (bouton du module plus ancien) ou « ← Étape précédente » / « ← Mes ateliers » (`Centrale.boutonPrecedent`, dans le widget de l'élève) | `avantDeQuitter` : dépose chaque sortie de l’étape (`.json`, `resume.json`, `.stl`, puis `.png`), si le projet a changé depuis le dernier dépôt. C’est ce dépôt qui termine l’étape et ouvre la suivante en mode « dans l’ordre ». |
 | Fichier → Reprendre le fichier de l’atelier / Déposer dans le dossier de l’atelier | `projet.charger(…)` (dépôt de l’élève, sinon entrée) / `projet.sauver(sortie, fichier)` pour chaque sortie de l’étape. En équipe, un conflit (coéquipier plus récent) est signalé au lieu d’écraser. |
 | Déconnexion | Le module envoie ce qui reste ; Établi 3D continue dans le navigateur. |
 
